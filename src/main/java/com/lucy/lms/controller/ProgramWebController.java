@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
+@SuppressWarnings("null")
 public class ProgramWebController {
 
     private final ProgramRepository programRepository;

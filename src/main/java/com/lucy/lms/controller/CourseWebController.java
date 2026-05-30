@@ -9,6 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
+@SuppressWarnings("null")
 public class CourseWebController {
 
     private final CourseRepository courseRepository;

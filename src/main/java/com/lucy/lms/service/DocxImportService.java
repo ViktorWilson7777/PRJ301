@@ -21,6 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@SuppressWarnings("null")
 public class DocxImportService {
 
     private final ImportFileRepository importFileRepository;

@@ -1,6 +1,5 @@
 package com.lucy.lms.controller;
 
-import com.lucy.lms.entity.ImportFile;
 import com.lucy.lms.service.DocxImportService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,7 +21,7 @@ public class DocxImportController {
             @RequestParam MultipartFile file,
             Model model
     ) {
-        ImportFile importFile = docxImportService.importDocx(courseId, file);
+        docxImportService.importDocx(courseId, file);
         return "redirect:/import-files";
     }
 }

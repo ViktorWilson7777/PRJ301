@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,7 @@
 
 <form action="/programs/save" method="post">
 
-    <!-- Nếu đang edit thì có id, nếu create mới thì id rỗng -->
+    <!-- Náº¿u Ä‘ang edit thÃ¬ cÃ³ id, náº¿u create má»›i thÃ¬ id rá»—ng -->
     <input type="hidden" name="id" value="${program.id}">
 
     <div>

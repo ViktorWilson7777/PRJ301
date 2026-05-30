@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
+@SuppressWarnings("null")
 public class AiSupportApiController {
 
     private final LessonRepository lessonRepository;

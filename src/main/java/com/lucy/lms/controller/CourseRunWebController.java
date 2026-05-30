@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 
 @Controller
+@SuppressWarnings("null")
 public class CourseRunWebController {
 
     private final CourseRunRepository courseRunRepository;
