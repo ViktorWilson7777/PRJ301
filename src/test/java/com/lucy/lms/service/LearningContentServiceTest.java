@@ -4,7 +4,6 @@ import com.lucy.lms.dto.CourseContentDto;
 import com.lucy.lms.entity.Course;
 import com.lucy.lms.repository.ChapterRepository;
 import com.lucy.lms.repository.CourseRepository;
-import com.lucy.lms.repository.LessonRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,16 +26,13 @@ class LearningContentServiceTest {
     @Mock
     private ChapterRepository chapterRepository;
 
-    @Mock
-    private LessonRepository lessonRepository;
-
     @InjectMocks
     private LearningContentService learningContentService;
 
     private Course course;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         course = new Course();
         course.setId(1L);
         course.setCode("JAVA101");

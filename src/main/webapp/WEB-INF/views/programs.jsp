@@ -1,4 +1,4 @@
-﻿<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html>
@@ -8,6 +8,14 @@
 </head>
 <body>
 <h1>Program List</h1>
+
+<div style="margin-bottom: 10px;">
+    <a href="/programs/create">
+        <button type="button" style="padding: 5px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            + Create New Program
+        </button>
+    </a>
+</div>
 
 <table border="1" cellpadding="8">
     <tr>

@@ -29,6 +29,9 @@ public class AiSupportApiController {
         this.generatedQuestionRepository = generatedQuestionRepository;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${gemini.api.key:}")
+    private String geminiApiKey;
+
     @PostMapping("/api/ai/suggest-questions")
     public Map<String, Object> suggestQuestions(
             @RequestParam Long lessonId,
@@ -54,7 +57,7 @@ public class AiSupportApiController {
             }
         }
 
-        List<String> questions = generateMockQuestions(lesson, promptType);
+        List<String> questions = generateQuestions(lesson, promptType, promptInstruction);
 
         List<AiGeneratedQuestion> savedQuestions = new ArrayList<>();
 
@@ -75,9 +78,72 @@ public class AiSupportApiController {
         response.put("lessonDescription", lesson.getDescription());
         response.put("promptType", promptType);
         response.put("promptInstruction", promptInstruction);
+        response.put("isMock", geminiApiKey == null || geminiApiKey.trim().isEmpty());
         response.put("questions", savedQuestions);
 
         return response;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List<String> generateQuestions(Lesson lesson, String promptType, String promptInstruction) {
+        if (geminiApiKey == null || geminiApiKey.trim().isEmpty()) {
+            return generateMockQuestions(lesson, promptType);
+        }
+
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
+
+            String systemPrompt = "You are an English teacher assistant. Generate exactly 3 questions or conversation starters based on the topic. Return ONLY the questions, each on a new line. Do NOT include numbers, bullet points, or intro text.\n";
+            String userPrompt = "Topic: " + lesson.getTitle() + "\n";
+            if (lesson.getDescription() != null && !lesson.getDescription().isEmpty()) {
+                userPrompt += "Content context: " + lesson.getDescription() + "\n";
+            }
+            if (promptInstruction != null && !promptInstruction.isEmpty()) {
+                userPrompt += "Specific Instruction: " + promptInstruction + "\n";
+            } else {
+                userPrompt += "Task: Generate 3 '" + promptType + "' questions.";
+            }
+
+            Map<String, Object> textPart = new HashMap<>();
+            textPart.put("text", systemPrompt + userPrompt);
+            Map<String, Object> partMap = new HashMap<>();
+            partMap.put("parts", Arrays.asList(textPart));
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("contents", Arrays.asList(partMap));
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            org.springframework.http.HttpEntity<Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
+
+            org.springframework.http.ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            Map<String, Object> responseBody = response.getBody();
+
+            if (responseBody != null && responseBody.containsKey("candidates")) {
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
+                if (!candidates.isEmpty()) {
+                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                    if (!parts.isEmpty()) {
+                        String text = (String) parts.get(0).get("text");
+                        return Arrays.asList(text.split("\\r?\\n")).stream()
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                                .map(s -> s.replaceFirst("^\\d+\\.\\s*", ""))
+                                .map(s -> s.replaceFirst("^-\\s*", ""))
+                                .map(s -> s.replaceFirst("^\\*\\s*", ""))
+                                .toList();
+                    }
+                }
+            }
+            return generateMockQuestions(lesson, promptType);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            System.err.println("Gemini HTTP Error: " + e.getResponseBodyAsString());
+            return generateMockQuestions(lesson, promptType);
+        } catch (RuntimeException e) {
+            System.err.println("Gemini API Error: " + e.getMessage());
+            return generateMockQuestions(lesson, promptType);
+        }
     }
 
     private List<String> generateMockQuestions(Lesson lesson, String promptType) {
