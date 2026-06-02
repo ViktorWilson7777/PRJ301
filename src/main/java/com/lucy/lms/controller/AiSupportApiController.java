@@ -6,6 +6,8 @@ import com.lucy.lms.entity.Lesson;
 import com.lucy.lms.repository.AiGeneratedQuestionRepository;
 import com.lucy.lms.repository.AiPromptTemplateRepository;
 import com.lucy.lms.repository.LessonRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -13,6 +15,7 @@ import java.util.*;
 
 @RestController
 @SuppressWarnings("null")
+@Tag(name = "AI", description = "AI Moderator Support APIs")
 public class AiSupportApiController {
 
     private final LessonRepository lessonRepository;
@@ -33,6 +36,7 @@ public class AiSupportApiController {
     private String geminiApiKey;
 
     @PostMapping("/api/ai/suggest-questions")
+    @Operation(summary = "Generate AI discussion questions for a lesson")
     public Map<String, Object> suggestQuestions(
             @RequestParam Long lessonId,
             @RequestParam(defaultValue = "discussion") String promptType
@@ -82,6 +86,16 @@ public class AiSupportApiController {
         response.put("questions", savedQuestions);
 
         return response;
+    }
+
+    @GetMapping("/api/ai/generated-questions")
+    @Operation(summary = "Get AI generated questions, optionally filter by lessonId")
+    public List<AiGeneratedQuestion> getGeneratedQuestions(
+            @RequestParam(required = false) Long lessonId) {
+        if (lessonId != null) {
+            return generatedQuestionRepository.findByLessonId(lessonId);
+        }
+        return generatedQuestionRepository.findAll();
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

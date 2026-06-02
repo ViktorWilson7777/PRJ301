@@ -16,8 +16,10 @@ public class CourseRun {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(columnDefinition = "NVARCHAR(50)")
     private String code;
 
+    @Column(columnDefinition = "NVARCHAR(20)")
     private String status;
 
     private LocalDateTime startsAt;

@@ -1,49 +1,63 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Programs</title>
-</head>
-<body>
-<h1>Program List</h1>
 
-<div style="margin-bottom: 10px;">
-    <a href="/programs/create">
-        <button type="button" style="padding: 5px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            + Create New Program
-        </button>
-    </a>
+<layout:main pageTitle="Programs">
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <p class="text-muted mb-0" style="font-size: 13px;">Manage language programs (EN, ZH, JA)</p>
+    </div>
+    <a href="/programs/create" class="btn btn-lucy"><i class="bi bi-plus-lg me-1"></i> New Program</a>
 </div>
 
-<table border="1" cellpadding="8">
-    <tr>
-        <th>ID</th>
-        <th>Code</th>
-        <th>Title</th>
-        <th>Description</th>
-        <th>Published</th>
-        <th>Action</th>
-    </tr>
+<div class="lucy-table">
+    <c:choose>
+        <c:when test="${empty programs}">
+            <div class="empty-state">
+                <i class="bi bi-collection"></i>
+                <p>No programs yet. Create your first language program.</p>
+            </div>
+        </c:when>
+        <c:otherwise>
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Code</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="p" items="${programs}">
+                        <tr>
+                            <td><strong>#${p.id}</strong></td>
+                            <td><span class="badge-status badge-purple">${p.code}</span></td>
+                            <td>${p.title}</td>
+                            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.description}</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${p.isPublished}">
+                                        <span class="badge-status badge-success">Published</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="badge-status badge-gray">Draft</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </td>
+                            <td>
+                                <a href="/programs/edit/${p.id}" class="btn-action edit" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <button class="btn-action delete" title="Delete" onclick="confirmDelete('/programs/delete/${p.id}')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </c:otherwise>
+    </c:choose>
+</div>
 
-    <c:forEach var="p" items="${programs}">
-        <tr>
-            <td>${p.id}</td>
-            <td>${p.code}</td>
-            <td>${p.title}</td>
-            <td>${p.description}</td>
-            <td>${p.isPublished}</td>
-            <td>
-                <a href="/programs/edit/${p.id}">Edit</a>
-                |
-                <a href="/programs/delete/${p.id}"
-                   onclick="return confirm('Are you sure you want to delete this program?')">
-                    Delete
-                </a>
-            </td>
-        </tr>
-    </c:forEach>
-</table>
-</body>
-</html>
+</layout:main>

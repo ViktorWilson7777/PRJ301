@@ -1,78 +1,65 @@
-﻿<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Course Run Form</title>
-</head>
-<body>
+<layout:main pageTitle="${courseRun.id != null ? 'Edit Course Run' : 'New Course Run'}">
 
-<h1>Course Run Form</h1>
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="lucy-form">
+            <form method="post" action="/course-runs/save">
+                <c:if test="${courseRun.id != null}">
+                    <input type="hidden" name="id" value="${courseRun.id}" />
+                </c:if>
 
-<form action="/course-runs/save" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Course <span class="text-danger">*</span></label>
+                    <select name="courseId" class="form-select" required>
+                        <option value="">— Select Course —</option>
+                        <c:forEach var="c" items="${courses}">
+                            <option value="${c.id}" <c:if test="${courseRun.course != null && courseRun.course.id == c.id}">selected</c:if>>${c.code} — ${c.title}</option>
+                        </c:forEach>
+                    </select>
+                </div>
 
-    <input type="hidden" name="id" value="${courseRun.id}">
+                <div class="mb-3">
+                    <label class="form-label">Code <span class="text-danger">*</span></label>
+                    <input type="text" name="code" class="form-control" value="${courseRun.code}" required placeholder="e.g. EN-S1-2025Q1" />
+                </div>
 
-    <div>
-        <label>Course:</label>
-        <select name="courseId">
-            <c:forEach var="c" items="${courses}">
-                <option value="${c.id}" ${courseRun.course.id == c.id ? "selected" : ""}>
-                        ${c.title}
-                </option>
-            </c:forEach>
-        </select>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">— Select —</option>
+                        <option value="OPEN" <c:if test="${courseRun.status == 'OPEN'}">selected</c:if>>Open</option>
+                        <option value="CLOSED" <c:if test="${courseRun.status == 'CLOSED'}">selected</c:if>>Closed</option>
+                        <option value="PLANNED" <c:if test="${courseRun.status == 'PLANNED'}">selected</c:if>>Planned</option>
+                    </select>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Starts At</label>
+                        <input type="datetime-local" name="startsAt" class="form-control" value="${courseRun.startsAt}" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ends At</label>
+                        <input type="datetime-local" name="endsAt" class="form-control" value="${courseRun.endsAt}" />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Capacity</label>
+                    <input type="number" name="capacity" class="form-control" value="${courseRun.capacity}" min="0" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-lucy"><i class="bi bi-check-lg me-1"></i> Save</button>
+                    <a href="/course-runs" class="btn btn-light" style="border-radius: 8px;">Cancel</a>
+                </div>
+            </form>
+        </div>
     </div>
+</div>
 
-    <br>
-
-    <div>
-        <label>Code:</label>
-        <input type="text" name="code" value="${courseRun.code}">
-    </div>
-
-    <br>
-
-    <div>
-        <label>Status:</label>
-        <select name="status">
-            <option value="DRAFT" ${courseRun.status == "DRAFT" ? "selected" : ""}>DRAFT</option>
-            <option value="ACTIVE" ${courseRun.status == "ACTIVE" ? "selected" : ""}>ACTIVE</option>
-            <option value="CLOSED" ${courseRun.status == "CLOSED" ? "selected" : ""}>CLOSED</option>
-        </select>
-    </div>
-
-    <br>
-
-    <div>
-        <label>Starts At:</label>
-        <input type="datetime-local" name="startsAt" value="${courseRun.startsAt}">
-    </div>
-
-    <br>
-
-    <div>
-        <label>Ends At:</label>
-        <input type="datetime-local" name="endsAt" value="${courseRun.endsAt}">
-    </div>
-
-    <br>
-
-    <div>
-        <label>Capacity:</label>
-        <input type="number" name="capacity" value="${courseRun.capacity}">
-    </div>
-
-    <br>
-
-    <button type="submit">Save Course Run</button>
-
-</form>
-
-<br>
-
-<a href="/course-runs">Back to Course Run List</a>
-
-</body>
-</html>
+</layout:main>

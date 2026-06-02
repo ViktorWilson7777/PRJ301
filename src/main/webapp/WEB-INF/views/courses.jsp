@@ -1,54 +1,58 @@
-﻿<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Courses</title>
-</head>
-<body>
 
-<h1>Course List</h1>
+<layout:main pageTitle="Courses">
 
-<a href="/courses/create">Create Course</a>
-<br><br>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <p class="text-muted mb-0" style="font-size: 13px;">Manage course stages within each program</p>
+    <a href="/courses/create" class="btn btn-lucy"><i class="bi bi-plus-lg me-1"></i> New Course</a>
+</div>
 
-<table border="1" cellpadding="10">
-    <tr>
-        <th>ID</th>
-        <th>Program</th>
-        <th>Code</th>
-        <th>Title</th>
-        <th>Level</th>
-        <th>Order</th>
-        <th>Description</th>
-        <th>Action</th>
-    </tr>
+<div class="lucy-table">
+    <c:choose>
+        <c:when test="${empty courses}">
+            <div class="empty-state">
+                <i class="bi bi-book"></i>
+                <p>No courses yet. Create a course within a program.</p>
+            </div>
+        </c:when>
+        <c:otherwise>
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Code</th>
+                        <th>Title</th>
+                        <th>Program</th>
+                        <th>Level</th>
+                        <th>Order</th>
+                        <th style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="c" items="${courses}">
+                        <tr>
+                            <td><strong>#${c.id}</strong></td>
+                            <td><span class="badge-status badge-info">${c.code}</span></td>
+                            <td>${c.title}</td>
+                            <td>
+                                <c:if test="${c.program != null}">
+                                    <span class="badge-status badge-purple">${c.program.code}</span>
+                                </c:if>
+                            </td>
+                            <td>${c.level}</td>
+                            <td>${c.orderIndex}</td>
+                            <td>
+                                <a href="/courses/edit/${c.id}" class="btn-action edit"><i class="bi bi-pencil"></i></a>
+                                <button class="btn-action delete" onclick="confirmDelete('/courses/delete/${c.id}')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </c:otherwise>
+    </c:choose>
+</div>
 
-    <c:forEach var="c" items="${courses}">
-        <tr>
-            <td>${c.id}</td>
-            <td>${c.program.title}</td>
-            <td>${c.code}</td>
-            <td>${c.title}</td>
-            <td>${c.level}</td>
-            <td>${c.orderIndex}</td>
-            <td>${c.description}</td>
-            <td>
-                <a href="/courses/edit/${c.id}">Edit</a>
-                |
-                <a href="/courses/delete/${c.id}"
-                   onclick="return confirm('Are you sure you want to delete this course?')">
-                    Delete
-                </a>
-            </td>
-        </tr>
-    </c:forEach>
-</table>
-
-<br>
-
-<a href="/programs">Back to Programs</a>
-
-</body>
-</html>
+</layout:main>

@@ -1,50 +1,50 @@
-﻿<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>AI Prompt Templates</title>
-</head>
-<body>
 
-<h1>AI Prompt Template List</h1>
+<layout:main pageTitle="AI Prompt Templates">
 
-<a href="/ai-prompt-templates/create">Create AI Prompt Template</a>
-<br><br>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <p class="text-muted mb-0" style="font-size: 13px;">Manage AI prompt instructions for question generation</p>
+    <a href="/ai-prompt-templates/create" class="btn btn-lucy"><i class="bi bi-plus-lg me-1"></i> New Template</a>
+</div>
 
-<table border="1" cellpadding="10">
-    <tr>
-        <th>ID</th>
-        <th>Lesson / SubLevel</th>
-        <th>Prompt Type</th>
-        <th>Prompt Instruction</th>
-        <th>Active</th>
-        <th>Action</th>
-    </tr>
+<div class="lucy-table">
+    <c:choose>
+        <c:when test="${empty templates}">
+            <div class="empty-state">
+                <i class="bi bi-cpu"></i>
+                <p>No AI prompt templates yet.</p>
+            </div>
+        </c:when>
+        <c:otherwise>
+            <table class="table mb-0">
+                <thead>
+                    <tr><th>ID</th><th>Prompt Type</th><th>Lesson</th><th>Instruction</th><th>Active</th><th style="width:100px;">Actions</th></tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="t" items="${templates}">
+                        <tr>
+                            <td><strong>#${t.id}</strong></td>
+                            <td><span class="badge-status badge-purple">${t.promptType}</span></td>
+                            <td><c:if test="${t.lesson != null}">${t.lesson.title}</c:if></td>
+                            <td style="max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px;">${t.promptInstruction}</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${t.isActive}"><span class="badge-status badge-success">Active</span></c:when>
+                                    <c:otherwise><span class="badge-status badge-gray">Inactive</span></c:otherwise>
+                                </c:choose>
+                            </td>
+                            <td>
+                                <a href="/ai-prompt-templates/edit/${t.id}" class="btn-action edit"><i class="bi bi-pencil"></i></a>
+                                <button class="btn-action delete" onclick="confirmDelete('/ai-prompt-templates/delete/${t.id}')"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </c:otherwise>
+    </c:choose>
+</div>
 
-    <c:forEach var="t" items="${templates}">
-        <tr>
-            <td>${t.id}</td>
-            <td>${t.lesson.title}</td>
-            <td>${t.promptType}</td>
-            <td>${t.promptInstruction}</td>
-            <td>${t.isActive}</td>
-            <td>
-                <a href="/ai-prompt-templates/edit/${t.id}">Edit</a>
-                |
-                <a href="/ai-prompt-templates/delete/${t.id}"
-                   onclick="return confirm('Are you sure you want to delete this template?')">
-                    Delete
-                </a>
-            </td>
-        </tr>
-    </c:forEach>
-</table>
-
-<br>
-
-<a href="/lessons">Back to Lessons</a>
-
-</body>
-</html>
+</layout:main>
