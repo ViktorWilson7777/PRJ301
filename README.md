@@ -155,6 +155,14 @@ See `docs/docx-import-format.md` for detailed documentation.
 
 ---
 
+## 📅 Implementation Roadmap
+
+We have structured a **10-Week Multi-Stack Implementation Roadmap** detailing the evolution of this project from a mock prototype into a fully integrated platform (Java, .NET, Node.js, Mobile App).
+
+See [docs/roadmap.md](file:///c:/Users/ADMIN/Desktop/PRJ301-1/docs/roadmap.md) for the detailed week-by-week timeline and stack-specific task breakdown.
+
+---
+
 ## Mock / Sandbox Notice
 
 This is a **university demo prototype**. The following features are **simulated**:

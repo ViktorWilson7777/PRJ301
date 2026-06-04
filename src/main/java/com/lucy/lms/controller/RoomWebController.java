@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Controller
 @SuppressWarnings("null")
@@ -21,6 +22,7 @@ public class RoomWebController {
     private final PinnedMaterialRepository pinnedMaterialRepository;
     private final GiftRepository giftRepository;
     private final GiftTransactionRepository giftTransactionRepository;
+    private final PodcastEpisodeRepository podcastEpisodeRepository;
 
     public RoomWebController(RoomRepository roomRepository,
                              AppUserRepository userRepository,
@@ -30,7 +32,8 @@ public class RoomWebController {
                              RoomParticipantRepository participantRepository,
                              PinnedMaterialRepository pinnedMaterialRepository,
                              GiftRepository giftRepository,
-                             GiftTransactionRepository giftTransactionRepository) {
+                             GiftTransactionRepository giftTransactionRepository,
+                             PodcastEpisodeRepository podcastEpisodeRepository) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
@@ -40,6 +43,7 @@ public class RoomWebController {
         this.pinnedMaterialRepository = pinnedMaterialRepository;
         this.giftRepository = giftRepository;
         this.giftTransactionRepository = giftTransactionRepository;
+        this.podcastEpisodeRepository = podcastEpisodeRepository;
     }
 
     @GetMapping("/rooms")
@@ -92,6 +96,13 @@ public class RoomWebController {
 
         if ("LIVE".equals(status) && room.getStartedAt() == null) {
             room.setStartedAt(LocalDateTime.now());
+            if (room.getChapter() != null) {
+                List<Lesson> lessons = lessonRepository.findByChapterIdOrderByOrderIndexAsc(room.getChapter().getId());
+                if (!lessons.isEmpty()) {
+                    room.setCurrentLesson(lessons.get(0));
+                    room.setStageStartedAt(LocalDateTime.now());
+                }
+            }
         }
         if ("ENDED".equals(status) && room.getEndedAt() == null) {
             room.setEndedAt(LocalDateTime.now());
@@ -229,6 +240,88 @@ public class RoomWebController {
         if (room != null) {
             room.setStatus("ENDED");
             room.setEndedAt(LocalDateTime.now());
+            if (Boolean.TRUE.equals(room.getIsRecording())) {
+                room.setIsRecording(false);
+                
+                // Create a Podcast Episode from this room
+                PodcastEpisode episode = new PodcastEpisode();
+                episode.setRoom(room);
+                episode.setCreator(room.getHostUser());
+                episode.setTitle("Podcast: " + room.getTitle());
+                episode.setDescription("Recorded session of room: " + room.getTitle() + "\n" + (room.getDescription() != null ? room.getDescription() : ""));
+                episode.setAudioUrl("/audio/recordings/room_" + room.getId() + ".mp3");
+                
+                long durationSec = 0;
+                if (room.getRecordingStartedAt() != null) {
+                    durationSec = java.time.Duration.between(room.getRecordingStartedAt(), LocalDateTime.now()).getSeconds();
+                }
+                episode.setDurationSeconds((int) (durationSec > 0 ? durationSec : 600));
+                episode.setStatus("PUBLISHED");
+                podcastEpisodeRepository.save(episode);
+            }
+            roomRepository.save(room);
+        }
+        return "redirect:/rooms/" + id;
+    }
+
+    @GetMapping("/rooms/{id}/next-stage")
+    public String nextStage(@PathVariable Long id) {
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room != null && "LIVE".equals(room.getStatus()) && room.getChapter() != null) {
+            List<Lesson> lessons = lessonRepository.findByChapterIdOrderByOrderIndexAsc(room.getChapter().getId());
+            if (!lessons.isEmpty()) {
+                Lesson nextLesson = null;
+                if (room.getCurrentLesson() == null) {
+                    nextLesson = lessons.get(0);
+                } else {
+                    for (int i = 0; i < lessons.size(); i++) {
+                        if (lessons.get(i).getId().equals(room.getCurrentLesson().getId())) {
+                            if (i + 1 < lessons.size()) {
+                                nextLesson = lessons.get(i + 1);
+                            } else {
+                                // Wrap around or stay at the last one
+                                nextLesson = lessons.get(0);
+                            }
+                            break;
+                        }
+                    }
+                }
+                if (nextLesson != null) {
+                    room.setCurrentLesson(nextLesson);
+                    room.setStageStartedAt(LocalDateTime.now());
+                    roomRepository.save(room);
+                }
+            }
+        }
+        return "redirect:/rooms/" + id;
+    }
+
+    @GetMapping("/rooms/{id}/toggle-recording")
+    public String toggleRecording(@PathVariable Long id) {
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room != null && "LIVE".equals(room.getStatus())) {
+            if (Boolean.TRUE.equals(room.getIsRecording())) {
+                room.setIsRecording(false);
+                
+                // Create a Podcast Episode from this room
+                PodcastEpisode episode = new PodcastEpisode();
+                episode.setRoom(room);
+                episode.setCreator(room.getHostUser());
+                episode.setTitle("Podcast: " + room.getTitle());
+                episode.setDescription("Recorded session of room: " + room.getTitle() + "\n" + (room.getDescription() != null ? room.getDescription() : ""));
+                episode.setAudioUrl("/audio/recordings/room_" + room.getId() + "_" + System.currentTimeMillis() + ".mp3");
+                
+                long durationSec = 0;
+                if (room.getRecordingStartedAt() != null) {
+                    durationSec = java.time.Duration.between(room.getRecordingStartedAt(), LocalDateTime.now()).getSeconds();
+                }
+                episode.setDurationSeconds((int) (durationSec > 0 ? durationSec : 300));
+                episode.setStatus("PUBLISHED");
+                podcastEpisodeRepository.save(episode);
+            } else {
+                room.setIsRecording(true);
+                room.setRecordingStartedAt(LocalDateTime.now());
+            }
             roomRepository.save(room);
         }
         return "redirect:/rooms/" + id;

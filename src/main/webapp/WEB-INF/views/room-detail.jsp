@@ -46,6 +46,67 @@
     </c:if>
 </div>
 
+<!-- Active Stage & Recording Controls (Agora & Stage Transition Simulation) -->
+<c:if test="${room.status == 'LIVE'}">
+    <div class="stat-card mb-4" style="border-left: 4px solid var(--lucy-primary); background: #fff;">
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <h6 style="font-weight: 700; color: var(--lucy-primary); margin-bottom: 8px;">
+                    <i class="bi bi-broadcast me-1"></i> Current Lesson (Active Stage)
+                </h6>
+                <c:choose>
+                    <c:when test="${room.currentLesson != null}">
+                        <h5 style="font-weight: 600; margin-bottom: 6px; color: #1A1A2E;">
+                            <span class="badge-status badge-purple me-1" style="font-size: 11px; text-transform: uppercase;">${room.currentLesson.type}</span> 
+                            ${room.currentLesson.title}
+                        </h5>
+                        <p class="text-muted mb-0" style="font-size: 13px;">${room.currentLesson.description}</p>
+                        <c:if test="${room.stageStartedAt != null}">
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-clock-history me-1"></i> Stage started at: <strong>${room.stageStartedAt}</strong> (Auto-switches every 10 mins)
+                            </small>
+                        </c:if>
+                    </c:when>
+                    <c:otherwise>
+                        <p class="text-muted mb-0" style="font-size: 13px;">No active topic selected. Add/select a course chapter to initialize topics.</p>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+            <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+                    <!-- Next Stage / Topic Skip -->
+                    <a href="/rooms/${room.id}/next-stage" class="btn btn-outline-lucy btn-sm" style="border-radius: 8px;">
+                        <i class="bi bi-chevron-double-right me-1"></i> Next Topic
+                    </a>
+                    
+                    <!-- Recording Control -->
+                    <c:choose>
+                        <c:when test="${room.isRecording}">
+                            <a href="/rooms/${room.id}/toggle-recording" class="btn btn-danger btn-sm" style="border-radius: 8px; background: var(--lucy-danger); border: none;">
+                                <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span>
+                                🔴 Recording (Stop & Save)
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="/rooms/${room.id}/toggle-recording" class="btn btn-outline-danger btn-sm" style="border-radius: 8px; border-color: var(--lucy-danger); color: var(--lucy-danger);">
+                                <i class="bi bi-record-circle me-1"></i> Start Recording
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                
+                <!-- Mock Agora Connection Info -->
+                <div class="mt-3 text-muted" style="font-size: 11px;">
+                    <i class="bi bi-cpu me-1"></i> Agora Audio Channel: <code style="background: #F3F4F6; color: #1F2937; padding: 2px 6px; border-radius: 4px;">lucy_room_${room.id}</code>
+                    <a href="/api/agora/token?channelName=lucy_room_${room.id}&uid=1" target="_blank" class="ms-2" style="text-decoration: none; color: var(--lucy-primary);" title="Get Agora Mock Token">
+                        <i class="bi bi-key-fill"></i> Get Token API
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</c:if>
+
 <div class="row g-4">
     <!-- Left Column: Participants -->
     <div class="col-lg-7">

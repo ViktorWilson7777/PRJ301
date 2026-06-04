@@ -43,6 +43,8 @@
             background: linear-gradient(180deg, var(--lucy-dark) 0%, var(--lucy-dark2) 100%);
             z-index: 1000;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             transition: transform 0.3s;
             scrollbar-width: thin;
             scrollbar-color: var(--lucy-dark3) transparent;
@@ -322,6 +324,41 @@
             <i class="bi bi-braces"></i> Swagger API
         </a>
     </div>
+
+    <!-- User Profile Section at Bottom of Sidebar -->
+    <c:if test="${sessionScope.currentUser != null}">
+        <div style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); margin-top: auto;">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--lucy-primary); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; color: white;">
+                    <c:choose>
+                        <c:when test="${not empty sessionScope.currentUser.avatarPersona}">
+                            ${sessionScope.currentUser.avatarPersona}
+                        </c:when>
+                        <c:otherwise>
+                            👤
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                <div style="overflow: hidden; flex: 1;">
+                    <div style="color: #fff; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                        ${sessionScope.currentUser.displayName}
+                    </div>
+                    <div style="font-size: 10px; color: var(--lucy-text-muted);">
+                        <c:choose>
+                            <c:when test="${sessionScope.currentUser.role == 'ADMIN'}"><span class="badge-status badge-danger" style="padding: 2px 6px; font-size: 9px;">ADMIN</span></c:when>
+                            <c:when test="${sessionScope.currentUser.role == 'PRO_MENTOR'}"><span class="badge-status badge-purple" style="padding: 2px 6px; font-size: 9px;">PRO MENTOR</span></c:when>
+                            <c:when test="${sessionScope.currentUser.role == 'SUPER_CREATOR'}"><span class="badge-status badge-pink" style="padding: 2px 6px; font-size: 9px;">SUPER CREATOR</span></c:when>
+                            <c:otherwise><span class="badge-status badge-success" style="padding: 2px 6px; font-size: 9px;">LEARNER</span></c:otherwise>
+                        </c:choose>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <a href="/profile" class="btn btn-outline-lucy btn-sm w-50" style="padding: 4px 0; font-size: 11px; border-color: rgba(255,255,255,0.15); color: #fff;"><i class="bi bi-person"></i> Profile</a>
+                <a href="/logout" class="btn btn-danger btn-sm w-50" style="padding: 4px 0; font-size: 11px; background: var(--lucy-danger); border: none;"><i class="bi bi-box-arrow-right"></i> Log out</a>
+            </div>
+        </div>
+    </c:if>
 </nav>
 
 <!-- ── Main ── -->
