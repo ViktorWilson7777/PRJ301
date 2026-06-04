@@ -4,6 +4,13 @@
 
 <layout:main pageTitle="Dashboard">
 
+<c:if test="${param.error == 'access_denied'}">
+    <div class="alert alert-danger alert-dismissible fade show animate-in" role="alert" style="border-radius: 12px; margin-bottom: 24px; font-size: 14px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Access Denied:</strong> You do not have permission to access that section. Admin privileges are required.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</c:if>
+
 <!-- Stat Cards Row 1 -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">

@@ -42,6 +42,16 @@ public class Room {
     @JoinColumn(name = "chapter_id")
     private Chapter chapter;
 
+    @ManyToOne
+    @JoinColumn(name = "current_lesson_id")
+    private Lesson currentLesson;
+
+    private LocalDateTime stageStartedAt;
+
+    private Boolean isRecording = false;
+
+    private LocalDateTime recordingStartedAt;
+
     private Integer maxParticipants = 20;
 
     private LocalDateTime startedAt;

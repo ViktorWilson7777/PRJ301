@@ -25,11 +25,11 @@ SET IDENTITY_INSERT course OFF;
 
 -- ── Users ──
 SET IDENTITY_INSERT app_user ON;
-INSERT INTO app_user (id, full_name, email, display_name, avatar_persona, role, anonymous_mode, credit_balance, reputation_score, created_at, active) VALUES
-(1, N'Admin User', N'admin@lucy.demo', N'LucyAdmin', NULL, N'ADMIN', 0, 1000.0, 100, GETDATE(), 1),
-(2, N'Anonymous Learner', N'learner@lucy.demo', N'AnonymousPanda', N'CuriousPanda🐼', N'LEARNER', 1, 50.0, 5, GETDATE(), 1),
-(3, N'Sensei Miko', N'miko@lucy.demo', N'SenseiMiko', NULL, N'PRO_MENTOR', 0, 500.0, 75, GETDATE(), 1),
-(4, N'Studio Max', N'max@lucy.demo', N'StudioMax', NULL, N'SUPER_CREATOR', 0, 800.0, 90, GETDATE(), 1);
+INSERT INTO app_user (id, full_name, email, display_name, avatar_persona, role, anonymous_mode, credit_balance, reputation_score, created_at, active, password) VALUES
+(1, N'Admin User', N'admin@lucy.demo', N'LucyAdmin', NULL, N'ADMIN', 0, 1000.0, 100, GETDATE(), 1, N'123456'),
+(2, N'Anonymous Learner', N'learner@lucy.demo', N'AnonymousPanda', N'CuriousPanda🐼', N'LEARNER', 1, 50.0, 5, GETDATE(), 1, N'123456'),
+(3, N'Sensei Miko', N'miko@lucy.demo', N'SenseiMiko', NULL, N'PRO_MENTOR', 0, 500.0, 75, GETDATE(), 1, N'123456'),
+(4, N'Studio Max', N'max@lucy.demo', N'StudioMax', NULL, N'SUPER_CREATOR', 0, 800.0, 90, GETDATE(), 1, N'123456');
 SET IDENTITY_INSERT app_user OFF;
 
 -- ── Billing Plans ──
