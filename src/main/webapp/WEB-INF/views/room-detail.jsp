@@ -276,12 +276,108 @@
         <!-- AI Questions -->
         <div class="stat-card">
             <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-cpu me-1"></i> AI Question Generator</h6>
-            <p style="font-size: 12px; color: #6B7280;">Use the Swagger API to generate AI questions:</p>
-            <code style="font-size: 11px; background: #F3F4F6; padding: 8px; border-radius: 6px; display: block; word-break: break-all;">
-                POST /api/ai/suggest-questions?lessonId=&lt;ID&gt;&amp;promptType=discussion
-            </code>
-            <a href="/swagger-ui/index.html" target="_blank" class="btn btn-outline-lucy btn-sm mt-2"><i class="bi bi-braces me-1"></i> Open Swagger</a>
+            
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 12px;">Select Lesson</label>
+                <select id="aiLessonId" class="form-select form-select-sm">
+                    <option value="">— Select a Lesson —</option>
+                    <c:forEach var="l" items="${lessons}">
+                        <option value="${l.id}" <c:if test="${room.currentLesson != null && room.currentLesson.id == l.id}">selected</c:if>>[${l.type}] ${l.title}</option>
+                    </c:forEach>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" style="font-size: 12px;">Prompt Type</label>
+                <select id="aiPromptType" class="form-select form-select-sm">
+                    <option value="discussion">Discussion</option>
+                    <option value="warmup">Warmup</option>
+                    <option value="ice_breaker">Ice Breaker</option>
+                    <option value="practice">Practice</option>
+                    <option value="wrapup">Wrap Up</option>
+                </select>
+            </div>
+            <button id="btnGenerateAi" class="btn btn-lucy btn-sm w-100" onclick="generateAiQuestions()">
+                <i class="bi bi-stars me-1"></i> Generate AI Questions
+            </button>
+
+            <!-- Loading indicator -->
+            <div id="aiLoading" class="text-center mt-3" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span style="font-size: 13px; margin-left: 8px;">Generating questions with AI...</span>
+            </div>
+
+            <!-- Results -->
+            <div id="aiResults" class="mt-3" style="display: none;">
+                <h6 style="font-size: 13px; font-weight: 600; color: #059669;"><i class="bi bi-check-circle me-1"></i> Generated Questions</h6>
+                <div id="aiMockBadge" class="mb-2" style="display: none;">
+                    <span class="badge-status badge-warning" style="font-size: 11px;">Mock Mode (no API key)</span>
+                </div>
+                <ul id="aiQuestionList" style="padding-left: 18px; font-size: 13px;"></ul>
+            </div>
+
+            <!-- Error -->
+            <div id="aiError" class="mt-3" style="display: none;">
+                <div class="text-danger" style="font-size: 13px;"><i class="bi bi-exclamation-triangle me-1"></i> <span id="aiErrorMsg"></span></div>
+            </div>
         </div>
+
+<script>
+function generateAiQuestions() {
+    var lessonId = document.getElementById('aiLessonId').value;
+    var promptType = document.getElementById('aiPromptType').value;
+
+    if (!lessonId) {
+        alert('Please select a lesson first!');
+        return;
+    }
+
+    var btn = document.getElementById('btnGenerateAi');
+    var loading = document.getElementById('aiLoading');
+    var results = document.getElementById('aiResults');
+    var errorDiv = document.getElementById('aiError');
+
+    btn.disabled = true;
+    loading.style.display = 'block';
+    results.style.display = 'none';
+    errorDiv.style.display = 'none';
+
+    fetch('/api/ai/suggest-questions?lessonId=' + lessonId + '&promptType=' + promptType, {
+        method: 'POST'
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        loading.style.display = 'none';
+        btn.disabled = false;
+
+        if (data.message) {
+            errorDiv.style.display = 'block';
+            document.getElementById('aiErrorMsg').textContent = data.message;
+            return;
+        }
+
+        results.style.display = 'block';
+        var mockBadge = document.getElementById('aiMockBadge');
+        mockBadge.style.display = data.isMock ? 'block' : 'none';
+
+        var list = document.getElementById('aiQuestionList');
+        list.innerHTML = '';
+        if (data.questions) {
+            data.questions.forEach(function(q) {
+                var li = document.createElement('li');
+                li.style.marginBottom = '6px';
+                li.textContent = q.generatedQuestion || q;
+                list.appendChild(li);
+            });
+        }
+    })
+    .catch(function(err) {
+        loading.style.display = 'none';
+        btn.disabled = false;
+        errorDiv.style.display = 'block';
+        document.getElementById('aiErrorMsg').textContent = 'Failed to connect: ' + err.message;
+    });
+}
+</script>
     </div>
 </div>
 

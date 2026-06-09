@@ -1,6 +1,7 @@
 package com.lucy.lms.controller;
 
 import com.lucy.lms.repository.AiGeneratedQuestionRepository;
+import com.lucy.lms.repository.LessonRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,14 +12,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class AiGeneratedQuestionWebController {
 
     private final AiGeneratedQuestionRepository questionRepository;
+    private final LessonRepository lessonRepository;
 
-    public AiGeneratedQuestionWebController(AiGeneratedQuestionRepository questionRepository) {
+    public AiGeneratedQuestionWebController(AiGeneratedQuestionRepository questionRepository,
+                                            LessonRepository lessonRepository) {
         this.questionRepository = questionRepository;
+        this.lessonRepository = lessonRepository;
     }
 
     @GetMapping("/ai-generated-questions")
     public String questions(Model model) {
         model.addAttribute("questions", questionRepository.findAll());
+        model.addAttribute("allLessons", lessonRepository.findAll());
         return "ai-generated-questions";
     }
 

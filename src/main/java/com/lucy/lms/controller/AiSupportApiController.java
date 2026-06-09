@@ -61,7 +61,14 @@ public class AiSupportApiController {
             }
         }
 
-        List<String> questions = generateQuestions(lesson, promptType, promptInstruction);
+        List<String> questions;
+        try {
+            questions = generateQuestions(lesson, promptType, promptInstruction);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", "AI Error: " + e.getMessage());
+            return error;
+        }
 
         List<AiGeneratedQuestion> savedQuestions = new ArrayList<>();
 
@@ -99,14 +106,14 @@ public class AiSupportApiController {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private List<String> generateQuestions(Lesson lesson, String promptType, String promptInstruction) {
+    private List<String> generateQuestions(Lesson lesson, String promptType, String promptInstruction) throws Exception {
         if (geminiApiKey == null || geminiApiKey.trim().isEmpty()) {
             return generateMockQuestions(lesson, promptType);
         }
 
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
+            String url = "https://openrouter.ai/api/v1/chat/completions";
 
             String systemPrompt = "You are an English teacher assistant. Generate exactly 3 questions or conversation starters based on the topic. Return ONLY the questions, each on a new line. Do NOT include numbers, bullet points, or intro text.\n";
             String userPrompt = "Topic: " + lesson.getTitle() + "\n";
@@ -119,27 +126,32 @@ public class AiSupportApiController {
                 userPrompt += "Task: Generate 3 '" + promptType + "' questions.";
             }
 
-            Map<String, Object> textPart = new HashMap<>();
-            textPart.put("text", systemPrompt + userPrompt);
-            Map<String, Object> partMap = new HashMap<>();
-            partMap.put("parts", Arrays.asList(textPart));
+            Map<String, Object> messageObj = new HashMap<>();
+            messageObj.put("role", "user");
+            messageObj.put("content", systemPrompt + userPrompt + "\n[Random Seed for variance: " + UUID.randomUUID().toString() + "]");
+            
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("contents", Arrays.asList(partMap));
+            requestBody.put("model", "google/gemma-4-31b-it:free"); // Sử dụng bản free của OpenRouter (Gemma 4)
+            requestBody.put("messages", Arrays.asList(messageObj));
+            requestBody.put("temperature", 1.2);
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + geminiApiKey);
+            headers.set("HTTP-Referer", "http://localhost:8081"); // Required by OpenRouter
+            headers.set("X-Title", "LUCY LMS"); // Required by OpenRouter
+
             org.springframework.http.HttpEntity<Map<String, Object>> entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
 
             org.springframework.http.ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
             Map<String, Object> responseBody = response.getBody();
 
-            if (responseBody != null && responseBody.containsKey("candidates")) {
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                    if (!parts.isEmpty()) {
-                        String text = (String) parts.get(0).get("text");
+            if (responseBody != null && responseBody.containsKey("choices")) {
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> msg = (Map<String, Object>) choices.get(0).get("message");
+                    if (msg != null && msg.containsKey("content")) {
+                        String text = (String) msg.get("content");
                         return Arrays.asList(text.split("\\r?\\n")).stream()
                                 .map(String::trim)
                                 .filter(s -> !s.isEmpty())
@@ -153,10 +165,10 @@ public class AiSupportApiController {
             return generateMockQuestions(lesson, promptType);
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             System.err.println("Gemini HTTP Error: " + e.getResponseBodyAsString());
-            return generateMockQuestions(lesson, promptType);
+            throw new Exception("Lỗi từ máy chủ Google: " + e.getResponseBodyAsString());
         } catch (RuntimeException e) {
             System.err.println("Gemini API Error: " + e.getMessage());
-            return generateMockQuestions(lesson, promptType);
+            throw new Exception("Lỗi kết nối: " + e.getMessage());
         }
     }
 
