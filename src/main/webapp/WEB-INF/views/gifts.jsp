@@ -58,14 +58,14 @@
         <table class="table mb-0">
             <thead><tr><th>Gift</th><th>Sender</th><th>Receiver</th><th>Room</th><th>Credits</th><th>Date</th></tr></thead>
             <tbody>
-                <c:forEach var="gt" items="${giftTransactions}">
+                <c:forEach var="txn" items="${giftTransactions}">
                     <tr>
-                        <td>${gt.gift.icon} ${gt.gift.name}</td>
-                        <td><c:if test="${gt.sender != null}">${gt.sender.displayName}</c:if></td>
-                        <td><c:if test="${gt.receiver != null}">${gt.receiver.displayName}</c:if></td>
-                        <td><c:if test="${gt.room != null}">${gt.room.title}</c:if></td>
-                        <td><strong>${gt.creditAmount}</strong></td>
-                        <td style="font-size: 12px;">${gt.createdAt}</td>
+                        <td>${txn.gift.icon} ${txn.gift.name}</td>
+                        <td><c:if test="${txn.sender != null}">${txn.sender.displayName}</c:if></td>
+                        <td><c:if test="${txn.receiver != null}">${txn.receiver.displayName}</c:if></td>
+                        <td><c:if test="${txn.room != null}">${txn.room.title}</c:if></td>
+                        <td><strong>${txn.creditAmount}</strong></td>
+                        <td style="font-size: 12px;">${txn.createdAt}</td>
                     </tr>
                 </c:forEach>
             </tbody>

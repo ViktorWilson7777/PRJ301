@@ -23,6 +23,7 @@ public class RoomWebController {
     private final GiftRepository giftRepository;
     private final GiftTransactionRepository giftTransactionRepository;
     private final PodcastEpisodeRepository podcastEpisodeRepository;
+    private final JoinRequestRepository joinRequestRepository;
 
     public RoomWebController(RoomRepository roomRepository,
                              AppUserRepository userRepository,
@@ -33,7 +34,8 @@ public class RoomWebController {
                              PinnedMaterialRepository pinnedMaterialRepository,
                              GiftRepository giftRepository,
                              GiftTransactionRepository giftTransactionRepository,
-                             PodcastEpisodeRepository podcastEpisodeRepository) {
+                             PodcastEpisodeRepository podcastEpisodeRepository,
+                             JoinRequestRepository joinRequestRepository) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
@@ -44,6 +46,7 @@ public class RoomWebController {
         this.giftRepository = giftRepository;
         this.giftTransactionRepository = giftTransactionRepository;
         this.podcastEpisodeRepository = podcastEpisodeRepository;
+        this.joinRequestRepository = joinRequestRepository;
     }
 
     @GetMapping("/rooms")
@@ -124,6 +127,7 @@ public class RoomWebController {
         model.addAttribute("users", userRepository.findAll());
         model.addAttribute("lessons", lessonRepository.findAll());
         model.addAttribute("gifts", giftRepository.findByActiveTrue());
+        model.addAttribute("pendingRequests", joinRequestRepository.findByRoomIdAndStatus(id, "PENDING"));
         return "room-detail";
     }
 

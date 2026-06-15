@@ -24,9 +24,10 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Secrets
+# Secrets — never commit real credentials
 .env
 application-local.properties
+src/main/resources/application.properties
 
 # Uploaded files
 uploads/
