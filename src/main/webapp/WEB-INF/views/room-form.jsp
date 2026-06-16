@@ -47,19 +47,10 @@
 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <label class="form-label">Host User</label>
-                        <select name="hostUserId" class="form-select">
-                            <option value="">— Select Host —</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}" <c:if test="${room.hostUser != null && room.hostUser.id == u.id}">selected</c:if>>${u.displayName} (${u.role})</option>
-                            </c:forEach>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
                         <label class="form-label">Level #</label>
                         <input type="number" name="levelNumber" class="form-control" value="${room.levelNumber}" min="1" />
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <label class="form-label">Max Participants</label>
                         <input type="number" name="maxParticipants" class="form-control" value="${room.maxParticipants != null ? room.maxParticipants : 20}" min="1" />
                     </div>

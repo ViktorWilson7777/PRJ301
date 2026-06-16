@@ -1,667 +1,750 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+    <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
+        <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
-<layout:main pageTitle="Room: ${room.title}">
+            <layout:room pageTitle="${room.title}">
 
-<div class="mock-banner">
-    <i class="bi bi-info-circle"></i>
-    <span><strong>Mock Room:</strong> This simulates a LUCY live audio room. No real-time audio. State changes via form submissions.</span>
-</div>
-
-<!-- Room Header -->
-<div class="stat-card mb-4">
-    <div class="d-flex align-items-start justify-content-between">
-        <div>
-            <h5 style="font-weight: 600; margin-bottom: 8px;">${room.title}</h5>
-            <div class="d-flex gap-2 flex-wrap mb-2">
-                <span class="badge-status badge-purple">${room.languageCode}</span>
-                <c:choose>
-                    <c:when test="${room.status == 'LIVE'}"><span class="badge-status badge-success"><i class="bi bi-broadcast me-1"></i>Live</span></c:when>
-                    <c:when test="${room.status == 'SCHEDULED'}"><span class="badge-status badge-warning">Scheduled</span></c:when>
-                    <c:when test="${room.status == 'ENDED'}"><span class="badge-status badge-gray">Ended</span></c:when>
-                </c:choose>
-                <c:choose>
-                    <c:when test="${room.roomType == 'PUBLIC'}"><span class="badge-status badge-info">Public</span></c:when>
-                    <c:when test="${room.roomType == 'PRO_CLASS'}"><span class="badge-status badge-purple">Pro Class</span></c:when>
-                    <c:when test="${room.roomType == 'PREMIUM'}"><span class="badge-status badge-pink">Premium</span></c:when>
-                </c:choose>
-            </div>
-            <p class="text-muted mb-0" style="font-size: 13px;">
-                <c:if test="${room.hostUser != null}"><i class="bi bi-person-fill me-1"></i>Host: <strong>${room.hostUser.displayName}</strong> &nbsp;</c:if>
-                <c:if test="${room.course != null}"><i class="bi bi-book me-1"></i>Course: ${room.course.title} &nbsp;</c:if>
-                <c:if test="${room.chapter != null}"><i class="bi bi-layers me-1"></i>Chapter: ${room.chapter.title}</c:if>
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <c:if test="${room.status != 'ENDED'}">
-                <a href="/rooms/${room.id}/end" class="btn btn-outline-danger btn-sm" style="border-radius: 8px;" onclick="return confirm('End this room?')">
-                    <i class="bi bi-stop-fill me-1"></i> End Room
-                </a>
-            </c:if>
-        </div>
-    </div>
-    <c:if test="${room.description != null}">
-        <p class="mt-2 mb-0" style="font-size: 13px; color: #6B7280;">${room.description}</p>
-    </c:if>
-</div>
-
-<!-- Active Stage & Recording Controls (Agora & Stage Transition Simulation) -->
-<c:if test="${room.status == 'LIVE'}">
-    <div class="stat-card mb-4" style="border-left: 4px solid var(--lucy-primary); background: #fff;">
-        <div class="row align-items-center">
-            <div class="col-md-7">
-                <h6 style="font-weight: 700; color: var(--lucy-primary); margin-bottom: 8px;">
-                    <i class="bi bi-broadcast me-1"></i> Current Lesson (Active Stage)
-                </h6>
-                <c:choose>
-                    <c:when test="${room.currentLesson != null}">
-                        <h5 style="font-weight: 600; margin-bottom: 6px; color: #1A1A2E;">
-                            <span class="badge-status badge-purple me-1" style="font-size: 11px; text-transform: uppercase;">${room.currentLesson.type}</span> 
-                            ${room.currentLesson.title}
-                        </h5>
-                        <p class="text-muted mb-0" style="font-size: 13px;">${room.currentLesson.description}</p>
-                        <c:if test="${room.stageStartedAt != null}">
-                            <small class="text-muted d-block mt-2">
-                                <i class="bi bi-clock-history me-1"></i> Stage started at: <strong>${room.stageStartedAt}</strong> (Auto-switches every 10 mins)
-                            </small>
-                        </c:if>
-                    </c:when>
-                    <c:otherwise>
-                        <p class="text-muted mb-0" style="font-size: 13px;">No active topic selected. Add/select a course chapter to initialize topics.</p>
-                    </c:otherwise>
-                </c:choose>
-            </div>
-            <div class="col-md-5 text-md-end mt-3 mt-md-0">
-                <div class="d-flex gap-2 justify-content-md-end flex-wrap">
-                    <!-- Next Stage / Topic Skip -->
-                    <a href="/rooms/${room.id}/next-stage" class="btn btn-outline-lucy btn-sm" style="border-radius: 8px;">
-                        <i class="bi bi-chevron-double-right me-1"></i> Next Topic
-                    </a>
-                    
-                    <!-- Recording Control -->
-                    <c:choose>
-                        <c:when test="${room.isRecording}">
-                            <a href="/rooms/${room.id}/toggle-recording" class="btn btn-danger btn-sm" style="border-radius: 8px; background: var(--lucy-danger); border: none;">
-                                <span class="spinner-grow spinner-grow-sm me-1" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span>
-                                🔴 Recording (Stop & Save)
-                            </a>
-                        </c:when>
-                        <c:otherwise>
-                            <a href="/rooms/${room.id}/toggle-recording" class="btn btn-outline-danger btn-sm" style="border-radius: 8px; border-color: var(--lucy-danger); color: var(--lucy-danger);">
-                                <i class="bi bi-record-circle me-1"></i> Start Recording
-                            </a>
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-                
-                <!-- Agora Audio Integration UI -->
-                <div class="mt-3 p-3" style="background: #F8F9FB; border-radius: 8px; border: 1px dashed #CBD5E1;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span style="font-size: 12px; font-weight: 600; color: #475569;"><i class="bi bi-headset me-1"></i> Real-time Audio (Agora)</span>
-                        <span id="audioStatus" class="badge-status badge-gray" style="font-size: 10px;">Disconnected</span>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button id="btnConnectAudio" class="btn btn-sm btn-outline-success w-100" style="font-size: 12px;">
-                            <i class="bi bi-telephone-fill me-1"></i> Connect Audio
-                        </button>
-                        <button id="btnDisconnectAudio" class="btn btn-sm btn-outline-danger w-100" style="font-size: 12px; display: none;">
-                            <i class="bi bi-telephone-x-fill me-1"></i> Disconnect
-                        </button>
-                    </div>
-                    <div id="audioError" class="mt-2 text-danger" style="font-size: 11px; display: none;"></div>
-                    <div class="mt-2 text-muted" style="font-size: 10px;">
-                        Channel: <code>lucy_room_${room.id}</code> | Token API: <a href="/api/agora/token?channelName=lucy_room_${room.id}&uid=1" target="_blank">Mock</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</c:if>
-
-<div class="row g-4">
-    <!-- Left Column: Participants -->
-    <div class="col-lg-7">
-        <!-- HOST: Pending Join Request Notification Panel -->
-        <c:if test="${room.status == 'LIVE'}">
-            <div id="joinRequestPanel" class="stat-card mb-4" data-room-id="${room.id}" style="border-left: 4px solid #F59E0B; background: #FFFBEB;" ${empty pendingRequests ? 'hidden' : ''}>
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h6 style="font-weight: 700; color: #D97706; margin: 0;">
-                        <i class="bi bi-person-plus-fill me-1"></i>
-                        Join Requests
-                        <span id="joinRequestBadge" class="ms-2" style="background: #EF4444; color: white; border-radius: 50%; padding: 2px 7px; font-size: 12px;">
-                            ${pendingRequests.size()}
-                        </span>
-                    </h6>
-                    <small class="text-muted" style="font-size: 11px;">Auto-refreshes every 5s</small>
-                </div>
-                <div id="joinRequestList">
-                    <c:forEach var="jr" items="${pendingRequests}">
-                        <div id="jr-row-${jr.id}" class="d-flex align-items-center justify-content-between p-2 mb-2" style="background: white; border-radius: 8px; border: 1px solid #FDE68A;">
-                            <div>
-                                <strong style="font-size: 13px;">${jr.displayName}</strong>
-                                <span class="ms-2 badge-status badge-gray" style="font-size: 10px;">${jr.roleRequested}</span>
-                                <br><small class="text-muted" style="font-size: 11px;"><i class="bi bi-clock me-1"></i>${jr.requestedAt}</small>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm" style="background: #059669; color: white; border-radius: 6px; font-size: 12px; border: none;"
-                                        data-action="approve" data-request-id="${jr.id}" onclick="handleJoinRequest(this)">
-                                    <i class="bi bi-check-lg me-1"></i>Accept
-                                </button>
-                                <button class="btn btn-sm" style="background: #DC2626; color: white; border-radius: 6px; font-size: 12px; border: none;"
-                                        data-action="deny" data-request-id="${jr.id}" onclick="handleJoinRequest(this)">
-                                    <i class="bi bi-x-lg me-1"></i>Deny
-                                </button>
-                            </div>
-                        </div>
-                    </c:forEach>
-                </div>
-            </div>
-        </c:if>
-
-        <div class="stat-card mb-4">
-            <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-people-fill me-1"></i> Participants (${participants.size()})</h6>
-
-            <c:if test="${not empty participants}">
-                <div class="lucy-table mb-3">
-                    <table class="table mb-0">
-                        <thead><tr><th>User</th><th>Role</th><th>Mic</th><th>Hand</th><th>Actions</th></tr></thead>
-                        <tbody>
-                            <c:forEach var="p" items="${participants}">
-                                <tr>
-                                    <td>
-                                        <strong>${p.displayName}</strong>
-                                        <c:if test="${p.user != null}"><br><small class="text-muted">${p.user.fullName}</small></c:if>
-                                    </td>
-                                    <td>
-                                        <c:choose>
-                                            <c:when test="${p.roleInRoom == 'HOST'}"><span class="badge-status badge-danger">Host</span></c:when>
-                                            <c:when test="${p.roleInRoom == 'MODERATOR'}"><span class="badge-status badge-warning">Mod</span></c:when>
-                                            <c:when test="${p.roleInRoom == 'SPEAKER'}"><span class="badge-status badge-success">Speaker</span></c:when>
-                                            <c:otherwise><span class="badge-status badge-gray">Listener</span></c:otherwise>
-                                        </c:choose>
-                                    </td>
-                                    <td>
-                                        <a href="/rooms/${room.id}/toggle-mic/${p.id}" style="text-decoration: none; font-size: 18px;">
-                                            <c:choose>
-                                                <c:when test="${p.micOn}"><i class="bi bi-mic-fill" style="color: #059669;"></i></c:when>
-                                                <c:otherwise><i class="bi bi-mic-mute-fill" style="color: #DC2626;"></i></c:otherwise>
-                                            </c:choose>
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <a href="/rooms/${room.id}/toggle-hand/${p.id}" style="text-decoration: none; font-size: 18px;">
-                                            <c:choose>
-                                                <c:when test="${p.handRaised}"><span style="color: #D97706;">✋</span></c:when>
-                                                <c:otherwise><span style="color: #D1D5DB;">✋</span></c:otherwise>
-                                            </c:choose>
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <button class="btn-action delete" onclick="confirmDelete('/rooms/${room.id}/remove-participant/${p.id}')"><i class="bi bi-x-lg"></i></button>
-                                    </td>
-                                </tr>
-                            </c:forEach>
-                        </tbody>
-                    </table>
-                </div>
-            </c:if>
-
-            <!-- Add Participant Form (Admin/Host direct add) -->
-            <details class="mt-3" style="border-top: 1px solid #F1F5F9; padding-top: 12px;">
-                <summary style="font-size: 12px; color: #6B7280; cursor: pointer; user-select: none;"><i class="bi bi-person-plus me-1"></i> Direct Add (Admin override)</summary>
-                <form method="post" action="/rooms/${room.id}/add-participant" class="d-flex gap-2 align-items-end mt-2">
-                    <div style="flex: 1;">
-                        <label class="form-label" style="font-size: 12px;">User</label>
-                        <select name="userId" class="form-select form-select-sm" required>
-                            <option value="">— Select —</option>
-                            <c:forEach var="u" items="${users}">
-                                <option value="${u.id}">${u.displayName} (${u.role})</option>
-                            </c:forEach>
-                        </select>
-                    </div>
-                    <div style="width: 130px;">
-                        <label class="form-label" style="font-size: 12px;">Role</label>
-                        <select name="roleInRoom" class="form-select form-select-sm">
-                            <option value="LISTENER">Listener</option>
-                            <option value="SPEAKER">Speaker</option>
-                            <option value="MODERATOR">Moderator</option>
-                            <option value="HOST">Host</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-lucy btn-sm"><i class="bi bi-plus-lg"></i> Add</button>
-                </form>
-            </details>
-
-            <!-- VISITOR: Request to Join Panel -->
-            <c:if test="${room.status == 'LIVE'}">
-                <div class="mt-3" style="border-top: 1px solid #F1F5F9; padding-top: 12px;">
-                    <h6 style="font-size: 13px; font-weight: 600; color: #6B7280;"><i class="bi bi-hand-index me-1"></i> Request to Join (Visitor Simulation)</h6>
-                    <div class="d-flex gap-2 align-items-end">
-                        <div style="flex: 1;">
-                            <label class="form-label" style="font-size: 12px;">As User</label>
-                            <select id="reqUserId" class="form-select form-select-sm">
-                                <option value="">— Select User —</option>
-                                <c:forEach var="u" items="${users}">
-                                    <option value="${u.id}">${u.displayName}</option>
-                                </c:forEach>
-                            </select>
-                        </div>
-                        <div style="width: 120px;">
-                            <label class="form-label" style="font-size: 12px;">Role</label>
-                            <select id="reqRole" class="form-select form-select-sm">
-                                <option value="LISTENER">Listener</option>
-                                <option value="SPEAKER">Speaker</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-sm" style="background: var(--lucy-primary); color: white; border-radius: 8px; border: none;" onclick="sendJoinRequest()">
-                            <i class="bi bi-person-plus me-1"></i>Request
-                        </button>
-                    </div>
-                    <div id="joinReqStatus" class="mt-2" style="display: none; font-size: 12px;"></div>
-                </div>
-            </c:if>
-        </div>
-
-        <!-- Gift Transactions in Room -->
-        <c:if test="${not empty giftTransactions}">
-            <div class="stat-card">
-                <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-gift me-1"></i> Gift History</h6>
-                <div class="lucy-table">
-                    <table class="table mb-0">
-                        <thead><tr><th>Gift</th><th>Sender</th><th>Receiver</th><th>Credits</th></tr></thead>
-                        <tbody>
-                            <c:forEach var="txn" items="${giftTransactions}">
-                                <tr>
-                                    <td>${txn.gift.icon} ${txn.gift.name}</td>
-                                    <td>${txn.sender.displayName}</td>
-                                    <td>${txn.receiver.displayName}</td>
-                                    <td><strong>${txn.creditAmount}</strong></td>
-                                </tr>
-                            </c:forEach>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </c:if>
-    </div>
-
-    <!-- Right Column: Pinned Materials, Send Gift -->
-    <div class="col-lg-5">
-        <!-- Pinned Materials -->
-        <div class="stat-card mb-4">
-            <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-pin-angle me-1"></i> Pinned Materials</h6>
-
-            <c:if test="${not empty pinnedMaterials}">
-                <c:forEach var="pm" items="${pinnedMaterials}">
-                    <div style="background: #F8F9FB; border-radius: 8px; padding: 12px; margin-bottom: 8px; position: relative;">
-                        <strong style="font-size: 13px;">${pm.title}</strong>
-                        <a href="/rooms/${room.id}/unpin/${pm.id}" style="position: absolute; top: 8px; right: 8px; color: #DC2626;" title="Unpin"><i class="bi bi-x-lg"></i></a>
-                        <p style="font-size: 12px; color: #6B7280; margin: 4px 0 0; max-height: 60px; overflow: hidden;">${pm.content}</p>
-                    </div>
-                </c:forEach>
-            </c:if>
-
-            <form method="post" action="/rooms/${room.id}/pin-material" class="mt-3">
-                <div class="mb-2">
-                    <select name="lessonId" class="form-select form-select-sm" required>
-                        <option value="">— Select Lesson to Pin —</option>
-                        <c:forEach var="l" items="${lessons}">
-                            <option value="${l.id}">[${l.type}] ${l.title}</option>
-                        </c:forEach>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <input type="text" name="pinTitle" class="form-control form-control-sm" placeholder="Custom title (optional)" />
-                </div>
-                <button type="submit" class="btn btn-outline-lucy btn-sm w-100"><i class="bi bi-pin me-1"></i> Pin Material</button>
-            </form>
-        </div>
-
-        <!-- Send Gift -->
-        <div class="stat-card mb-4">
-            <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-gift me-1"></i> Send Gift</h6>
-            <div class="mock-banner" style="margin-bottom: 12px;">
-                <i class="bi bi-info-circle"></i>
-                <span>Mock billing — no real charges</span>
-            </div>
-            <form method="post" action="/rooms/${room.id}/send-gift">
-                <div class="mb-2">
-                    <select name="senderId" class="form-select form-select-sm" required>
-                        <option value="">— Sender —</option>
-                        <c:forEach var="u" items="${users}">
-                            <option value="${u.id}">${u.displayName} (${u.creditBalance} credits)</option>
-                        </c:forEach>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <select name="receiverId" class="form-select form-select-sm" required>
-                        <option value="">— Receiver —</option>
-                        <c:forEach var="u" items="${users}">
-                            <option value="${u.id}">${u.displayName}</option>
-                        </c:forEach>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <select name="giftId" class="form-select form-select-sm" required>
-                        <option value="">— Gift —</option>
-                        <c:forEach var="g" items="${gifts}">
-                            <option value="${g.id}">${g.icon} ${g.name} (${g.creditCost} credits)</option>
-                        </c:forEach>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-lucy btn-sm w-100"><i class="bi bi-send me-1"></i> Send Gift</button>
-            </form>
-        </div>
-
-        <!-- AI Questions -->
-        <div class="stat-card">
-            <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-cpu me-1"></i> AI Question Generator</h6>
-            
-            <div class="mb-3">
-                <label class="form-label" style="font-size: 12px;">Select Lesson</label>
-                <select id="aiLessonId" class="form-select form-select-sm">
-                    <option value="">— Select a Lesson —</option>
-                    <c:forEach var="l" items="${lessons}">
-                        <option value="${l.id}" <c:if test="${room.currentLesson != null and room.currentLesson.id == l.id}">selected</c:if>>[${l.type}] ${l.title}</option>
-                    </c:forEach>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label" style="font-size: 12px;">Prompt Type</label>
-                <select id="aiPromptType" class="form-select form-select-sm">
-                    <option value="discussion">Discussion</option>
-                    <option value="warmup">Warmup</option>
-                    <option value="ice_breaker">Ice Breaker</option>
-                    <option value="practice">Practice</option>
-                    <option value="wrapup">Wrap Up</option>
-                </select>
-            </div>
-            <button id="btnGenerateAi" class="btn btn-lucy btn-sm w-100" onclick="generateAiQuestions()">
-                <i class="bi bi-stars me-1"></i> Generate AI Questions
-            </button>
-
-            <!-- Loading indicator -->
-            <div id="aiLoading" class="text-center mt-3" style="display: none;">
-                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                <span style="font-size: 13px; margin-left: 8px;">Generating questions with AI...</span>
-            </div>
-
-            <!-- Results -->
-            <div id="aiResults" class="mt-3" style="display: none;">
-                <h6 style="font-size: 13px; font-weight: 600; color: #059669;"><i class="bi bi-check-circle me-1"></i> Generated Questions</h6>
-                <div id="aiMockBadge" class="mb-2" style="display: none;">
-                    <span class="badge-status badge-warning" style="font-size: 11px;">Mock Mode (no API key)</span>
-                </div>
-                <ul id="aiQuestionList" style="padding-left: 18px; font-size: 13px;"></ul>
-            </div>
-
-            <!-- Error -->
-            <div id="aiError" class="mt-3" style="display: none;">
-                <div class="text-danger" style="font-size: 13px;"><i class="bi bi-exclamation-triangle me-1"></i> <span id="aiErrorMsg"></span></div>
-            </div>
-        </div>
-
-<script>
-function generateAiQuestions() {
-    var lessonId = document.getElementById('aiLessonId').value;
-    var promptType = document.getElementById('aiPromptType').value;
-
-    if (!lessonId) {
-        alert('Please select a lesson first!');
-        return;
-    }
-
-    var btn = document.getElementById('btnGenerateAi');
-    var loading = document.getElementById('aiLoading');
-    var results = document.getElementById('aiResults');
-    var errorDiv = document.getElementById('aiError');
-
-    btn.disabled = true;
-    loading.style.display = 'block';
-    results.style.display = 'none';
-    errorDiv.style.display = 'none';
-
-    fetch('/api/ai/suggest-questions?lessonId=' + lessonId + '&promptType=' + promptType, {
-        method: 'POST'
-    })
-    .then(function(response) { return response.json(); })
-    .then(function(data) {
-        loading.style.display = 'none';
-        btn.disabled = false;
-
-        if (data.message) {
-            errorDiv.style.display = 'block';
-            document.getElementById('aiErrorMsg').textContent = data.message;
-            return;
-        }
-
-        results.style.display = 'block';
-        var mockBadge = document.getElementById('aiMockBadge');
-        mockBadge.style.display = data.isMock ? 'block' : 'none';
-
-        var list = document.getElementById('aiQuestionList');
-        list.innerHTML = '';
-        if (data.questions) {
-            data.questions.forEach(function(q) {
-                var li = document.createElement('li');
-                li.style.marginBottom = '6px';
-                li.textContent = q.generatedQuestion || q;
-                list.appendChild(li);
-            });
-        }
-    })
-    .catch(function(err) {
-        loading.style.display = 'none';
-        btn.disabled = false;
-        errorDiv.style.display = 'block';
-        document.getElementById('aiErrorMsg').textContent = 'Failed to connect: ' + err.message;
-    });
-}
-</script>
-
-<script>
-// ============================================================
-// JOIN REQUEST: Send + Handle Accept/Deny
-// ============================================================
-
-function sendJoinRequest() {
-    var panel = document.getElementById('joinRequestPanel');
-    var roomId = panel ? parseInt(panel.dataset.roomId) : 0;
-    var userId = document.getElementById('reqUserId').value;
-    var role = document.getElementById('reqRole').value;
-    var statusDiv = document.getElementById('joinReqStatus');
-
-    if (!userId) {
-        alert('Please select a user to simulate the join request.');
-        return;
-    }
-    if (!roomId) {
-        alert('Room ID not found.');
-        return;
-    }
-
-    statusDiv.style.display = 'block';
-    statusDiv.style.color = '#6B7280';
-    statusDiv.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Sending join request...';
-
-    fetch('/api/rooms/' + roomId + '/request-join?userId=' + userId + '&roleRequested=' + role, { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.error) {
-                statusDiv.style.color = '#DC2626';
-                statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' + data.error;
-            } else {
-                statusDiv.style.color = '#059669';
-                statusDiv.innerHTML = '<i class="bi bi-check-circle me-1"></i>Join request sent! Waiting for host approval...';
-            }
-        })
-        .catch(function(e) {
-            statusDiv.style.color = '#DC2626';
-            statusDiv.innerHTML = '<i class="bi bi-x-circle me-1"></i>Error: ' + e.message;
-        });
-}
-
-function handleJoinRequest(btn) {
-    var panel = document.getElementById('joinRequestPanel');
-    var roomId = panel ? parseInt(panel.dataset.roomId) : 0;
-    var requestId = parseInt(btn.dataset.requestId);
-    var action = btn.dataset.action;
-    var url = '/api/rooms/' + roomId + '/' + (action === 'approve' ? 'approve-join' : 'deny-join') + '/' + requestId;
-    fetch(url, { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var row = document.getElementById('jr-row-' + requestId);
-            if (row) {
-                row.style.transition = 'opacity 0.3s';
-                row.style.opacity = '0';
-                setTimeout(function() { row.remove(); refreshJoinBadge(); }, 300);
-            }
-            if (action === 'approve') {
-                setTimeout(function() { window.location.reload(); }, 600);
-            }
-        })
-        .catch(function(e) { alert('Error: ' + e.message); });
-}
-
-function refreshJoinBadge() {
-    var list = document.getElementById('joinRequestList');
-    var panel = document.getElementById('joinRequestPanel');
-    var badge = document.getElementById('joinRequestBadge');
-    if (!list || !panel) return;
-    var rows = list.querySelectorAll('[id^="jr-row-"]');
-    badge.textContent = rows.length;
-    panel.style.display = rows.length > 0 ? 'block' : 'none';
-}
-
-// Poll for new join requests every 5 seconds (simulates real-time for host)
-var roomPollPanel = document.getElementById('joinRequestPanel');
-var ROOM_ID_FOR_POLL = roomPollPanel ? parseInt(roomPollPanel.dataset.roomId) : 0;
-
-if (ROOM_ID_FOR_POLL > 0) {
-    // Initialise display state
-    var _initPanel = document.getElementById('joinRequestPanel');
-    if (_initPanel) _initPanel.style.display = _initPanel.querySelectorAll('[id^="jr-row-"]').length > 0 ? 'block' : 'none';
-
-    setInterval(function() {
-        fetch('/api/rooms/' + ROOM_ID_FOR_POLL + '/pending-requests')
-            .then(function(r) { return r.json(); })
-            .then(function(requests) {
-                var panel = document.getElementById('joinRequestPanel');
-                var list = document.getElementById('joinRequestList');
-                var badge = document.getElementById('joinRequestBadge');
-                if (!panel || !list || !badge) return;
-
-                panel.style.display = requests.length > 0 ? 'block' : 'none';
-                badge.textContent = requests.length;
-
-                requests.forEach(function(jr) {
-                    if (!document.getElementById('jr-row-' + jr.requestId)) {
-                        var html = '<div id="jr-row-' + jr.requestId + '" class="d-flex align-items-center justify-content-between p-2 mb-2" style="background: white; border-radius: 8px; border: 1px solid #FDE68A;">' +
-                            '<div>' +
-                            '  <strong style="font-size: 13px;">' + jr.displayName + '</strong>' +
-                            '  <span class="ms-2 badge-status badge-gray" style="font-size: 10px;">' + jr.roleRequested + '</span>' +
-                            '</div>' +
-                            '<div class="d-flex gap-2">' +
-                            '  <button class="btn btn-sm" style="background:#059669;color:white;border-radius:6px;font-size:12px;border:none;" data-action="approve" data-request-id="' + jr.requestId + '" onclick="handleJoinRequest(this)"><i class="bi bi-check-lg me-1"></i>Accept</button>' +
-                            '  <button class="btn btn-sm" style="background:#DC2626;color:white;border-radius:6px;font-size:12px;border:none;" data-action="deny" data-request-id="' + jr.requestId + '" onclick="handleJoinRequest(this)"><i class="bi bi-x-lg me-1"></i>Deny</button>' +
-                            '</div></div>';
-                        list.insertAdjacentHTML('beforeend', html);
+                <style>
+                    /* ── TIKTOK LIVE STYLE OVERRIDES ── */
+                    .stream-area {
+                        position: relative;
+                        background: radial-gradient(circle at center, #1E1B4B 0%, #0F0E17 100%);
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        overflow: hidden;
                     }
-                });
-            })
-            .catch(function() { /* silent poll error */ });
-    }, 5000);
-}
-</script>
 
-<!-- Agora Web SDK -->
-<script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
-<script>
-    // Agora Audio Integration Logic
-    var rtc = {
-        client: null,
-        localAudioTrack: null
-    };
-    var options = {
-        appId: "1adc56609faa4f95b208d10e17d60786", // TODO: Replace with real App ID
-        channel: "lucy_room_${room.id}",
-        uid: Math.floor(Math.random() * 10000), // Random UID for testing
-        token: null // Will be fetched from Node.js / Java API
-    };
+                    .chat-area {
+                        background: rgba(15, 14, 23, 0.95);
+                        border-left: 1px solid rgba(255, 255, 255, 0.08);
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        position: relative;
+                    }
 
-    document.getElementById('btnConnectAudio').onclick = async function() {
-        var btnConnect = document.getElementById('btnConnectAudio');
-        var btnDisconnect = document.getElementById('btnDisconnectAudio');
-        var statusBadge = document.getElementById('audioStatus');
-        var errorDiv = document.getElementById('audioError');
-        
-        errorDiv.style.display = 'none';
-        btnConnect.disabled = true;
-        btnConnect.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Connecting...';
+                    /* ── OVERLAYS TRÊN STREAM ── */
+                    .stream-header-overlay {
+                        position: absolute;
+                        top: 20px;
+                        left: 24px;
+                        right: 24px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        z-index: 10;
+                    }
 
-        try {
-            // 1. Fetch Token from API (Using our Mock API for now)
-            const response = await fetch('/api/agora/token?channelName=' + options.channel + '&uid=' + options.uid);
-            const data = await response.json();
-            // If the token is a mock token, we set it to null so Agora can use AppID-only testing mode (if enabled for this App ID)
-            options.token = (data.token && data.token.startsWith('006MOCK')) ? null : data.token; 
+                    .host-badge {
+                        background: rgba(0, 0, 0, 0.4);
+                        backdrop-filter: blur(8px);
+                        border-radius: 40px;
+                        padding: 6px 16px 6px 6px;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                    }
 
-            // 2. Initialize Agora Client
-            rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+                    .host-avatar-mini {
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #00CEC9, #6C5CE7);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 700;
+                        color: #fff;
+                        font-size: 16px;
+                    }
 
-            // 3. Add Event Listeners for remote users
-            rtc.client.on("user-published", async function(user, mediaType) {
-                await rtc.client.subscribe(user, mediaType);
-                console.log("Subscribed to remote user", user.uid);
-                if (mediaType === "audio") {
-                    user.audioTrack.play();
-                }
-            });
+                    .host-info {
+                        display: flex;
+                        flex-direction: column;
+                    }
 
-            // 4. Join Channel
-            // WARNING: If using the Mock Token, this line will throw an error. 
-            // In a real environment with Node.js token server, it will succeed.
-            await rtc.client.join(options.appId, options.channel, options.token, options.uid);
+                    .host-name {
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #fff;
+                        line-height: 1.2;
+                    }
 
-            // 5. Create and publish local audio track (Microphone)
-            rtc.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-            await rtc.client.publish([rtc.localAudioTrack]);
+                    .room-topic {
+                        font-size: 11px;
+                        color: #A29BFE;
+                        font-weight: 500;
+                    }
 
-            // Update UI
-            btnConnect.style.display = 'none';
-            btnDisconnect.style.display = 'block';
-            statusBadge.textContent = 'Connected';
-            statusBadge.className = 'badge-status badge-success';
-            console.log("Publish success!");
+                    .live-stats {
+                        display: flex;
+                        gap: 8px;
+                    }
 
-        } catch (error) {
-            console.error("Agora Connection Failed:", error);
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML = '<strong>Connection Failed:</strong> ' + error.message + '<br><small>Note: If using Mock Token, Agora will reject it. Use a real Node.js token server.</small>';
-            btnConnect.disabled = false;
-            btnConnect.innerHTML = '<i class="bi bi-telephone-fill me-1"></i> Connect Audio';
-        }
-    };
+                    .stat-pill {
+                        background: rgba(0, 0, 0, 0.4);
+                        backdrop-filter: blur(8px);
+                        padding: 6px 12px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #fff;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    }
 
-    document.getElementById('btnDisconnectAudio').onclick = async function() {
-        if (rtc.localAudioTrack) {
-            rtc.localAudioTrack.close();
-        }
-        if (rtc.client) {
-            await rtc.client.leave();
-        }
-        document.getElementById('btnConnectAudio').style.display = 'block';
-        document.getElementById('btnConnectAudio').disabled = false;
-        document.getElementById('btnConnectAudio').innerHTML = '<i class="bi bi-telephone-fill me-1"></i> Connect Audio';
-        document.getElementById('btnDisconnectAudio').style.display = 'none';
-        
-        var statusBadge = document.getElementById('audioStatus');
-        statusBadge.textContent = 'Disconnected';
-        statusBadge.className = 'badge-status badge-gray';
-    };
-</script>
-    </div>
-</div>
+                    .stat-pill.live {
+                        background: rgba(239, 68, 68, 0.8);
+                    }
 
-</layout:main>
+                    /* ── SÂN KHẤU (AVATARS) ── */
+                    .stage-container {
+                        position: relative;
+                        z-index: 5;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 40px;
+                    }
+
+                    .host-avatar-big {
+                        width: 160px;
+                        height: 160px;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #00CEC9, #6C5CE7);
+                        border: 4px solid #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 64px;
+                        font-weight: 700;
+                        color: #fff;
+                        position: relative;
+                        box-shadow: 0 0 40px rgba(108, 92, 231, 0.4);
+                        animation: pulse-avatar 2s infinite;
+                    }
+
+                    @keyframes pulse-avatar {
+                        0% {
+                            box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.6);
+                        }
+
+                        70% {
+                            box-shadow: 0 0 0 25px rgba(108, 92, 231, 0);
+                        }
+
+                        100% {
+                            box-shadow: 0 0 0 0 rgba(108, 92, 231, 0);
+                        }
+                    }
+
+                    .speaker-grid {
+                        display: flex;
+                        gap: 20px;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                    }
+
+                    .speaker-avatar {
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 50%;
+                        background: #2D2B47;
+                        border: 2px solid rgba(255, 255, 255, 0.2);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 28px;
+                        font-weight: 600;
+                        color: #fff;
+                        position: relative;
+                    }
+
+                    .mic-icon-stage {
+                        position: absolute;
+                        bottom: 0;
+                        right: 0;
+                        width: 24px;
+                        height: 24px;
+                        background: #10B981;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        color: #fff;
+                        border: 2px solid #0F0E17;
+                    }
+
+                    /* ── FLOATING ACTION BAR ── */
+                    .floating-action-bar {
+                        position: absolute;
+                        bottom: 30px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(0, 0, 0, 0.6);
+                        backdrop-filter: blur(12px);
+                        padding: 12px 24px;
+                        border-radius: 40px;
+                        display: flex;
+                        gap: 16px;
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        z-index: 10;
+                    }
+
+                    .fab-btn {
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 50%;
+                        background: rgba(255, 255, 255, 0.1);
+                        border: none;
+                        color: #fff;
+                        font-size: 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: 0.2s;
+                        position: relative;
+                    }
+
+                    .fab-btn:hover {
+                        background: rgba(255, 255, 255, 0.2);
+                        transform: scale(1.05);
+                    }
+
+                    .fab-btn.primary {
+                        background: linear-gradient(135deg, #FD79A8, #E84393);
+                    }
+
+                    .fab-btn.primary:hover {
+                        box-shadow: 0 0 15px rgba(232, 67, 147, 0.6);
+                    }
+
+                    /* ── CHAT SIDEBAR ── */
+                    .chat-messages {
+                        flex: 1;
+                        overflow-y: auto;
+                        padding: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        scrollbar-width: none;
+                    }
+
+                    .chat-messages::-webkit-scrollbar {
+                        display: none;
+                    }
+
+                    .chat-msg {
+                        font-size: 13px;
+                        color: #E2E8F0;
+                        line-height: 1.4;
+                        background: rgba(255, 255, 255, 0.03);
+                        padding: 8px 12px;
+                        border-radius: 12px;
+                        width: fit-content;
+                        max-width: 90%;
+                    }
+
+                    .chat-msg span.user {
+                        color: #A29BFE;
+                        font-weight: 600;
+                        margin-right: 6px;
+                    }
+
+                    .chat-msg.gift-alert {
+                        background: rgba(253, 121, 168, 0.15);
+                        border: 1px solid rgba(253, 121, 168, 0.3);
+                        color: #FFE4E6;
+                    }
+
+                    .chat-msg.system-alert {
+                        color: #00CEC9;
+                        font-style: italic;
+                        background: transparent;
+                        padding: 4px 0;
+                    }
+
+                    .chat-input-area {
+                        padding: 16px;
+                        border-top: 1px solid rgba(255, 255, 255, 0.08);
+                        display: flex;
+                        gap: 10px;
+                        background: rgba(15, 14, 23, 0.95);
+                    }
+
+                    .chat-input {
+                        flex: 1;
+                        background: rgba(255, 255, 255, 0.08);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        color: #fff;
+                        border-radius: 20px;
+                        padding: 8px 16px;
+                        font-size: 13px;
+                        outline: none;
+                    }
+
+                    .chat-input:focus {
+                        border-color: #6C5CE7;
+                    }
+
+                    .btn-send {
+                        background: #6C5CE7;
+                        color: #fff;
+                        border: none;
+                        width: 38px;
+                        height: 38px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    /* ── OFFCANVAS HOST TOOLS ── */
+                    .host-tools-panel {
+                        background: #1A1929;
+                        color: #E2E8F0;
+                        border-left: 1px solid rgba(255, 255, 255, 0.1);
+                    }
+
+                    .host-tools-panel .offcanvas-header {
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    }
+
+                    .tool-module {
+                        background: rgba(255, 255, 255, 0.03);
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        border-radius: 12px;
+                        padding: 16px;
+                        margin-bottom: 16px;
+                    }
+
+                    .tool-module h6 {
+                        font-size: 12px;
+                        color: #94A1B2;
+                        text-transform: uppercase;
+                        font-weight: 600;
+                        margin-bottom: 12px;
+                        letter-spacing: 0.5px;
+                    }
+
+                    .form-dark {
+                        background: rgba(0, 0, 0, 0.2);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        color: #fff;
+                        border-radius: 8px;
+                    }
+                </style>
+
+                <div class="row g-0 w-100 h-100">
+
+                    <!-- ========================================== -->
+                    <!-- LEFT: THE STREAM (Immersive Stage)         -->
+                    <!-- ========================================== -->
+                    <div class="col-xl-9 col-lg-8 stream-area">
+
+                        <!-- Stream Overlay Header -->
+                        <div class="stream-header-overlay">
+                            <div class="host-badge">
+                                <div class="host-avatar-mini">
+                                    ${room.hostUser != null ? room.hostUser.displayName.substring(0,1).toUpperCase() :
+                                    'H'}
+                                </div>
+                                <div class="host-info">
+                                    <span class="host-name">${room.hostUser != null ? room.hostUser.displayName :
+                                        'Unknown Host'}</span>
+                                    <span class="room-topic">${room.title}</span>
+                                </div>
+                                <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
+                                    style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
+                            </div>
+                            <div class="live-stats">
+                                <c:if test="${room.status == 'LIVE'}">
+                                    <div class="stat-pill live">
+                                        <div class="live-dot"
+                                            style="width:6px;height:6px;background:#fff;border-radius:50%;animation:pulse-red 1s infinite;">
+                                        </div> LIVE
+                                    </div>
+                                </c:if>
+                                <div class="stat-pill"><i class="bi bi-eye-fill"></i> <span id="eyeCount">${participants.size()}</span></div>
+                                <div class="stat-pill" style="background: rgba(108,92,231,0.8);"><i
+                                        class="bi bi-stars"></i> ${room.languageCode}</div>
+                            </div>
+                        </div>
+
+                        <!-- The Stage (Avatars) -->
+                        <div class="stage-container">
+                            <!-- Host -->
+                            <div class="d-flex flex-column align-items-center gap-3">
+                                <div class="host-avatar-big">
+                                    ${room.hostUser != null ? room.hostUser.displayName.substring(0,1).toUpperCase() :
+                                    'H'}
+                                    <div class="mic-icon-stage" style="width: 32px; height: 32px; font-size: 16px;"><i
+                                            class="bi bi-mic-fill"></i></div>
+                                </div>
+                                <div class="text-center">
+                                    <div style="font-size: 18px; font-weight: 700; color: #fff;">${room.hostUser != null
+                                        ? room.hostUser.displayName : 'Host'}</div>
+                                    <div style="font-size: 13px; color: #A29BFE; font-weight: 500;">Host</div>
+                                </div>
+                            </div>
+
+                            <!-- Speakers -->
+                            <div class="speaker-grid">
+                                <c:forEach var="p" items="${participants}">
+                                    <c:if test="${p.roleInRoom == 'SPEAKER' || p.roleInRoom == 'MODERATOR'}">
+                                        <div class="d-flex flex-column align-items-center gap-2">
+                                            <div class="speaker-avatar">
+                                                ${p.displayName.substring(0,1).toUpperCase()}
+                                                <div class="mic-icon-stage ${p.micOn ? '' : 'bg-danger'}">
+                                                    <i class="bi ${p.micOn ? 'bi-mic-fill' : 'bi-mic-mute-fill'}"></i>
+                                                </div>
+                                            </div>
+                                            <div style="font-size: 12px; color: #E2E8F0;">${p.displayName}</div>
+                                        </div>
+                                    </c:if>
+                                </c:forEach>
+                            </div>
+                        </div>
+
+                        <!-- Floating Action Bar -->
+                        <div class="floating-action-bar">
+                            <button id="btnConnectAudio" class="fab-btn" title="Connect Audio">
+                                <i class="bi bi-headset"></i>
+                            </button>
+                            <button id="btnDisconnectAudio" class="fab-btn" title="Disconnect"
+                                style="display:none; color: #EF4444;">
+                                <i class="bi bi-telephone-x"></i>
+                            </button>
+
+                            <!-- Send Gift triggers Modal -->
+                            <button class="fab-btn primary" title="Send Gift" data-bs-toggle="modal"
+                                data-bs-target="#giftModal">
+                                <i class="bi bi-gift-fill"></i>
+                            </button>
+
+                            <button id="btnRaiseHand" class="fab-btn" title="Request to Speak">
+                                ✋
+                            </button>
+
+                            <!-- Host Tools -->
+                            <c:if
+                                test="${sessionScope.currentUser.role == 'ADMIN' || (room.hostUser != null && room.hostUser.id == sessionScope.currentUser.id)}">
+                                <button class="fab-btn" title="Host Tools" data-bs-toggle="offcanvas"
+                                    data-bs-target="#hostToolsOffcanvas">
+                                    <i class="bi bi-sliders"></i>
+                                </button>
+                            </c:if>
+                        </div>
+
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- RIGHT: LIVE CHAT & ACTIVITY STREAM         -->
+                    <!-- ========================================== -->
+                    <div class="col-xl-3 col-lg-4 chat-area">
+
+                        <div class="p-3 border-bottom" style="border-color: rgba(255,255,255,0.08)!important;">
+                            <h6 class="m-0" style="color: #fff; font-weight: 600;"><i class="bi bi-chat-dots-fill me-1"
+                                    style="color: #6C5CE7;"></i> Live Chat</h6>
+                        </div>
+
+                        <!-- Chat Stream -->
+                        <div class="chat-messages" id="chatStream">
+                            <div class="chat-msg system-alert">Welcome to ${room.title}! Remember to be polite and
+                                respectful.</div>
+
+                            <c:forEach var="txn" items="${giftTransactions}">
+                                <div class="chat-msg gift-alert">
+                                    <span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}
+                                        ${txn.gift.icon}</strong> to ${txn.receiver.displayName}
+                                </div>
+                            </c:forEach>
+
+                            <!-- Mock Chat Messages -->
+                            <div class="chat-msg"><span class="user">Alex:</span> Hello everyone! 👋</div>
+                            <div class="chat-msg"><span class="user">Sarah:</span> Can't wait to practice speaking.
+                            </div>
+                            <div class="chat-msg"><span class="user">Mike:</span> Is the audio clear?</div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="chat-input-area">
+                            <input type="text" id="chatInput" class="chat-input" placeholder="Say something nice...">
+                            <button id="btnSendChat" class="btn-send"><i class="bi bi-send-fill"></i></button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- MODALS & OFFCANVAS (HOST TOOLS)            -->
+                <!-- ========================================== -->
+
+                <!-- Gift Modal -->
+                <div class="modal fade" id="giftModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                        <div class="modal-content"
+                            style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;">
+                            <div class="modal-header border-0 pb-0">
+                                <h6 class="modal-title text-white fw-bold">Send Gift 🎁</h6>
+                                <button type="button" class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form method="post" action="/rooms/${room.id}/send-gift">
+                                    <input type="hidden" name="senderId" value="${sessionScope.currentUser.id}">
+                                    <div class="mb-3">
+                                        <label class="form-label" style="font-size: 11px; color: #94A1B2;">To
+                                            User</label>
+                                        <select name="receiverId" class="form-select form-select-sm form-dark" required>
+                                            <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
+                                                <option value="${room.hostUser.id}">👑 ${room.hostUser.displayName} (Host)</option>
+                                            </c:if>
+                                            <c:forEach var="p" items="${participants}">
+                                                <c:if test="${sessionScope.currentUser.id != p.user.id}">
+                                                    <option value="${p.user.id}">${p.displayName}</option>
+                                                </c:if>
+                                            </c:forEach>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
+                                            Gift</label>
+                                        <select name="giftId" class="form-select form-select-sm form-dark" required>
+                                            <c:forEach var="g" items="${gifts}">
+                                                <option value="${g.id}">${g.icon} ${g.name} (${g.creditCost} cr)
+                                                </option>
+                                            </c:forEach>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn w-100"
+                                        style="background: linear-gradient(135deg, #FD79A8, #E84393); color: white; border-radius: 12px; font-weight: 600;">
+                                        Send 💖
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Host Tools Offcanvas -->
+                <c:if
+                    test="${sessionScope.currentUser.role == 'ADMIN' || (room.hostUser != null && room.hostUser.id == sessionScope.currentUser.id)}">
+                    <div class="offcanvas offcanvas-end host-tools-panel" tabindex="-1" id="hostToolsOffcanvas">
+                        <div class="offcanvas-header">
+                            <h5 class="offcanvas-title fw-bold"><i class="bi bi-sliders me-1"
+                                    style="color: #00CEC9;"></i> Host Tools</h5>
+                            <button type="button" class="btn-close btn-close-white"
+                                data-bs-dismiss="offcanvas"></button>
+                        </div>
+                        <div class="offcanvas-body">
+
+                            <!-- Room Control -->
+                            <div class="tool-module">
+                                <h6>Room Controls</h6>
+                                <a href="/rooms/${room.id}/end" class="btn w-100 btn-sm"
+                                    style="background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid #EF4444; border-radius: 8px;"
+                                    onclick="return confirm('End this live session?')">
+                                    <i class="bi bi-stop-fill me-1"></i> End Live Stream
+                                </a>
+                            </div>
+
+                            <!-- Add Participant -->
+                            <div class="tool-module">
+                                <h6>Direct Add User</h6>
+                                <form method="post" action="/rooms/${room.id}/add-participant"
+                                    class="d-flex flex-column gap-2">
+                                    <select name="userId" class="form-select form-select-sm form-dark" required>
+                                        <option value="">— Select User —</option>
+                                        <c:forEach var="u" items="${users}">
+                                            <option value="${u.id}">${u.displayName}</option>
+                                        </c:forEach>
+                                    </select>
+                                    <div class="d-flex gap-2">
+                                        <select name="roleInRoom" class="form-select form-select-sm form-dark">
+                                            <option value="LISTENER">Audience</option>
+                                            <option value="SPEAKER">Speaker</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm"
+                                            style="background: #6C5CE7; color: white; border-radius: 8px;">Add</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Pin Material -->
+                            <div class="tool-module">
+                                <h6>Pin Material to Stream</h6>
+                                <form method="post" action="/rooms/${room.id}/pin-material"
+                                    class="d-flex flex-column gap-2">
+                                    <select name="lessonId" class="form-select form-select-sm form-dark" required>
+                                        <option value="">— Select Lesson —</option>
+                                        <c:forEach var="l" items="${lessons}">
+                                            <option value="${l.id}">[${l.type}] ${l.title}</option>
+                                        </c:forEach>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm"
+                                        style="background: rgba(255,255,255,0.1); color: white; border-radius: 8px;">Pin</button>
+                                </form>
+                            </div>
+
+                            <!-- AI Assistant -->
+                            <div class="tool-module">
+                                <h6>AI Idea Generator</h6>
+                                <div class="d-flex flex-column gap-2">
+                                    <select id="aiLessonId" class="form-select form-select-sm form-dark">
+                                        <c:forEach var="l" items="${lessons}">
+                                            <option value="${l.id}">${l.title}</option>
+                                        </c:forEach>
+                                    </select>
+                                    <button class="btn btn-sm w-100"
+                                        style="background: rgba(0, 206, 201, 0.2); color: #00CEC9; border: 1px solid #00CEC9; border-radius: 8px;"
+                                        onclick="alert('AI Feature called!')">
+                                        Generate Topic Ideas <i class="bi bi-stars"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </c:if>
+
+                <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+                <script>
+                    var roomId = '${room.id}';
+                    var currentUser = '${sessionScope.currentUser != null ? sessionScope.currentUser.displayName : "Guest"}';
+                    
+                    var socket = new SockJS('/ws');
+                    var stompClient = Stomp.over(socket);
+                    stompClient.debug = null; // Tắt log nhảm của STOMP
+
+                    stompClient.connect({}, function (frame) {
+                        stompClient.subscribe('/topic/room/' + roomId, function (message) {
+                            var msg = JSON.parse(message.body);
+                            
+                            // Cập nhật mắt xem real-time
+                            if (msg.viewCount !== undefined) {
+                                document.getElementById('eyeCount').innerText = msg.viewCount;
+                            }
+
+                            var chatStream = document.getElementById('chatStream');
+
+                            // Xử lý Chat
+                            if (msg.type === 'CHAT') {
+                                var div = document.createElement('div');
+                                div.className = 'chat-msg';
+                                div.innerHTML = '<span class="user">' + msg.senderName + ':</span> ' + msg.content;
+                                chatStream.appendChild(div);
+                                chatStream.scrollTop = chatStream.scrollHeight;
+                            } 
+                            // Xử lý Giơ tay
+                            else if (msg.type === 'RAISE_HAND') {
+                                var div = document.createElement('div');
+                                div.className = 'chat-msg system-alert';
+                                div.innerHTML = '✋ <b>' + msg.senderName + '</b> wants to speak!';
+                                chatStream.appendChild(div);
+                                chatStream.scrollTop = chatStream.scrollHeight;
+                            }
+                            // Xử lý Follow
+                            else if (msg.type === 'FOLLOW') {
+                                var div = document.createElement('div');
+                                div.className = 'chat-msg gift-alert';
+                                div.innerHTML = '💖 <b>' + msg.senderName + '</b> followed the host!';
+                                chatStream.appendChild(div);
+                                chatStream.scrollTop = chatStream.scrollHeight;
+                            }
+                        });
+
+                        // Báo cho toàn server biết mình đã Join để tăng mắt xem
+                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'JOIN', senderName: currentUser }));
+                    });
+
+                    // Gửi Chat
+                    document.getElementById('btnSendChat').onclick = function() {
+                        var input = document.getElementById('chatInput');
+                        if (input.value.trim() !== '') {
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'CHAT', senderName: currentUser, content: input.value }));
+                            input.value = '';
+                        }
+                    };
+                    document.getElementById('chatInput').addEventListener('keypress', function (e) {
+                        if (e.key === 'Enter') document.getElementById('btnSendChat').click();
+                    });
+
+                    // Giơ tay
+                    document.getElementById('btnRaiseHand').onclick = function() {
+                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'RAISE_HAND', senderName: currentUser }));
+                        this.style.background = '#F59E0B'; // Đổi màu thành vàng báo hiệu đang giơ tay
+                        this.style.color = '#fff';
+                    };
+
+                    // Follow
+                    document.getElementById('btnFollow').onclick = function() {
+                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'FOLLOW', senderName: currentUser }));
+                        this.innerHTML = 'Following';
+                        this.className = 'btn btn-sm btn-light ms-2';
+                        this.disabled = true; // Bấm 1 lần thôi
+                    };
+
+                    // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
+                    window.addEventListener('beforeunload', function() {
+                        if (stompClient !== null) {
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'LEAVE', senderName: currentUser }));
+                            stompClient.disconnect();
+                        }
+                    });
+                </script>
+
+                <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+                <script>
+                    // Auto-scroll chat to bottom
+                    var chatStream = document.getElementById('chatStream');
+                    if (chatStream) chatStream.scrollTop = chatStream.scrollHeight;
+
+                    // Agora Mock Logic
+                    var rtc = { client: null, localAudioTrack: null };
+                    var options = { appId: "1adc56609faa4f95b208d10e17d60786", channel: "lucy_room_${room.id}", uid: Math.floor(Math.random() * 10000), token: null };
+
+                    document.getElementById('btnConnectAudio').onclick = async function () {
+                        var btnConnect = document.getElementById('btnConnectAudio');
+                        var btnDisconnect = document.getElementById('btnDisconnectAudio');
+                        btnConnect.disabled = true;
+
+                        try {
+                            const response = await fetch('/api/agora/token?channelName=' + options.channel + '&uid=' + options.uid);
+                            const data = await response.json();
+                            options.token = (data.token && data.token.startsWith('006MOCK')) ? null : data.token;
+
+                            rtc.client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+                            rtc.client.on("user-published", async function (user, mediaType) {
+                                await rtc.client.subscribe(user, mediaType);
+                                if (mediaType === "audio") user.audioTrack.play();
+                            });
+
+                            await rtc.client.join(options.appId, options.channel, options.token, options.uid);
+                            rtc.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                            await rtc.client.publish([rtc.localAudioTrack]);
+
+                            btnConnect.style.display = 'none'; btnDisconnect.style.display = 'block';
+                        } catch (error) {
+                            alert('Agora Connection Failed: ' + error.message);
+                            btnConnect.disabled = false;
+                        }
+                    };
+
+                    document.getElementById('btnDisconnectAudio').onclick = async function () {
+                        if (rtc.localAudioTrack) rtc.localAudioTrack.close();
+                        if (rtc.client) await rtc.client.leave();
+                        document.getElementById('btnConnectAudio').style.display = 'block';
+                        document.getElementById('btnConnectAudio').disabled = false;
+                        document.getElementById('btnDisconnectAudio').style.display = 'none';
+                    };
+                </script>
+
+            </layout:room>

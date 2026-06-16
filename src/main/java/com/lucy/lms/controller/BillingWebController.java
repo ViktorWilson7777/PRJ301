@@ -79,6 +79,46 @@ public class BillingWebController {
         return "redirect:/billing/plans";
     }
 
+    // ── Self-Service Top-Up ──
+
+    @GetMapping("/billing/topup")
+    public String topupPage(Model model, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        AppUser fresh = userRepository.findById(currentUser.getId()).orElse(currentUser);
+        model.addAttribute("user", fresh);
+        return "billing-topup";
+    }
+
+    @PostMapping("/billing/topup")
+    public String processTopup(
+            @RequestParam Long userId,
+            @RequestParam Double amount,
+            @RequestParam(required = false, defaultValue = "TOP_UP") String txType,
+            jakarta.servlet.http.HttpSession session) {
+
+        AppUser user = userRepository.findById(userId).orElse(null);
+        if (user == null) return "redirect:/billing/topup?error=user_not_found";
+        if (amount == null || amount <= 0) return "redirect:/billing/topup?error=invalid_amount";
+
+        user.setCreditBalance((user.getCreditBalance() != null ? user.getCreditBalance() : 0.0) + amount);
+        userRepository.save(user);
+
+        CreditTransaction tx = new CreditTransaction();
+        tx.setUser(user);
+        tx.setAmount(amount);
+        tx.setType(txType);
+        tx.setDescription("Self-service top-up of " + amount + " credits");
+        transactionRepository.save(tx);
+
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser != null && currentUser.getId().equals(userId)) {
+            session.setAttribute("currentUser", user);
+        }
+
+        return "redirect:/billing/topup?success=credits_added&amount=" + amount.intValue();
+    }
+
     // ── User Wallets ──
     @GetMapping("/billing/users")
     public String billingUsers(Model model) {

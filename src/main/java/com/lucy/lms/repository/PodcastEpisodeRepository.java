@@ -10,4 +10,6 @@ public interface PodcastEpisodeRepository extends JpaRepository<PodcastEpisode, 
     List<PodcastEpisode> findByCreatorId(Long creatorId);
 
     List<PodcastEpisode> findByStatus(String status);
+
+    List<PodcastEpisode> findByRoomId(Long roomId);
 }

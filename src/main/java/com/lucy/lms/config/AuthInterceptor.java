@@ -31,16 +31,38 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         AppUser user = (AppUser) session.getAttribute("currentUser");
+        String role = user.getRole() != null ? user.getRole() : "LEARNER";
 
         // Admin-only route checks
-        boolean isAdminRoute = uri.startsWith("/users") 
-                || uri.startsWith("/billing/plans") 
+        boolean isAdminRoute = uri.startsWith("/users")
+                || uri.startsWith("/billing/plans")
                 || uri.startsWith("/billing/transactions")
-                || uri.contains("/create") 
-                || uri.contains("/edit") 
-                || uri.contains("/delete");
+                || uri.startsWith("/programs/create")
+                || (uri.startsWith("/programs/") && uri.contains("/edit"))
+                || (uri.startsWith("/programs/") && uri.contains("/delete"));
 
-        if (isAdminRoute && !"ADMIN".equals(user.getRole())) {
+        if (isAdminRoute && !"ADMIN".equals(role)) {
+            response.sendRedirect("/dashboard?error=access_denied");
+            return false;
+        }
+
+        // PRO_MENTOR+ routes: create/manage/delete rooms
+        boolean isMentorRoute = uri.equals("/rooms/create")
+                || uri.matches("/rooms/\\d+/end")
+                || uri.matches("/rooms/\\d+/next-stage")
+                || uri.matches("/rooms/\\d+/add-participant")
+                || uri.matches("/rooms/\\d+/pin-material")
+                || uri.matches("/rooms/delete/\\d+");
+
+        if (isMentorRoute && !("PRO_MENTOR".equals(role) || "SUPER_CREATOR".equals(role) || "ADMIN".equals(role))) {
+            response.sendRedirect("/dashboard?error=access_denied");
+            return false;
+        }
+
+        // SUPER_CREATOR+ routes: recording
+        boolean isCreatorRoute = uri.matches("/rooms/\\d+/toggle-recording");
+
+        if (isCreatorRoute && !("SUPER_CREATOR".equals(role) || "ADMIN".equals(role))) {
             response.sendRedirect("/dashboard?error=access_denied");
             return false;
         }

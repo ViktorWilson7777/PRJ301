@@ -76,7 +76,8 @@ public class RoomWebController {
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Long chapterId,
             @RequestParam(required = false) Integer maxParticipants,
-            @RequestParam(required = false) String description
+            @RequestParam(required = false) String description,
+            jakarta.servlet.http.HttpSession session
     ) {
         Room room;
         if (id != null) {
@@ -93,7 +94,13 @@ public class RoomWebController {
         room.setMaxParticipants(maxParticipants != null ? maxParticipants : 20);
         room.setDescription(description);
 
-        if (hostUserId != null) room.setHostUser(userRepository.findById(hostUserId).orElse(null));
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser != null) {
+            room.setHostUser(currentUser);
+        } else if (hostUserId != null) {
+            room.setHostUser(userRepository.findById(hostUserId).orElse(null));
+        }
+
         if (courseId != null) room.setCourse(courseRepository.findById(courseId).orElse(null));
         if (chapterId != null) room.setChapter(chapterRepository.findById(chapterId).orElse(null));
 
@@ -205,17 +212,21 @@ public class RoomWebController {
     public String sendGift(@PathVariable Long id,
                            @RequestParam Long senderId,
                            @RequestParam Long receiverId,
-                           @RequestParam Long giftId) {
+                           @RequestParam Long giftId,
+                           jakarta.servlet.http.HttpSession session) {
         Room room = roomRepository.findById(id).orElse(null);
         AppUser sender = userRepository.findById(senderId).orElse(null);
         AppUser receiver = userRepository.findById(receiverId).orElse(null);
         Gift gift = giftRepository.findById(giftId).orElse(null);
 
         if (room == null || sender == null || receiver == null || gift == null) {
-            return "redirect:/rooms/" + id;
+            return "redirect:/rooms/" + id + "?error=not_found";
         }
 
         int cost = gift.getCreditCost() != null ? gift.getCreditCost() : 0;
+        if (sender.getCreditBalance() == null || sender.getCreditBalance() < cost) {
+            return "redirect:/rooms/" + id + "?error=insufficient_credits";
+        }
 
         // Deduct sender
         sender.setCreditBalance(sender.getCreditBalance() - cost);
@@ -235,7 +246,12 @@ public class RoomWebController {
         tx.setCreditAmount(cost);
         giftTransactionRepository.save(tx);
 
-        return "redirect:/rooms/" + id;
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser != null && currentUser.getId().equals(senderId)) {
+            session.setAttribute("currentUser", userRepository.findById(senderId).orElse(currentUser));
+        }
+
+        return "redirect:/rooms/" + id + "?success=gift_sent";
     }
 
     @GetMapping("/rooms/{id}/end")
