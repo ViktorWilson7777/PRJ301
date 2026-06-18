@@ -182,7 +182,7 @@
             </div>
 
             <div class="text-start mb-2">
-                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase; margin-left: 4px;">Choose your role</label>
+                <label class="form-label" style="color: #A29BFE; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-left: 4px;">Choose your role</label>
                 <select id="roleRequested" class="form-dark">
                     <option value="LISTENER">Audience (Listen & Text Chat)</option>
                     <option value="SPEAKER">Speaker (Actively speak on stage)</option>
@@ -210,7 +210,14 @@
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
-                    alert("Yêu cầu thất bại: " + data.error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Request Failed',
+                        text: data.error,
+                        background: '#1E1B4B',
+                        color: '#fff',
+                        confirmButtonColor: '#6C5CE7'
+                    });
                     btn.disabled = false;
                     btn.innerHTML = 'Send Request to Join';
                 } else {
@@ -219,7 +226,14 @@
                 }
             })
             .catch(err => {
-                alert("Lỗi kết nối: " + err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error',
+                    text: err,
+                    background: '#1E1B4B',
+                    color: '#fff',
+                    confirmButtonColor: '#6C5CE7'
+                });
                 btn.disabled = false;
                 btn.innerHTML = 'Send Request to Join';
             });

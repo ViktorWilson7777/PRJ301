@@ -56,9 +56,23 @@
 
     <c:otherwise>
         <!-- LEARNER VIEW: Card Grid -->
-        <div class="mb-4">
-            <h3 style="font-weight: 700; color: #1E293B;">Language Programs</h3>
-            <p style="color: #64748B;">Choose a language path to begin your journey.</p>
+        <div class="mb-4 d-flex justify-content-between align-items-end flex-wrap gap-3">
+            <div>
+                <h3 style="font-weight: 700; color: #1E293B;">Language Programs</h3>
+                <p style="color: #64748B; margin-bottom: 0;">Choose a language path to begin your journey.</p>
+            </div>
+            <form action="/programs" method="GET" class="d-flex gap-2 align-items-center">
+                <input type="text" name="keyword" list="programCodesList" class="form-control form-control-sm" placeholder="Search by code or title..." value="${keyword}" style="border-radius: 8px; border: 1px solid #E2E8F0; width: 250px;">
+                <datalist id="programCodesList">
+                    <c:forEach var="p" items="${allPrograms}">
+                        <option value="${p.code}">${p.title}</option>
+                    </c:forEach>
+                </datalist>
+                <button type="submit" class="btn btn-lucy btn-sm" style="border-radius: 8px;"><i class="bi bi-search"></i></button>
+                <c:if test="${not empty keyword}">
+                    <a href="/programs" class="btn btn-light btn-sm" style="border-radius: 8px;"><i class="bi bi-x-circle"></i></a>
+                </c:if>
+            </form>
         </div>
 
         <c:choose>

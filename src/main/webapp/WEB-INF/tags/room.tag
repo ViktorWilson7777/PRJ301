@@ -29,7 +29,7 @@
 
 <nav class="room-nav">
     <a href="/dashboard" class="room-brand"><i class="bi bi-translate" style="color: #00CEC9;"></i> LUCY<span style="color: #6C5CE7;">.LIVE</span></a>
-    <a href="/rooms" class="btn-leave"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
+    <a href="/rooms" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
 </nav>
 
 <div class="room-content">
@@ -37,5 +37,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

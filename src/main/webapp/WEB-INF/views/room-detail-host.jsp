@@ -860,7 +860,12 @@
                     // AI Suggest Questions
                     function generateAiQuestions(lessonId) {
                         if (!lessonId || lessonId === 0) {
-                            alert("No lesson currently selected in the room.");
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'No Lesson Selected',
+                                text: 'No lesson currently selected in the room.',
+                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                            });
                             return;
                         }
                         var promptType = document.getElementById('aiPromptType').value;
@@ -984,7 +989,12 @@
                             btnToggleMic.style.display = 'flex';
                             stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'ON' }));
                         } catch (error) {
-                            alert('Agora Connection Failed: ' + error.message);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Failed',
+                                text: 'Agora Connection Failed: ' + error.message,
+                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                            });
                             btnConnect.disabled = false;
                         }
                     };
@@ -1002,6 +1012,22 @@
                         btnToggleMic.style.color = '';
                         stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'OFF' }));
                     };
+                </script>
+
+                <script>
+                    // Update leave button to end the room for the host
+                    var leaveBtn = document.getElementById('globalLeaveBtn');
+                    if (leaveBtn) {
+                        leaveBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i> End Live Room';
+                        leaveBtn.href = '/rooms/${room.id}/end';
+                        leaveBtn.style.background = '#EF4444';
+                        leaveBtn.style.color = '#FFFFFF';
+                    }
+
+                    // Handle tab closure to end the room automatically
+                    window.addEventListener('beforeunload', function (e) {
+                        navigator.sendBeacon('/api/rooms/${room.id}/end');
+                    });
                 </script>
 
             </layout:room>

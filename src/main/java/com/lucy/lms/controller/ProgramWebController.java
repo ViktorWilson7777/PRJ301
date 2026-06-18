@@ -20,8 +20,24 @@ public class ProgramWebController {
     }
 
     @GetMapping("/programs")
-    public String programs(Model model) {
-        model.addAttribute("programs", programRepository.findAll());
+    public String programs(@org.springframework.web.bind.annotation.RequestParam(required = false) String keyword, Model model) {
+        if (keyword != null && !keyword.isEmpty()) {
+            // Memory filter for simplicity since programs list is small
+            java.util.List<Program> all = programRepository.findAll();
+            java.util.List<Program> filtered = new java.util.ArrayList<>();
+            String k = keyword.toLowerCase();
+            for (Program p : all) {
+                if ((p.getCode() != null && p.getCode().toLowerCase().contains(k)) || 
+                    (p.getTitle() != null && p.getTitle().toLowerCase().contains(k))) {
+                    filtered.add(p);
+                }
+            }
+            model.addAttribute("programs", filtered);
+        } else {
+            model.addAttribute("programs", programRepository.findAll());
+        }
+        model.addAttribute("allPrograms", programRepository.findAll());
+        model.addAttribute("keyword", keyword);
         return "programs";
     }
 

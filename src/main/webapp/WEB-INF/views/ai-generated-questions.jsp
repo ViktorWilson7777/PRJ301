@@ -107,7 +107,11 @@ function generateAiQuestions() {
     var promptType = document.getElementById('aiPromptType').value;
 
     if (!lessonId) {
-        alert('Please select a lesson first!');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Lesson',
+            text: 'Please select a lesson first!'
+        });
         return;
     }
 

@@ -739,7 +739,12 @@
                             btnDisconnect.style.display = 'block';
                             isAudioConnected = true;
                         } catch (error) {
-                            alert('Agora Connection Failed: ' + error.message);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Connection Failed',
+                                text: 'Agora Connection Failed: ' + error.message,
+                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                            });
                             btnConnect.disabled = false;
                         }
                     }
@@ -782,8 +787,14 @@
                             })
                             .then(data => {
                                 if (data && data.status !== 'APPROVED') {
-                                    alert("Bạn đã bị mời ra khỏi phòng hoặc phòng đã kết thúc.");
-                                    window.location.href = "/rooms";
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Disconnected',
+                                        text: 'Bạn đã bị mời ra khỏi phòng hoặc phòng đã kết thúc.',
+                                        background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                                    }).then(() => {
+                                        window.location.href = "/rooms";
+                                    });
                                     return;
                                 }
 
@@ -792,7 +803,13 @@
                                     participantRole = data.role;
                                     agoraRole = (participantRole === 'SPEAKER' || participantRole === 'MODERATOR') ? 'publisher' : 'subscriber';
                                     
-                                    alert("Vai trò của bạn đã được thay đổi thành: " + participantRole);
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Role Updated',
+                                        text: 'Vai trò của bạn đã được thay đổi thành: ' + participantRole,
+                                        background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7',
+                                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
+                                    });
 
                                     // If currently connected to audio stream, reconnect with new role permissions!
                                     if (isAudioConnected) {

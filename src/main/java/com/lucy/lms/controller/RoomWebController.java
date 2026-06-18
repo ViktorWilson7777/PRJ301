@@ -19,6 +19,7 @@ import java.io.IOException;
 public class RoomWebController {
 
     private final RoomRepository roomRepository;
+    private final ProgramRepository programRepository;
     private final AppUserRepository userRepository;
     private final CourseRepository courseRepository;
     private final ChapterRepository chapterRepository;
@@ -31,6 +32,7 @@ public class RoomWebController {
     private final JoinRequestRepository joinRequestRepository;
 
     public RoomWebController(RoomRepository roomRepository,
+                             ProgramRepository programRepository,
                              AppUserRepository userRepository,
                              CourseRepository courseRepository,
                              ChapterRepository chapterRepository,
@@ -42,6 +44,7 @@ public class RoomWebController {
                              PodcastEpisodeRepository podcastEpisodeRepository,
                              JoinRequestRepository joinRequestRepository) {
         this.roomRepository = roomRepository;
+        this.programRepository = programRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.chapterRepository = chapterRepository;
@@ -60,11 +63,20 @@ public class RoomWebController {
         return "rooms";
     }
 
+    @GetMapping("/my-rooms")
+    public String myRooms(Model model, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        model.addAttribute("rooms", roomRepository.findByHostUserId(currentUser.getId()));
+        return "my-rooms";
+    }
+
     @GetMapping("/rooms/create")
     public String createRoomPage(Model model) {
         model.addAttribute("room", new Room());
         model.addAttribute("users", userRepository.findAll());
         model.addAttribute("courses", courseRepository.findAll());
+        model.addAttribute("programs", programRepository.findAll());
         model.addAttribute("chapters", chapterRepository.findAll());
         return "room-form";
     }
@@ -93,6 +105,7 @@ public class RoomWebController {
 
         room.setTitle(title);
         room.setLanguageCode(languageCode);
+        // levelNumber and course will be inferred from chapter if available
         room.setLevelNumber(levelNumber);
         room.setRoomType(roomType);
         room.setStatus(status);
@@ -106,8 +119,17 @@ public class RoomWebController {
             room.setHostUser(userRepository.findById(hostUserId).orElse(null));
         }
 
-        if (courseId != null) room.setCourse(courseRepository.findById(courseId).orElse(null));
-        if (chapterId != null) room.setChapter(chapterRepository.findById(chapterId).orElse(null));
+        if (chapterId != null) {
+            com.lucy.lms.entity.Chapter chapter = chapterRepository.findById(chapterId).orElse(null);
+            room.setChapter(chapter);
+            if (chapter != null) {
+                room.setCourse(chapter.getCourse());
+                room.setLevelNumber(chapter.getOrderIndex() != null ? chapter.getOrderIndex() : levelNumber);
+            }
+        } else {
+            room.setChapter(null);
+            if (courseId != null) room.setCourse(courseRepository.findById(courseId).orElse(null));
+        }
 
         if ("LIVE".equals(status) && room.getStartedAt() == null) {
             room.setStartedAt(LocalDateTime.now());
@@ -124,6 +146,15 @@ public class RoomWebController {
         }
 
         roomRepository.save(room);
+
+        if ("LIVE".equals(status)) {
+            return "redirect:/rooms/" + room.getId();
+        }
+        
+        if (room.getCourse() != null) {
+            return "redirect:/courses/" + room.getCourse().getId();
+        }
+        
         return "redirect:/rooms";
     }
 
@@ -178,6 +209,15 @@ public class RoomWebController {
                 model.addAttribute("request", latestRequest);
                 model.addAttribute("denied", true);
                 return "room-join-request";
+            }
+        }
+
+        // Level check
+        if (room.getLevelNumber() != null) {
+            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
+            int userLevel = 1 + score / 100;
+            if (userLevel < room.getLevelNumber()) {
+                return "redirect:/courses/" + (room.getCourse() != null ? room.getCourse().getId() : "") + "?error=level_too_low";
             }
         }
 

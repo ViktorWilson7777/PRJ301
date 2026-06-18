@@ -54,15 +54,13 @@
                 <p style="color: #64748B; margin-bottom: 0;">Explore structured lessons to improve your skills.</p>
             </div>
             <form action="/courses" method="GET" class="d-flex gap-2 align-items-center">
-                <input type="text" name="keyword" class="form-control form-control-sm" placeholder="Search courses..." value="${keyword}" style="border-radius: 8px; border: 1px solid #E2E8F0; width: 200px;">
-                <select name="level" class="form-select form-select-sm" style="border-radius: 8px; border: 1px solid #E2E8F0; width: 120px;">
-                    <option value="">All Levels</option>
-                    <option value="A1" ${level == 'A1' ? 'selected' : ''}>A1</option>
-                    <option value="A2" ${level == 'A2' ? 'selected' : ''}>A2</option>
-                    <option value="B1" ${level == 'B1' ? 'selected' : ''}>B1</option>
-                    <option value="B2" ${level == 'B2' ? 'selected' : ''}>B2</option>
-                    <option value="C1" ${level == 'C1' ? 'selected' : ''}>C1</option>
-                </select>
+                <input type="text" name="keyword" list="courseCodesList" class="form-control form-control-sm" placeholder="Search by code or title..." value="${keyword}" style="border-radius: 8px; border: 1px solid #E2E8F0; width: 200px;">
+                <datalist id="courseCodesList">
+                    <c:forEach var="c" items="${allCourses}">
+                        <option value="${c.code}">${c.title}</option>
+                    </c:forEach>
+                </datalist>
+
                 <button type="submit" class="btn btn-lucy btn-sm" style="border-radius: 8px;"><i class="bi bi-search"></i></button>
             </form>
         </div>

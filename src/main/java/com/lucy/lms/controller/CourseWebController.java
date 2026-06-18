@@ -4,10 +4,13 @@ import com.lucy.lms.entity.Chapter;
 import com.lucy.lms.entity.Course;
 import com.lucy.lms.entity.Lesson;
 import com.lucy.lms.entity.Program;
+import com.lucy.lms.entity.Room;
+import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.repository.ChapterRepository;
 import com.lucy.lms.repository.CourseRepository;
 import com.lucy.lms.repository.LessonRepository;
 import com.lucy.lms.repository.ProgramRepository;
+import com.lucy.lms.repository.RoomRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,15 +30,18 @@ public class CourseWebController {
     private final ProgramRepository programRepository;
     private final ChapterRepository chapterRepository;
     private final LessonRepository lessonRepository;
+    private final RoomRepository roomRepository;
 
     public CourseWebController(CourseRepository courseRepository,
-                               ProgramRepository programRepository,
-                               ChapterRepository chapterRepository,
-                               LessonRepository lessonRepository) {
+            ProgramRepository programRepository,
+            ChapterRepository chapterRepository,
+            LessonRepository lessonRepository,
+            RoomRepository roomRepository) {
         this.courseRepository = courseRepository;
         this.programRepository = programRepository;
         this.chapterRepository = chapterRepository;
         this.lessonRepository = lessonRepository;
+        this.roomRepository = roomRepository;
     }
 
     @GetMapping("/courses")
@@ -58,13 +64,17 @@ public class CourseWebController {
         }
 
         model.addAttribute("coursePage", coursePage);
+        model.addAttribute("allCourses", courseRepository.findAll());
         model.addAttribute("keyword", keyword);
         model.addAttribute("level", level);
         return "courses";
     }
 
     @GetMapping("/courses/{id}")
-    public String courseDetail(@PathVariable Long id, Model model) {
+    public String courseDetail(@PathVariable Long id, 
+                               @org.springframework.web.bind.annotation.RequestParam(required = false) String hostName,
+                               @org.springframework.web.bind.annotation.RequestParam(required = false) Integer level,
+                               Model model, jakarta.servlet.http.HttpSession session) {
         Course course = courseRepository.findById(id).orElse(null);
         if (course == null) {
             return "redirect:/courses";
@@ -78,9 +88,26 @@ public class CourseWebController {
             chapterLessonsMap.put(chapter.getId(), lessons);
         }
 
+        // Fetch Live and Scheduled Rooms for this course with filters
+        List<Room> liveRooms = roomRepository.findRoomsByFilters(id, java.util.Arrays.asList("LIVE", "SCHEDULED"), 
+                                                                 (hostName != null && !hostName.isEmpty()) ? hostName : null, level);
+        
+        model.addAttribute("hostName", hostName);
+        model.addAttribute("searchLevel", level);
+
+        // Calculate User Level
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        int userLevel = 1;
+        if (currentUser != null) {
+            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
+            userLevel = 1 + score / 100;
+        }
+
         model.addAttribute("course", course);
         model.addAttribute("chapters", chapters);
         model.addAttribute("chapterLessonsMap", chapterLessonsMap);
+        model.addAttribute("liveRooms", liveRooms);
+        model.addAttribute("userLevel", userLevel);
 
         return "course-detail";
     }
@@ -100,8 +127,7 @@ public class CourseWebController {
             @RequestParam String title,
             @RequestParam(required = false) String level,
             @RequestParam(required = false) Integer orderIndex,
-            @RequestParam(required = false) String description
-    ) {
+            @RequestParam(required = false) String description) {
         Course course;
 
         if (id != null) {

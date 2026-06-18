@@ -114,15 +114,13 @@
             <a class="lucy-nav-link" href="/dashboard"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
             <a class="lucy-nav-link" href="/profile"><i class="bi bi-person-circle"></i> My Profile</a>
 
-            <div class="nav-group-label">LMS Content</div>
-            <a class="lucy-nav-link" href="/programs"><i class="bi bi-collection"></i> Programs</a>
-            <a class="lucy-nav-link" href="/courses"><i class="bi bi-book"></i> Courses</a>
-            <a class="lucy-nav-link" href="/course-runs"><i class="bi bi-calendar-event"></i> Course Runs</a>
-            <a class="lucy-nav-link" href="/chapters"><i class="bi bi-layers"></i> Chapters</a>
-            <a class="lucy-nav-link" href="/lessons"><i class="bi bi-file-earmark-text"></i> Lessons</a>
-
-            <div class="nav-group-label">Rooms</div>
-            <a class="lucy-nav-link" href="/rooms"><i class="bi bi-mic"></i> Live Rooms</a>
+            <c:if test="${sessionScope.currentUser.role == 'ADMIN'}">
+                <div class="nav-group-label">LMS Content</div>
+                <a class="lucy-nav-link" href="/programs"><i class="bi bi-collection"></i> Programs</a>
+                <a class="lucy-nav-link" href="/courses"><i class="bi bi-book"></i> Courses</a>
+                <a class="lucy-nav-link" href="/chapters"><i class="bi bi-layers"></i> Chapters (Levels)</a>
+                <a class="lucy-nav-link" href="/lessons"><i class="bi bi-file-earmark-text"></i> Lessons (Questions)</a>
+            </c:if>
 
             <div class="nav-group-label">Content Creator</div>
             <a class="lucy-nav-link" href="/podcasts"><i class="bi bi-headphones"></i> Podcasts</a>
@@ -153,8 +151,10 @@
                     <a href="/dashboard" class="learner-nav-link">Home</a>
                     <a href="/courses" class="learner-nav-link">Courses</a>
                     <a href="/programs" class="learner-nav-link">Programs</a>
-                    <a href="/rooms" class="learner-nav-link">Live Rooms</a>
                     <a href="/podcasts" class="learner-nav-link">Podcasts</a>
+                    <c:if test="${sessionScope.currentUser.role != 'LEARNER'}">
+                        <a href="/my-rooms" class="learner-nav-link">My Live Rooms</a>
+                    </c:if>
                 </div>
             </div>
             <div class="learner-user">
