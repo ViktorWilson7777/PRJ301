@@ -26,3 +26,4 @@ server.port=8081
 # === AI API KEY ===
 # Get your OpenRouter API key at https://openrouter.ai/keys
 gemini.api.key=YOUR_OPENROUTER_API_KEY
+server.forward-headers-strategy=framework

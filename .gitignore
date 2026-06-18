@@ -31,3 +31,7 @@ src/main/resources/application.properties
 
 # Uploaded files
 uploads/
+
+# ngrok
+ngrok.exe
+ngrok
