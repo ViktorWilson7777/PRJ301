@@ -14,21 +14,108 @@ public class PremiumContentWebController {
     private final AppUserRepository userRepository;
     private final CourseRepository courseRepository;
     private final ChapterRepository chapterRepository;
+    private final CreditTransactionRepository transactionRepository;
 
     public PremiumContentWebController(PremiumContentRepository premiumRepository,
                                        AppUserRepository userRepository,
                                        CourseRepository courseRepository,
-                                       ChapterRepository chapterRepository) {
+                                       ChapterRepository chapterRepository,
+                                       CreditTransactionRepository transactionRepository) {
         this.premiumRepository = premiumRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.chapterRepository = chapterRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     @GetMapping("/premium-content")
-    public String premiumContent(Model model) {
-        model.addAttribute("contents", premiumRepository.findAll());
-        return "premium-content";
+    public String premiumContent(Model model, jakarta.servlet.http.HttpSession session) {
+        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+        boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
+
+        if (isAdmin) {
+            model.addAttribute("contents", premiumRepository.findAll());
+            return "premium-content";
+        } else {
+            java.util.List<PremiumContent> activeContents = premiumRepository.findAll().stream()
+                    .filter(c -> c.getActive() != null && c.getActive())
+                    .toList();
+            model.addAttribute("contents", activeContents);
+
+            java.util.Set<Long> unlockedIds = new java.util.HashSet<>();
+            if (currentUser != null) {
+                for (PremiumContent c : activeContents) {
+                    boolean hasTx = transactionRepository.existsByUserIdAndTypeAndDescriptionContaining(
+                            currentUser.getId(), "PREMIUM_PURCHASE", "[PREMIUM_CONTENT:" + c.getId() + "]"
+                    );
+                    if (hasTx) {
+                        unlockedIds.add(c.getId());
+                    }
+                }
+            }
+            model.addAttribute("unlockedIds", unlockedIds);
+            return "premium-content-learner";
+        }
+    }
+
+    @PostMapping("/premium-content/buy/{id}")
+    public String buyPremiumContent(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        PremiumContent content = premiumRepository.findById(id).orElse(null);
+        if (content == null) return "redirect:/premium-content?error=not_found";
+
+        boolean alreadyPurchased = transactionRepository.existsByUserIdAndTypeAndDescriptionContaining(
+                currentUser.getId(), "PREMIUM_PURCHASE", "[PREMIUM_CONTENT:" + content.getId() + "]"
+        );
+        if (alreadyPurchased) {
+            return "redirect:/premium-content?error=already_purchased";
+        }
+
+        com.lucy.lms.entity.AppUser user = userRepository.findById(currentUser.getId()).orElse(currentUser);
+        double balance = user.getCreditBalance() != null ? user.getCreditBalance() : 0.0;
+        int price = content.getPriceCredits() != null ? content.getPriceCredits() : 0;
+
+        if (balance < price) {
+            return "redirect:/premium-content?error=insufficient_credits";
+        }
+
+        user.setCreditBalance(balance - price);
+        userRepository.save(user);
+
+        com.lucy.lms.entity.CreditTransaction tx = new com.lucy.lms.entity.CreditTransaction();
+        tx.setUser(user);
+        tx.setAmount((double) -price);
+        tx.setType("PREMIUM_PURCHASE");
+        tx.setDescription("Purchased premium content: " + content.getTitle() + " [PREMIUM_CONTENT:" + content.getId() + "]");
+        transactionRepository.save(tx);
+
+        session.setAttribute("currentUser", user);
+
+        return "redirect:/premium-content?success=purchased&title=" + java.net.URLEncoder.encode(content.getTitle(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @GetMapping("/premium-content/view/{id}")
+    public String viewContent(@PathVariable Long id, Model model, jakarta.servlet.http.HttpSession session) {
+        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        PremiumContent content = premiumRepository.findById(id).orElse(null);
+        if (content == null) return "redirect:/premium-content?error=not_found";
+
+        boolean isAdmin = "ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole());
+        boolean isOwner = content.getCreator() != null && content.getCreator().getId().equals(currentUser.getId());
+        boolean isUnlocked = isAdmin || isOwner || transactionRepository.existsByUserIdAndTypeAndDescriptionContaining(
+                currentUser.getId(), "PREMIUM_PURCHASE", "[PREMIUM_CONTENT:" + content.getId() + "]"
+        );
+
+        if (!isUnlocked) {
+            return "redirect:/premium-content?error=locked";
+        }
+
+        model.addAttribute("content", content);
+        return "premium-content-view";
     }
 
     @GetMapping("/premium-content/create")

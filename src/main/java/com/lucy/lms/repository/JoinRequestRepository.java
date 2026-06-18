@@ -12,4 +12,7 @@ public interface JoinRequestRepository extends JpaRepository<JoinRequest, Long> 
     List<JoinRequest> findByRoomId(Long roomId);
 
     boolean existsByRoomIdAndUserIdAndStatus(Long roomId, Long userId, String status);
+
+    List<JoinRequest> findByRoomIdAndUserIdOrderByRequestedAtDesc(Long roomId, Long userId);
 }
+

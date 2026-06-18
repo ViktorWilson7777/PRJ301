@@ -123,20 +123,63 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms/{id}")
-    public String roomDetail(@PathVariable Long id, Model model) {
+    public String roomDetail(@PathVariable Long id, Model model, jakarta.servlet.http.HttpSession session) {
         Room room = roomRepository.findById(id).orElse(null);
         if (room == null) return "redirect:/rooms";
 
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        boolean isHost = room.getHostUser() != null && room.getHostUser().getId().equals(currentUser.getId());
+        boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+
+        if (isHost || isAdmin) {
+            model.addAttribute("room", room);
+            model.addAttribute("participants", participantRepository.findByRoomId(id));
+            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomId(id));
+            model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
+            model.addAttribute("users", userRepository.findAll());
+            model.addAttribute("lessons", lessonRepository.findAll());
+            model.addAttribute("gifts", giftRepository.findByActiveTrue());
+            model.addAttribute("pendingRequests", joinRequestRepository.findByRoomIdAndStatus(id, "PENDING"));
+            return "room-detail-host";
+        }
+
+        boolean isParticipant = participantRepository.existsByRoomIdAndUserId(id, currentUser.getId());
+        if (isParticipant) {
+            model.addAttribute("room", room);
+            model.addAttribute("participants", participantRepository.findByRoomId(id));
+            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomId(id));
+            model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
+            model.addAttribute("users", userRepository.findAll());
+            model.addAttribute("lessons", lessonRepository.findAll());
+            model.addAttribute("gifts", giftRepository.findByActiveTrue());
+            
+            RoomParticipant currentParticipant = participantRepository.findByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
+            model.addAttribute("currentParticipant", currentParticipant);
+            
+            return "room-detail-learner";
+        }
+
+        List<JoinRequest> requests = joinRequestRepository.findByRoomIdAndUserIdOrderByRequestedAtDesc(id, currentUser.getId());
+        if (!requests.isEmpty()) {
+            JoinRequest latestRequest = requests.get(0);
+            if ("PENDING".equals(latestRequest.getStatus())) {
+                model.addAttribute("room", room);
+                model.addAttribute("request", latestRequest);
+                return "room-waiting";
+            } else if ("DENIED".equals(latestRequest.getStatus())) {
+                model.addAttribute("room", room);
+                model.addAttribute("request", latestRequest);
+                model.addAttribute("denied", true);
+                return "room-join-request";
+            }
+        }
+
         model.addAttribute("room", room);
-        model.addAttribute("participants", participantRepository.findByRoomId(id));
-        model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomId(id));
-        model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
-        model.addAttribute("users", userRepository.findAll());
-        model.addAttribute("lessons", lessonRepository.findAll());
-        model.addAttribute("gifts", giftRepository.findByActiveTrue());
-        model.addAttribute("pendingRequests", joinRequestRepository.findByRoomIdAndStatus(id, "PENDING"));
-        return "room-detail";
+        return "room-join-request";
     }
+
 
     @PostMapping("/rooms/{id}/add-participant")
     public String addParticipant(@PathVariable Long id,
@@ -258,14 +301,11 @@ public class RoomWebController {
     public String endRoom(@PathVariable Long id) {
         Room room = roomRepository.findById(id).orElse(null);
         if (room != null) {
-            room.setStatus("ENDED");
-            room.setEndedAt(LocalDateTime.now());
             if (Boolean.TRUE.equals(room.getIsRecording())) {
                 room.setIsRecording(false);
                 
-                // Create a Podcast Episode from this room
                 PodcastEpisode episode = new PodcastEpisode();
-                episode.setRoom(room);
+                episode.setRoom(null);
                 episode.setCreator(room.getHostUser());
                 episode.setTitle("Podcast: " + room.getTitle());
                 episode.setDescription("Recorded session of room: " + room.getTitle() + "\n" + (room.getDescription() != null ? room.getDescription() : ""));
@@ -279,10 +319,40 @@ public class RoomWebController {
                 episode.setStatus("PUBLISHED");
                 podcastEpisodeRepository.save(episode);
             }
-            roomRepository.save(room);
+            
+            // Clean up related entities
+            participantRepository.findByRoomId(id).forEach(p -> participantRepository.deleteById(p.getId()));
+            pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
+            joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
+            giftTransactionRepository.findByRoomId(id).forEach(gt -> {
+                gt.setRoom(null);
+                giftTransactionRepository.save(gt);
+            });
+            podcastEpisodeRepository.findByRoomId(id).forEach(pe -> {
+                pe.setRoom(null);
+                podcastEpisodeRepository.save(pe);
+            });
+            
+            // Delete the room
+            roomRepository.deleteById(id);
         }
-        return "redirect:/rooms/" + id;
+        return "redirect:/rooms";
     }
+
+    @GetMapping("/rooms/{roomId}/toggle-role/{participantId}")
+    public String toggleRole(@PathVariable Long roomId, @PathVariable Long participantId) {
+        RoomParticipant p = participantRepository.findById(participantId).orElse(null);
+        if (p != null) {
+            if ("SPEAKER".equals(p.getRoleInRoom())) {
+                p.setRoleInRoom("LISTENER");
+            } else {
+                p.setRoleInRoom("SPEAKER");
+            }
+            participantRepository.save(p);
+        }
+        return "redirect:/rooms/" + roomId;
+    }
+
 
     @GetMapping("/rooms/{id}/next-stage")
     public String nextStage(@PathVariable Long id) {
@@ -345,6 +415,38 @@ public class RoomWebController {
             roomRepository.save(room);
         }
         return "redirect:/rooms/" + id;
+    }
+
+    @PostMapping("/rooms/{roomId}/approve-join/{requestId}")
+    public String approveJoin(@PathVariable Long roomId, @PathVariable Long requestId) {
+        JoinRequest jr = joinRequestRepository.findById(requestId).orElse(null);
+        if (jr != null && jr.getRoom().getId().equals(roomId)) {
+            jr.setStatus("APPROVED");
+            jr.setRespondedAt(LocalDateTime.now());
+            joinRequestRepository.save(jr);
+
+            // Add participant
+            RoomParticipant p = new RoomParticipant();
+            p.setRoom(jr.getRoom());
+            p.setUser(jr.getUser());
+            p.setDisplayName(jr.getDisplayName());
+            p.setRoleInRoom(jr.getRoleRequested() != null ? jr.getRoleRequested().toUpperCase() : "LISTENER");
+            p.setMicOn(false);
+            p.setHandRaised(false);
+            participantRepository.save(p);
+        }
+        return "redirect:/rooms/" + roomId;
+    }
+
+    @PostMapping("/rooms/{roomId}/deny-join/{requestId}")
+    public String denyJoin(@PathVariable Long roomId, @PathVariable Long requestId) {
+        JoinRequest jr = joinRequestRepository.findById(requestId).orElse(null);
+        if (jr != null && jr.getRoom().getId().equals(roomId)) {
+            jr.setStatus("DENIED");
+            jr.setRespondedAt(LocalDateTime.now());
+            joinRequestRepository.save(jr);
+        }
+        return "redirect:/rooms/" + roomId;
     }
 
     @GetMapping("/rooms/delete/{id}")

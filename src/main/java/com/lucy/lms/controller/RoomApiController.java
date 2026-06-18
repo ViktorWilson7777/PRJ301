@@ -319,13 +319,11 @@ public class RoomApiController {
     public ResponseEntity<Map<String, Object>> endRoom(@PathVariable Long id) {
         Room room = roomRepository.findById(id).orElse(null);
         if (room != null) {
-            room.setStatus("ENDED");
-            room.setEndedAt(java.time.LocalDateTime.now());
             if (Boolean.TRUE.equals(room.getIsRecording())) {
                 room.setIsRecording(false);
                 
                 com.lucy.lms.entity.PodcastEpisode episode = new com.lucy.lms.entity.PodcastEpisode();
-                episode.setRoom(room);
+                episode.setRoom(null);
                 episode.setCreator(room.getHostUser());
                 episode.setTitle("Podcast: " + room.getTitle());
                 episode.setDescription("Recorded session of room: " + room.getTitle());
@@ -339,8 +337,23 @@ public class RoomApiController {
                 episode.setStatus("PUBLISHED");
                 podcastEpisodeRepository.save(episode);
             }
-            roomRepository.save(room);
-            return ResponseEntity.ok(Map.of("status", "ENDED"));
+            
+            // Clean up related entities
+            participantRepository.findByRoomId(id).forEach(p -> participantRepository.deleteById(p.getId()));
+            pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
+            joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
+            giftTransactionRepository.findByRoomId(id).forEach(gt -> {
+                gt.setRoom(null);
+                giftTransactionRepository.save(gt);
+            });
+            podcastEpisodeRepository.findByRoomId(id).forEach(pe -> {
+                pe.setRoom(null);
+                podcastEpisodeRepository.save(pe);
+            });
+            
+            // Delete the room
+            roomRepository.deleteById(id);
+            return ResponseEntity.ok(Map.of("status", "ENDED_AND_DELETED"));
         }
         return ResponseEntity.notFound().build();
     }
@@ -476,4 +489,28 @@ public class RoomApiController {
 
         return ResponseEntity.ok(Map.of("status", "DENIED", "requestId", requestId));
     }
+
+    @GetMapping("/api/rooms/{roomId}/request-status")
+    @Operation(summary = "Get current user's join request status")
+    public ResponseEntity<Map<String, Object>> getMyRequestStatus(@PathVariable Long roomId, jakarta.servlet.http.HttpSession session) {
+        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return ResponseEntity.status(401).build();
+
+        java.util.Optional<RoomParticipant> participantOpt = participantRepository.findByRoomIdAndUserId(roomId, currentUser.getId());
+        if (participantOpt.isPresent()) {
+            return ResponseEntity.ok(Map.of("status", "APPROVED", "role", participantOpt.get().getRoleInRoom()));
+        }
+
+        List<JoinRequest> requests = joinRequestRepository.findByRoomIdAndUserIdOrderByRequestedAtDesc(roomId, currentUser.getId());
+        if (requests.isEmpty()) {
+            return ResponseEntity.ok(Map.of("status", "NONE"));
+        }
+
+        String status = requests.get(0).getStatus();
+        if ("APPROVED".equals(status)) {
+            status = "NONE";
+        }
+        return ResponseEntity.ok(Map.of("status", status));
+    }
 }
+

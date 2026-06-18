@@ -52,6 +52,9 @@ public class AuthInterceptor implements HandlerInterceptor {
                 || uri.matches("/rooms/\\d+/next-stage")
                 || uri.matches("/rooms/\\d+/add-participant")
                 || uri.matches("/rooms/\\d+/pin-material")
+                || uri.matches("/rooms/\\d+/approve-join/\\d+")
+                || uri.matches("/rooms/\\d+/deny-join/\\d+")
+                || uri.matches("/rooms/\\d+/toggle-role/\\d+")
                 || uri.matches("/rooms/delete/\\d+");
 
         if (isMentorRoute && !("PRO_MENTOR".equals(role) || "SUPER_CREATOR".equals(role) || "ADMIN".equals(role))) {

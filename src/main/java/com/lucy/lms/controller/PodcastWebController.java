@@ -25,9 +25,17 @@ public class PodcastWebController {
     }
 
     @GetMapping("/podcasts")
-    public String podcasts(Model model) {
-        model.addAttribute("podcasts", podcastRepository.findAll());
-        return "podcasts";
+    public String podcasts(Model model, jakarta.servlet.http.HttpSession session) {
+        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+        boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
+
+        if (isAdmin) {
+            model.addAttribute("podcasts", podcastRepository.findAll());
+            return "podcasts";
+        } else {
+            model.addAttribute("podcasts", podcastRepository.findByStatus("PUBLISHED"));
+            return "podcast-player";
+        }
     }
 
     @GetMapping("/podcasts/create")

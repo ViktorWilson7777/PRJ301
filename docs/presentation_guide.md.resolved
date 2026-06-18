@@ -1,0 +1,70 @@
+# 📢 Hướng dẫn Báo cáo Tiến độ Dự án LUCY LMS (Dành cho Giảng viên)
+
+Tài liệu này tổng hợp cấu trúc bài báo cáo, các điểm nhấn công nghệ trọng tâm, và cách trình bày demo để bạn đạt điểm số tối ưu trước Hội đồng/Giảng viên hướng dẫn.
+
+---
+
+## 1. Giới thiệu Tổng quan Dự án (Project Overview)
+* **Tên dự án**: LUCY LMS - Nền tảng Giáo dục trực tuyến Gamified Audio (Học qua phòng âm thanh và tương tác thời gian thực).
+* **Công nghệ cốt lõi**:
+  * **Backend**: Java 21 / Spring Boot 3.5.x, JPA / Hibernate.
+  * **Database**: SQL Server / H2.
+  * **Frontend**: HTML5, Vanilla CSS, JSP (JavaServer Pages), Bootstrap 5.
+  * **Real-time & Audio**: WebSocket (STOMP Protocol) để đồng bộ trạng thái, kết hợp **Agora Web RTC SDK** cho truyền tải âm thanh thời gian thực chất lượng cao.
+  * **Biểu đồ thống kê**: Chart.js.
+
+---
+
+## 2. Các Điểm nhấn Công nghệ nổi bật (Key Tech Highlights)
+Hãy báo cáo các giải pháp kỹ thuật đã giải quyết được thay vì chỉ liệt kê chức năng:
+
+* **Real-time WebSocket & STOMP**:
+  * Chuyển đổi thành công cơ chế duyệt tham gia phòng học (`Join Requests`) từ dạng **Polling (quét liên tục)** sang **WebSocket (đẩy thời gian thực)** giúp giảm tải server và phản hồi ngay lập tức khi Host chấp nhận/từ chối.
+  * Đồng bộ trạng thái Bật/Tắt Microphone (`MIC_TOGGLE`) thời gian thực trên Avatar của toàn bộ thành viên đang trên Stage.
+* **Tích hợp Agora Web RTC chống hú (AEC/AGC/ANS)**:
+  * Tích hợp thành công SDK âm thanh của Agora để các thiết bị trong cùng phòng có thể giao tiếp không trễ.
+  * Sử dụng cấu hình Audio Profile chuẩn để khử tiếng vọng (Acoustic Echo Cancellation - AEC), tự động cân bằng âm lượng (Automatic Gain Control - AGC), và giảm thiểu tiếng ồn (Active Noise Suppression - ANS), tránh tối đa hiện tượng rú rít khi đặt các thiết bị cạnh nhau.
+* **Phân quyền Role-Based Access Control (RBAC)**:
+  * Tách biệt 3 vai trò rõ rệt: **Learner** (Người học), **Creator / Pro Mentor** (Người sáng tạo nội dung), và **Admin** (Quản trị viên).
+  * Kiểm soát an toàn bằng `AuthInterceptor` chặn các yêu cầu trái phép từ phía backend, đồng thời tự động điều hướng giao diện phù hợp với vai trò của Session User.
+
+---
+
+## 3. Demo Chức năng Thực tế (Live Demo Script)
+Khi trình bày, hãy tập trung demo luồng nghiệp vụ hoàn chỉnh của thành viên **Trần Công Tiến** đã hoàn thành 100%:
+
+### Kịch bản 1: Luồng nạp tiền và mua nội dung Premium
+1. **Bước 1**: Đăng nhập tài khoản Learner. Vào trang **Profile** hiển thị số dư hiện tại (ví dụ: `0 credits`).
+2. **Bước 2**: Nhấp vào **Top Up Credits** (`/billing/topup`). Chọn gói nạp (ví dụ: `1000 credits` - Pro Pack) và xác nhận. Giao diện mượt mà và trực quan sẽ mô phỏng giao dịch, ghi nhận lịch sử giao dịch loại `TOP_UP` và số dư ví cập nhật tức thì.
+3. **Bước 3**: Truy cập **LUCY Premium Store** (`/premium-content`). Xem các khóa học Premium đang bị khóa (Locked).
+4. **Bước 4**: Nhấn nút **Unlock** cho một khóa học. Hệ thống hiển thị hộp thoại xác nhận số tiền cần trừ. Sau khi đồng ý:
+   * Số dư ví của Learner bị trừ đi tương ứng.
+   * Một giao dịch loại `PREMIUM_PURCHASE` được ghi nhận trong DB.
+   * Giao diện cập nhật sang trạng thái **Unlocked** và mở nút **Access**.
+5. **Bước 5**: Nhấp vào **Access** để truy cập nội dung chi tiết. Hệ thống điều hướng đến trang học trực quan kết nối trực tiếp đến Course/Chapter liên quan.
+
+### Kịch bản 2: Spotify-like Podcast Player cho Learner
+1. **Bước 1**: Learner truy cập `/podcasts`.
+2. **Bước 2**: Giao diện trình phát nhạc dạng đĩa than xoay tròn theo nhịp bài học sẽ hiển thị.
+3. **Bước 3**: Thực hiện phát/tạm dừng, tua thanh tiến trình, điều chỉnh âm lượng và tự động chuyển tiếp bài học tiếp theo khi kết thúc.
+
+### Kịch bản 3: Bảng điều khiển tài chính dành cho Admin
+1. **Bước 1**: Đăng nhập bằng tài khoản role `ADMIN`.
+2. **Bước 2**: Truy cập thanh menu quản trị **Financial Overview** (`/billing/stats`).
+3. **Bước 3**: Trình bày biểu đồ cột trực quan hiển thị tổng doanh thu nạp tiền hàng tháng được vẽ bằng **Chart.js**, đi kèm danh sách 5 học viên đóng góp tài chính nhiều nhất hệ thống.
+
+---
+
+## 4. Báo cáo Tiến độ Nhóm (Team Progress)
+Báo cáo trung thực về tiến độ hiện tại so với kế hoạch phân công công việc:
+* **Tổng tiến độ dự án**: Đã hoàn thành khoảng **90%** các tính năng nền tảng và **100%** module ví điện tử, quản lý giao dịch và trình phát Podcast cao cấp.
+* **Chi tiết theo phân công**:
+  * **Trần Công Tiến**: Đạt **100%** tiến độ (Hoàn thành hệ thống Podcast Player, luồng giao dịch Premium, nạp credit tự phục vụ và biểu đồ doanh thu Admin).
+  * **Trần Thanh Nguyên, Văn Thái Trung, Mai Hoàng Đăng**: Đã dựng sẵn cấu trúc Entity/Repository/Controller và giao diện JSP thô; đang tiếp tục hoàn thiện các logic tìm kiếm nâng cao, đổi mật khẩu và quiz AI trong tuần tiếp theo.
+
+---
+
+## 5. Các Việc Cần Làm Tiếp Tiếp Theo (Next Steps)
+* Triển khai Node.js Token Server thật để sinh Agora dynamic tokens tự động thay vì dùng mock token.
+* Áp dụng bảo mật nâng cao Session-based Auth cho toàn bộ các API endpoints ngoài giao diện Web.
+* Xây dựng Scheduler chạy ngầm để tính toán Stage Timer tự động chuyển bài học sau mỗi 10 phút.

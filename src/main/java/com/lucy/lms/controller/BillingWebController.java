@@ -149,4 +149,43 @@ public class BillingWebController {
         model.addAttribute("transactions", transactionRepository.findAll());
         return "billing-transactions";
     }
+
+    // ── Stats/Revenue ──
+    @GetMapping("/billing/stats")
+    public String billingStats(Model model) {
+        java.util.List<CreditTransaction> allTx = transactionRepository.findAll();
+        double totalCreditsSold = 0.0;
+        java.util.Map<AppUser, Double> userSpent = new java.util.HashMap<>();
+        java.util.Map<String, Double> monthlyTopups = new java.util.TreeMap<>();
+
+        for (CreditTransaction tx : allTx) {
+            if ("TOP_UP".equals(tx.getType())) {
+                double amt = tx.getAmount() != null ? tx.getAmount() : 0.0;
+                totalCreditsSold += amt;
+                if (tx.getUser() != null) {
+                    userSpent.merge(tx.getUser(), amt, Double::sum);
+                }
+                if (tx.getCreatedAt() != null) {
+                    String monthStr = tx.getCreatedAt().getYear() + "-" + String.format("%02d", tx.getCreatedAt().getMonthValue());
+                    monthlyTopups.merge(monthStr, amt, Double::sum);
+                }
+            }
+        }
+
+        java.util.List<java.util.Map.Entry<AppUser, Double>> topBuyers = new java.util.ArrayList<>(userSpent.entrySet());
+        topBuyers.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        if (topBuyers.size() > 5) {
+            topBuyers = topBuyers.subList(0, 5);
+        }
+
+        java.util.List<String> monthlyLabels = new java.util.ArrayList<>(monthlyTopups.keySet());
+        java.util.List<Double> monthlyValues = new java.util.ArrayList<>(monthlyTopups.values());
+
+        model.addAttribute("totalCreditsSold", totalCreditsSold);
+        model.addAttribute("topBuyers", topBuyers);
+        model.addAttribute("monthlyLabels", monthlyLabels);
+        model.addAttribute("monthlyValues", monthlyValues);
+
+        return "billing-stats";
+    }
 }
