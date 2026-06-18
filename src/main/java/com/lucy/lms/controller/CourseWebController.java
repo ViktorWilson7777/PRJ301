@@ -1,12 +1,23 @@
 package com.lucy.lms.controller;
 
+import com.lucy.lms.entity.Chapter;
 import com.lucy.lms.entity.Course;
+import com.lucy.lms.entity.Lesson;
 import com.lucy.lms.entity.Program;
+import com.lucy.lms.repository.ChapterRepository;
 import com.lucy.lms.repository.CourseRepository;
+import com.lucy.lms.repository.LessonRepository;
 import com.lucy.lms.repository.ProgramRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @SuppressWarnings("null")
@@ -14,17 +25,64 @@ public class CourseWebController {
 
     private final CourseRepository courseRepository;
     private final ProgramRepository programRepository;
+    private final ChapterRepository chapterRepository;
+    private final LessonRepository lessonRepository;
 
     public CourseWebController(CourseRepository courseRepository,
-                               ProgramRepository programRepository) {
+                               ProgramRepository programRepository,
+                               ChapterRepository chapterRepository,
+                               LessonRepository lessonRepository) {
         this.courseRepository = courseRepository;
         this.programRepository = programRepository;
+        this.chapterRepository = chapterRepository;
+        this.lessonRepository = lessonRepository;
     }
 
     @GetMapping("/courses")
-    public String courses(Model model) {
-        model.addAttribute("courses", courseRepository.findAll());
+    public String courses(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String level,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "9") int size,
+            Model model) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Course> coursePage;
+
+        if ((keyword != null && !keyword.isEmpty()) || (level != null && !level.isEmpty())) {
+            String searchKeyword = (keyword != null && !keyword.isEmpty()) ? keyword : null;
+            String searchLevel = (level != null && !level.isEmpty()) ? level : null;
+            coursePage = courseRepository.findByFilters(searchKeyword, searchLevel, pageable);
+        } else {
+            coursePage = courseRepository.findAll(pageable);
+        }
+
+        model.addAttribute("coursePage", coursePage);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("level", level);
         return "courses";
+    }
+
+    @GetMapping("/courses/{id}")
+    public String courseDetail(@PathVariable Long id, Model model) {
+        Course course = courseRepository.findById(id).orElse(null);
+        if (course == null) {
+            return "redirect:/courses";
+        }
+
+        List<Chapter> chapters = chapterRepository.findByCourseIdOrderByOrderIndexAsc(id);
+        Map<Long, List<Lesson>> chapterLessonsMap = new HashMap<>();
+
+        for (Chapter chapter : chapters) {
+            List<Lesson> lessons = lessonRepository.findByChapterIdOrderByOrderIndexAsc(chapter.getId());
+            chapterLessonsMap.put(chapter.getId(), lessons);
+        }
+
+        model.addAttribute("course", course);
+        model.addAttribute("chapters", chapters);
+        model.addAttribute("chapterLessonsMap", chapterLessonsMap);
+
+        return "course-detail";
     }
 
     @GetMapping("/courses/create")

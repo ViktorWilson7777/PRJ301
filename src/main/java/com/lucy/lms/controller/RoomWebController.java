@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.IOException;
+
 @Controller
 @SuppressWarnings("null")
 public class RoomWebController {
@@ -223,7 +228,19 @@ public class RoomWebController {
 
     @GetMapping("/rooms/{roomId}/remove-participant/{participantId}")
     public String removeParticipant(@PathVariable Long roomId, @PathVariable Long participantId) {
-        participantRepository.deleteById(participantId);
+        RoomParticipant p = participantRepository.findById(participantId).orElse(null);
+        if (p != null) {
+            if (p.getJoinedAt() != null) {
+                long durationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
+                int points = (int) (durationSec / 60);
+                if (points > 0 && p.getUser() != null) {
+                    AppUser user = p.getUser();
+                    user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
+                    userRepository.save(user);
+                }
+            }
+            participantRepository.deleteById(participantId);
+        }
         return "redirect:/rooms/" + roomId;
     }
 
@@ -321,7 +338,18 @@ public class RoomWebController {
             }
             
             // Clean up related entities
-            participantRepository.findByRoomId(id).forEach(p -> participantRepository.deleteById(p.getId()));
+            participantRepository.findByRoomId(id).forEach(p -> {
+                if (p.getJoinedAt() != null) {
+                    long pDurationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
+                    int points = (int) (pDurationSec / 60);
+                    if (points > 0 && p.getUser() != null) {
+                        AppUser user = p.getUser();
+                        user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
+                        userRepository.save(user);
+                    }
+                }
+                participantRepository.deleteById(p.getId());
+            });
             pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
             joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
             giftTransactionRepository.findByRoomId(id).forEach(gt -> {
@@ -456,5 +484,49 @@ public class RoomWebController {
         pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
         roomRepository.deleteById(id);
         return "redirect:/rooms";
+    }
+
+    @GetMapping("/rooms/{id}/export-participants")
+    public void exportParticipantsToExcel(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return;
+
+        List<RoomParticipant> participants = participantRepository.findByRoomId(id);
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=room_" + id + "_participants.xlsx");
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Participants");
+
+            // Header row
+            Row headerRow = sheet.createRow(0);
+            String[] columns = {"ID", "Display Name", "Role in Room", "Joined At"};
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                CellStyle style = workbook.createCellStyle();
+                Font font = workbook.createFont();
+                font.setBold(true);
+                style.setFont(font);
+                cell.setCellStyle(style);
+            }
+
+            // Data rows
+            int rowIdx = 1;
+            for (RoomParticipant p : participants) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(p.getId());
+                row.createCell(1).setCellValue(p.getDisplayName() != null ? p.getDisplayName() : "");
+                row.createCell(2).setCellValue(p.getRoleInRoom() != null ? p.getRoleInRoom() : "");
+                row.createCell(3).setCellValue(p.getJoinedAt() != null ? p.getJoinedAt().toString() : "");
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(response.getOutputStream());
+        }
     }
 }

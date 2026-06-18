@@ -54,12 +54,26 @@
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label">Status <span class="text-danger">*</span></label>
-                    <select name="status" class="form-select" required>
-                        <option value="DRAFT" <c:if test="${podcast.status == null || podcast.status == 'DRAFT'}">selected</c:if>>Draft</option>
-                        <option value="PUBLISHED" <c:if test="${podcast.status == 'PUBLISHED'}">selected</c:if>>Published</option>
-                    </select>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Status <span class="text-danger">*</span></label>
+                        <select name="status" class="form-select" required>
+                            <option value="DRAFT" <c:if test="${podcast.status == null || podcast.status == 'DRAFT'}">selected</c:if>>Draft</option>
+                            <option value="PUBLISHED" <c:if test="${podcast.status == 'PUBLISHED'}">selected</c:if>>Published</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Premium Access</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" name="isPremium" id="isPremiumSwitch" value="true" ${podcast.isPremium ? 'checked' : ''} onchange="document.getElementById('priceDiv').style.display = this.checked ? 'block' : 'none';" />
+                                <label class="form-check-label" for="isPremiumSwitch">Require Unlock</label>
+                            </div>
+                            <div id="priceDiv" style="display: ${podcast.isPremium ? 'block' : 'none'}; flex-grow: 1;">
+                                <input type="number" name="price" class="form-control form-control-sm" value="${podcast.price}" min="0" placeholder="Price in XP/Credits" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2">

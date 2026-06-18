@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "podcast_episode")
@@ -40,9 +42,23 @@ public class PodcastEpisode {
 
     private LocalDateTime createdAt;
 
+    private Boolean isPremium = false;
+
+    private Integer price = 0; // Credit cost if premium
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "podcast_unlocks",
+        joinColumns = @JoinColumn(name = "podcast_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<AppUser> unlockedByUsers = new HashSet<>();
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (status == null) status = "DRAFT";
+        if (isPremium == null) isPremium = false;
+        if (price == null) price = 0;
     }
 }

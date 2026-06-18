@@ -174,4 +174,57 @@ public class AuthWebController {
 
         return "redirect:/profile?success=role_upgraded";
     }
+
+    @PostMapping("/profile/change-password")
+    public String changePassword(
+            @RequestParam String currentPassword,
+            @RequestParam String newPassword,
+            HttpSession session
+    ) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+        if (user != null) {
+            if (!user.getPassword().equals(currentPassword)) {
+                return "redirect:/profile?error=wrong_password";
+            }
+            user.setPassword(newPassword);
+            userRepository.save(user);
+            session.setAttribute("currentUser", user);
+        }
+        return "redirect:/profile?success=password_changed";
+    }
+
+    @PostMapping("/profile/upload-avatar")
+    public String uploadAvatar(
+            @RequestParam("avatarFile") org.springframework.web.multipart.MultipartFile file,
+            HttpSession session
+    ) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        if (!file.isEmpty()) {
+            try {
+                java.nio.file.Path uploadPath = java.nio.file.Paths.get("uploads/avatars");
+                if (!java.nio.file.Files.exists(uploadPath)) {
+                    java.nio.file.Files.createDirectories(uploadPath);
+                }
+                String filename = currentUser.getId() + "_" + file.getOriginalFilename();
+                java.nio.file.Path filePath = uploadPath.resolve(filename);
+                file.transferTo(filePath.toFile());
+
+                AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+                if (user != null) {
+                    user.setAvatarUrl("/uploads/avatars/" + filename);
+                    userRepository.save(user);
+                    session.setAttribute("currentUser", user);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return "redirect:/profile?error=upload_failed";
+            }
+        }
+        return "redirect:/profile?success=avatar_uploaded";
+    }
 }

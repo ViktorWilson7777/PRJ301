@@ -19,7 +19,7 @@
         <!--                ADMIN DASHBOARD                 -->
         <!-- ============================================== -->
         <div class="row g-3 mb-4">
-            <div class="col-xl-3 col-md-6">
+            <div class="col-xl-4 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="stat-icon" style="background: #F3E8FF;"><i class="bi bi-collection" style="color: #7C3AED;"></i></div>
@@ -29,7 +29,7 @@
                     <div class="stat-label">Programs</div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6">
+            <div class="col-xl-4 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="stat-icon" style="background: #EFF6FF;"><i class="bi bi-book" style="color: #2563EB;"></i></div>
@@ -39,24 +39,14 @@
                     <div class="stat-label">Courses</div>
                 </div>
             </div>
-            <div class="col-xl-3 col-md-6">
+            <div class="col-xl-4 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="stat-icon" style="background: #ECFDF5;"><i class="bi bi-calendar-event" style="color: #059669;"></i></div>
-                        <a href="/course-runs" class="text-decoration-none" style="font-size: 12px;">View all →</a>
+                        <div class="stat-icon" style="background: #FFFBEB;"><i class="bi bi-person-video3" style="color: #D97706;"></i></div>
+                        <a href="/lessons" class="text-decoration-none" style="font-size: 12px;">View all →</a>
                     </div>
-                    <div class="stat-value">${courseRunCount}</div>
-                    <div class="stat-label">Course Runs</div>
-                </div>
-            </div>
-            <div class="col-xl-3 col-md-6">
-                <div class="stat-card">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="stat-icon" style="background: #FFF7ED;"><i class="bi bi-layers" style="color: #EA580C;"></i></div>
-                        <a href="/chapters" class="text-decoration-none" style="font-size: 12px;">View all →</a>
-                    </div>
-                    <div class="stat-value">${chapterCount}</div>
-                    <div class="stat-label">Chapters</div>
+                    <div class="stat-value">${lessonCount}</div>
+                    <div class="stat-label">Lessons</div>
                 </div>
             </div>
         </div>
@@ -65,11 +55,11 @@
             <div class="col-xl-3 col-md-6">
                 <div class="stat-card">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="stat-icon" style="background: #FDF2F8;"><i class="bi bi-file-earmark-text" style="color: #DB2777;"></i></div>
-                        <a href="/lessons" class="text-decoration-none" style="font-size: 12px;">View all →</a>
+                        <div class="stat-icon" style="background: #FFF7ED;"><i class="bi bi-layers" style="color: #EA580C;"></i></div>
+                        <a href="/chapters" class="text-decoration-none" style="font-size: 12px;">View all →</a>
                     </div>
-                    <div class="stat-value">${lessonCount}</div>
-                    <div class="stat-label">Lessons</div>
+                    <div class="stat-value">${chapterCount}</div>
+                    <div class="stat-label">Chapters</div>
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">

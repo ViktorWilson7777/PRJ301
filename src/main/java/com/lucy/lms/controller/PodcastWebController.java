@@ -1,9 +1,11 @@
 package com.lucy.lms.controller;
 
+import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.entity.PodcastEpisode;
 import com.lucy.lms.repository.AppUserRepository;
 import com.lucy.lms.repository.PodcastEpisodeRepository;
 import com.lucy.lms.repository.RoomRepository;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -25,14 +27,17 @@ public class PodcastWebController {
     }
 
     @GetMapping("/podcasts")
-    public String podcasts(Model model, jakarta.servlet.http.HttpSession session) {
-        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+    public String podcasts(Model model, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
         boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
 
         if (isAdmin) {
             model.addAttribute("podcasts", podcastRepository.findAll());
             return "podcasts";
         } else {
+            // Need fresh currentUser for unlocked info
+            AppUser freshUser = currentUser != null ? userRepository.findById(currentUser.getId()).orElse(currentUser) : null;
+            model.addAttribute("currentUser", freshUser);
             model.addAttribute("podcasts", podcastRepository.findByStatus("PUBLISHED"));
             return "podcast-player";
         }
@@ -54,7 +59,9 @@ public class PodcastWebController {
                               @RequestParam(required = false) Long creatorId,
                               @RequestParam(required = false) String audioUrl,
                               @RequestParam(required = false) Integer durationSeconds,
-                              @RequestParam String status) {
+                              @RequestParam String status,
+                              @RequestParam(required = false) String isPremium,
+                              @RequestParam(required = false) Integer price) {
         PodcastEpisode podcast;
         if (id != null) {
             podcast = podcastRepository.findById(id).orElse(new PodcastEpisode());
@@ -66,6 +73,8 @@ public class PodcastWebController {
         podcast.setStatus(status);
         podcast.setAudioUrl(audioUrl != null && !audioUrl.isBlank() ? audioUrl : "https://example.com/mock-podcast-" + System.currentTimeMillis() + ".mp3");
         podcast.setDurationSeconds(durationSeconds != null ? durationSeconds : 0);
+        podcast.setIsPremium(isPremium != null);
+        podcast.setPrice(price != null ? price : 0);
 
         if (roomId != null) podcast.setRoom(roomRepository.findById(roomId).orElse(null));
         if (creatorId != null) podcast.setCreator(userRepository.findById(creatorId).orElse(null));
@@ -90,6 +99,31 @@ public class PodcastWebController {
         if (podcast != null) {
             podcast.setStatus("PUBLISHED");
             podcastRepository.save(podcast);
+        }
+        return "redirect:/podcasts";
+    }
+
+    @PostMapping("/podcasts/buy/{id}")
+    public String buyPodcast(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        PodcastEpisode podcast = podcastRepository.findById(id).orElse(null);
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+
+        if (podcast != null && user != null && Boolean.TRUE.equals(podcast.getIsPremium())) {
+            if (!podcast.getUnlockedByUsers().contains(user)) {
+                if (user.getCreditBalance() >= podcast.getPrice()) {
+                    user.setCreditBalance(user.getCreditBalance() - podcast.getPrice());
+                    podcast.getUnlockedByUsers().add(user);
+                    userRepository.save(user);
+                    podcastRepository.save(podcast);
+                    session.setAttribute("currentUser", user);
+                    return "redirect:/podcasts?success=unlocked";
+                } else {
+                    return "redirect:/podcasts?error=insufficient_credits";
+                }
+            }
         }
         return "redirect:/podcasts";
     }

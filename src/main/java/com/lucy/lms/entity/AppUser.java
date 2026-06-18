@@ -28,6 +28,9 @@ public class AppUser {
     @Column(columnDefinition = "NVARCHAR(100)")
     private String avatarPersona;
 
+    @Column(columnDefinition = "NVARCHAR(500)")
+    private String avatarUrl;
+
     @Column(columnDefinition = "NVARCHAR(30)")
     private String role; // ADMIN, LEARNER, MODERATOR, PRO_MENTOR, SUPER_CREATOR
 

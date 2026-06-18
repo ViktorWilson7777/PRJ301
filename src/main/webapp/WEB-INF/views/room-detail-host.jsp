@@ -565,6 +565,31 @@
                                     <i class="bi ${room.isRecording ? 'bi-record-fill' : 'bi-record'} me-1"></i>
                                     ${room.isRecording ? 'Stop Recording' : 'Start Recording'}
                                 </a>
+                                <a href="/rooms/${room.id}/export-participants" class="btn w-100 btn-sm btn-outline-success" style="border-radius: 8px;">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> Export Participants
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- AI Support -->
+                        <div class="tool-module" style="background: rgba(108, 92, 231, 0.1); border: 1px solid rgba(108, 92, 231, 0.2);">
+                            <h6 style="color: #A29BFE;"><i class="bi bi-robot me-1"></i> AI Moderator Support</h6>
+                            <p class="text-muted" style="font-size: 11px; margin-bottom: 8px;">Generate questions for the current lesson</p>
+                            <div class="d-flex flex-column gap-2">
+                                <select id="aiPromptType" class="form-select form-select-sm form-dark">
+                                    <option value="warmup">Warm-up Questions</option>
+                                    <option value="discussion">Discussion Questions</option>
+                                    <option value="practice">Practice Exercises</option>
+                                    <option value="wrapup">Wrap-up Questions</option>
+                                </select>
+                                <button type="button" class="btn btn-sm w-100" style="background: #6C5CE7; color: white; border-radius: 8px;" onclick="generateAiQuestions(${room.currentLesson != null ? room.currentLesson.id : 0})">
+                                    <i class="bi bi-magic me-1"></i> Suggest Questions
+                                </button>
+                                <div id="aiLoadingIndicator" style="display: none; text-align: center; margin-top: 8px;">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span style="font-size: 12px; color: #A29BFE;"> Generating...</span>
+                                </div>
+                                <div id="aiResultContainer" class="mt-2 d-flex flex-column gap-2"></div>
                             </div>
                         </div>
 
@@ -803,7 +828,6 @@
                             .catch(err => console.error("Error denying join request:", err));
                     }
 
-                    // Host polling pending join requests
                     function pollPendingRequests() {
                         fetch('/api/rooms/' + roomId + '/pending-requests')
                             .then(response => response.json())
@@ -832,6 +856,67 @@
                             .catch(err => console.error("Error polling join requests:", err));
                     }
                     setInterval(pollPendingRequests, 10000);
+
+                    // AI Suggest Questions
+                    function generateAiQuestions(lessonId) {
+                        if (!lessonId || lessonId === 0) {
+                            alert("No lesson currently selected in the room.");
+                            return;
+                        }
+                        var promptType = document.getElementById('aiPromptType').value;
+                        var btnContainer = document.getElementById('aiResultContainer');
+                        var loading = document.getElementById('aiLoadingIndicator');
+                        
+                        btnContainer.innerHTML = '';
+                        loading.style.display = 'block';
+
+                        fetch('/api/ai/suggest-questions?lessonId=' + lessonId + '&promptType=' + promptType, { method: 'POST' })
+                            .then(res => res.json())
+                            .then(data => {
+                                loading.style.display = 'none';
+                                if (data.message) {
+                                    btnContainer.innerHTML = '<div class="text-danger" style="font-size: 12px;">' + data.message + '</div>';
+                                    return;
+                                }
+                                if (data.questions && data.questions.length > 0) {
+                                    let html = '';
+                                    data.questions.forEach(q => {
+                                        html += '<div class="p-2 rounded mb-1" style="background: rgba(255,255,255,0.05); font-size: 12px;">' + 
+                                                '<div class="d-flex justify-content-between align-items-start">' +
+                                                '<div class="flex-grow-1">' + q.generatedQuestion + '</div>' +
+                                                '<button class="btn btn-xs btn-outline-light ms-2 py-0 px-1" onclick="sendAiQuestionToChat(this)" data-q="' + encodeURIComponent(q.generatedQuestion) + '"><i class="bi bi-send"></i></button>' +
+                                                '</div></div>';
+                                    });
+                                    btnContainer.innerHTML = html;
+                                } else {
+                                    btnContainer.innerHTML = '<div class="text-muted" style="font-size: 12px;">No questions generated.</div>';
+                                }
+                            })
+                            .catch(err => {
+                                loading.style.display = 'none';
+                                btnContainer.innerHTML = '<div class="text-danger" style="font-size: 12px;">Error generating questions.</div>';
+                                console.error(err);
+                            });
+                    }
+
+                    function sendAiQuestionToChat(btn) {
+                        var question = decodeURIComponent(btn.getAttribute('data-q'));
+                        if (question && stompClient) {
+                            var formattedMsg = '🤖 [AI Moderator]: ' + question;
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'CHAT', senderName: currentUser, content: formattedMsg }));
+                            
+                            // Flash button to show success
+                            var origHTML = btn.innerHTML;
+                            btn.innerHTML = '<i class="bi bi-check2"></i>';
+                            btn.classList.add('btn-success');
+                            btn.classList.remove('btn-outline-light');
+                            setTimeout(() => {
+                                btn.innerHTML = origHTML;
+                                btn.classList.remove('btn-success');
+                                btn.classList.add('btn-outline-light');
+                            }, 2000);
+                        }
+                    }
                 </script>
 
                 <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>

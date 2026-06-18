@@ -5,9 +5,37 @@
 <layout:main pageTitle="My Profile">
 
 <div class="row g-4 animate-in">
-    <!-- Left Column: Edit Profile -->
+    <!-- Left Column: Edit Profile & Security -->
     <div class="col-lg-6">
-        <div class="stat-card">
+        
+        <!-- Avatar Upload -->
+        <div class="stat-card mb-4">
+            <h5 style="font-weight: 600; margin-bottom: 20px;">
+                <i class="bi bi-camera me-1" style="color: var(--lucy-primary);"></i> Profile Picture
+            </h5>
+            <div class="d-flex align-items-center gap-4">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #E2E8F0;">
+                    <c:choose>
+                        <c:when test="${not empty user.avatarUrl}">
+                            <img src="${user.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
+                        </c:when>
+                        <c:otherwise>
+                            <i class="bi bi-person-fill" style="font-size: 40px; color: #94A1B2;"></i>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+                <form method="post" action="/profile/upload-avatar" enctype="multipart/form-data" class="flex-grow-1">
+                    <div class="input-group">
+                        <input type="file" class="form-control" name="avatarFile" accept="image/*" required>
+                        <button class="btn btn-lucy" type="submit">Upload</button>
+                    </div>
+                    <small class="text-muted mt-1 d-block">Recommended: Square image, max 2MB.</small>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Profile -->
+        <div class="stat-card mb-4">
             <h5 style="font-weight: 600; margin-bottom: 20px;">
                 <i class="bi bi-person-bounding-box me-1" style="color: var(--lucy-primary);"></i> Edit Profile Details
             </h5>
@@ -44,6 +72,36 @@
                 <button type="submit" class="btn btn-lucy w-100"><i class="bi bi-save me-1"></i> Save Changes</button>
             </form>
         </div>
+
+        <!-- Change Password -->
+        <div class="stat-card">
+            <h5 style="font-weight: 600; margin-bottom: 20px;">
+                <i class="bi bi-shield-lock me-1" style="color: var(--lucy-primary);"></i> Change Password
+            </h5>
+            
+            <c:if test="${param.success == 'password_changed'}">
+                <div class="alert alert-success" style="border-radius: 10px; font-size: 13.5px; padding: 8px 12px;">
+                    <i class="bi bi-check-circle-fill me-2"></i> Password updated successfully!
+                </div>
+            </c:if>
+            <c:if test="${param.error == 'wrong_password'}">
+                <div class="alert alert-danger" style="border-radius: 10px; font-size: 13.5px; padding: 8px 12px;">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Incorrect current password!
+                </div>
+            </c:if>
+
+            <form method="post" action="/profile/change-password" class="lucy-form" style="border: none; padding: 0;">
+                <div class="mb-3">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" name="currentPassword" class="form-control" required />
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">New Password</label>
+                    <input type="password" name="newPassword" class="form-control" required />
+                </div>
+                <button type="submit" class="btn btn-outline-dark w-100"><i class="bi bi-key me-1"></i> Update Password</button>
+            </form>
+        </div>
     </div>
 
     <!-- Right Column: Account Status & Upgrades -->
@@ -74,18 +132,29 @@
                 </div>
             </div>
 
-            <div class="row text-center g-2 mb-2">
-                <div class="col-6">
-                    <div style="background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #E8ECF1;">
-                        <span class="text-muted" style="font-size: 11px;">Reputation Score</span>
-                        <div style="font-size: 20px; font-weight: 700; color: #1A1A2E;">⭐ ${user.reputationScore}</div>
-                    </div>
+            <!-- Gamification Status -->
+            <c:set var="score" value="${user.reputationScore != null ? user.reputationScore : 0}" />
+            <c:set var="level" value="${1 + (score - (score % 100)) / 100}" />
+            <c:set var="nextLevelPoints" value="${level * 100}" />
+            <c:set var="progress" value="${((score % 100) / 100) * 100}" />
+            
+            <div class="mb-4" style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 16px; border-radius: 12px;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span style="font-weight: 700; color: #1E293B;">Lvl ${level} Speaker</span>
+                    <span style="font-size: 13px; color: #64748B; font-weight: 600;">⭐ ${score} / ${nextLevelPoints} XP</span>
                 </div>
-                <div class="col-6">
+                <div class="progress" style="height: 8px; border-radius: 4px; background: #E2E8F0;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div style="font-size: 12px; color: #94A1B2; margin-top: 8px;">Gain 1 XP for every minute spent practicing in Live Rooms.</div>
+            </div>
+
+            <div class="row text-center g-2 mb-2">
+                <div class="col-12">
                     <div style="background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #E8ECF1;">
                         <span class="text-muted" style="font-size: 11px;">Account Status</span>
-                        <div style="font-size: 20px; font-weight: 700; color: var(--lucy-success);">
-                            ${user.active ? 'Active' : 'Suspended'}
+                        <div style="font-size: 18px; font-weight: 700; color: var(--lucy-success);">
+                            ${user.active ? 'Active & Verified' : 'Suspended'}
                         </div>
                     </div>
                 </div>
@@ -120,7 +189,7 @@
                     <div style="background: #F8F9FB; border-radius: 12px; padding: 16px; border: 1px solid #E8ECF1; position: relative;">
                         <span class="badge bg-purple position-absolute" style="top: 16px; right: 16px; font-size: 10px;">150 CREDITS</span>
                         <h6 style="font-weight: 700; margin-bottom: 6px;">Pro Mentor Tier</h6>
-                        <p class="text-muted mb-3" style="font-size: 12px;">Host specialized learning rooms, ghim Slide/Tài liệu, and manage student list in dashboard.</p>
+                        <p class="text-muted mb-3" style="font-size: 12px;">Host specialized learning rooms, pin documents, and manage student list in dashboard.</p>
                         
                         <c:choose>
                             <c:when test="${user.role == 'PRO_MENTOR' || user.role == 'SUPER_CREATOR'}">

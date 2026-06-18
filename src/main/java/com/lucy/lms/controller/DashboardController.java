@@ -10,7 +10,6 @@ public class DashboardController {
 
     private final ProgramRepository programRepository;
     private final CourseRepository courseRepository;
-    private final CourseRunRepository courseRunRepository;
     private final ChapterRepository chapterRepository;
     private final LessonRepository lessonRepository;
     private final ImportFileRepository importFileRepository;
@@ -22,7 +21,6 @@ public class DashboardController {
 
     public DashboardController(ProgramRepository programRepository,
                                CourseRepository courseRepository,
-                               CourseRunRepository courseRunRepository,
                                ChapterRepository chapterRepository,
                                LessonRepository lessonRepository,
                                ImportFileRepository importFileRepository,
@@ -33,7 +31,6 @@ public class DashboardController {
                                PodcastEpisodeRepository podcastEpisodeRepository) {
         this.programRepository = programRepository;
         this.courseRepository = courseRepository;
-        this.courseRunRepository = courseRunRepository;
         this.chapterRepository = chapterRepository;
         this.lessonRepository = lessonRepository;
         this.importFileRepository = importFileRepository;
@@ -53,7 +50,6 @@ public class DashboardController {
     public String dashboard(Model model) {
         model.addAttribute("programCount", programRepository.count());
         model.addAttribute("courseCount", courseRepository.count());
-        model.addAttribute("courseRunCount", courseRunRepository.count());
         model.addAttribute("chapterCount", chapterRepository.count());
         model.addAttribute("lessonCount", lessonRepository.count());
         model.addAttribute("importFileCount", importFileRepository.count());

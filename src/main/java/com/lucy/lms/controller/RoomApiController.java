@@ -198,6 +198,15 @@ public class RoomApiController {
     public ResponseEntity<Void> removeParticipant(@PathVariable Long roomId, @PathVariable Long participantId) {
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
         if (p != null && p.getRoom().getId().equals(roomId)) {
+            if (p.getJoinedAt() != null) {
+                long durationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
+                int points = (int) (durationSec / 60);
+                if (points > 0 && p.getUser() != null) {
+                    com.lucy.lms.entity.AppUser user = p.getUser();
+                    user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
+                    userRepository.save(user);
+                }
+            }
             participantRepository.deleteById(participantId);
         }
         return ResponseEntity.ok().build();
@@ -339,7 +348,18 @@ public class RoomApiController {
             }
             
             // Clean up related entities
-            participantRepository.findByRoomId(id).forEach(p -> participantRepository.deleteById(p.getId()));
+            participantRepository.findByRoomId(id).forEach(p -> {
+                if (p.getJoinedAt() != null) {
+                    long pDurationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
+                    int points = (int) (pDurationSec / 60);
+                    if (points > 0 && p.getUser() != null) {
+                        com.lucy.lms.entity.AppUser user = p.getUser();
+                        user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
+                        userRepository.save(user);
+                    }
+                }
+                participantRepository.deleteById(p.getId());
+            });
             pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
             joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
             giftTransactionRepository.findByRoomId(id).forEach(gt -> {

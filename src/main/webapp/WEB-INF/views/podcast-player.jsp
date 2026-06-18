@@ -105,6 +105,11 @@
         border-color: #1DB954;
     }
 
+    .episode-card.locked {
+        opacity: 0.7;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
     .episode-info {
         display: flex;
         align-items: center;
@@ -124,9 +129,13 @@
         transition: all 0.2s;
     }
 
-    .episode-card:hover .episode-avatar {
+    .episode-card:not(.locked):hover .episode-avatar {
         background: #1DB954;
         color: #fff;
+    }
+    
+    .episode-card.locked .episode-avatar {
+        color: #a7a9be;
     }
 
     .episode-meta {
@@ -161,25 +170,6 @@
     .episode-duration {
         font-size: 13px;
         color: #a7a9be;
-    }
-
-    .btn-play-mini {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: #1DB954;
-        border: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 16px;
-        transition: all 0.2s;
-    }
-
-    .btn-play-mini:hover {
-        transform: scale(1.1);
-        background: #1ed760;
     }
 
     /* Right pane current details */
@@ -428,10 +418,21 @@
             <i class="bi bi-headphones"></i>
         </div>
         <div>
-            <div class="spotify-title">LUCY Spotify-like Podcast Player</div>
-            <p class="text-muted mb-0" style="font-size: 12.5px;">Enjoy recorded audio sessions from our Super Mentors</p>
+            <div class="spotify-title">LUCY Premium Podcasts</div>
+            <p class="text-muted mb-0" style="font-size: 12.5px;">Enjoy recorded audio sessions from our Super Creators</p>
         </div>
     </div>
+
+    <c:if test="${param.success == 'unlocked'}">
+        <div class="alert alert-success" style="border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> You have successfully unlocked the premium podcast!
+        </div>
+    </c:if>
+    <c:if test="${param.error == 'insufficient_credits'}">
+        <div class="alert alert-danger" style="border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> Insufficient credits. Please recharge your account.
+        </div>
+    </c:if>
 
     <div class="spotify-body">
         <!-- Episode List Panel -->
@@ -447,26 +448,47 @@
                     </c:when>
                     <c:otherwise>
                         <c:forEach var="p" items="${podcasts}" varStatus="status">
-                            <div class="episode-card <c:if test='${status.first}'>active</c:if>" 
+                            <c:set var="isUnlocked" value="${!p.isPremium || (p.unlockedByUsers != null && p.unlockedByUsers.contains(currentUser))}" />
+                            
+                            <div class="episode-card ${!isUnlocked ? 'locked' : ''} ${status.first && isUnlocked ? 'active' : ''}" 
                                  data-id="${p.id}" 
                                  data-title="${p.title}" 
                                  data-creator="${p.creator.displayName}" 
                                  data-desc="${p.description}" 
-                                 data-url="${p.audioUrl}" 
-                                 data-duration="${p.durationSeconds}">
+                                 data-url="${isUnlocked ? p.audioUrl : ''}" 
+                                 data-duration="${p.durationSeconds}"
+                                 data-unlocked="${isUnlocked}">
                                 <div class="episode-info">
                                     <div class="episode-avatar">
-                                        <i class="bi bi-play-fill"></i>
+                                        <c:choose>
+                                            <c:when test="${isUnlocked}">
+                                                <i class="bi bi-play-fill"></i>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <i class="bi bi-lock-fill"></i>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                     <div class="episode-meta">
-                                        <div class="episode-title">${p.title}</div>
+                                        <div class="episode-title">${p.title} <c:if test="${p.isPremium}"><span class="badge bg-warning text-dark ms-1" style="font-size: 10px;">PREMIUM</span></c:if></div>
                                         <div class="episode-desc">${p.description}</div>
                                     </div>
                                 </div>
                                 <div class="episode-right">
-                                    <div class="episode-duration">
-                                        <span class="badge-status badge-purple me-2">By ${p.creator.displayName}</span>
-                                        <span class="duration-text"></span>
+                                    <div class="episode-duration d-flex align-items-center">
+                                        <c:choose>
+                                            <c:when test="${!isUnlocked}">
+                                                <form method="post" action="/podcasts/buy/${p.id}" class="m-0">
+                                                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border-radius: 20px; font-size: 12px; font-weight: 600;" onclick="return confirm('Unlock this podcast for ${p.price} credits?')">
+                                                        Unlock for ${p.price} <i class="bi bi-coin ms-1 text-warning"></i>
+                                                    </button>
+                                                </form>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="badge-status badge-purple me-2">By ${p.creator.displayName}</span>
+                                                <span class="duration-text"></span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                 </div>
                             </div>
@@ -559,7 +581,7 @@
         const volumeWrapper = document.getElementById("volumeWrapper");
         const volumeFill = document.getElementById("volumeFill");
 
-        let currentActiveIndex = 0;
+        let currentActiveIndex = -1;
         let isPlaying = false;
         let isMuted = false;
         let currentVolume = 0.8;
@@ -575,22 +597,29 @@
         // Initialize duration text in episode cards
         cards.forEach((card, index) => {
             const rawSecs = parseInt(card.getAttribute("data-duration")) || 180;
-            card.querySelector(".duration-text").textContent = formatTime(rawSecs);
+            const durationEl = card.querySelector(".duration-text");
+            if (durationEl) durationEl.textContent = formatTime(rawSecs);
             
-            card.addEventListener("click", function () {
-                selectTrack(index);
-                playTrack();
+            card.addEventListener("click", function (e) {
+                // Ignore clicks on the buy button/form
+                if (e.target.closest('form')) return;
+
+                if (card.getAttribute("data-unlocked") === "true") {
+                    selectTrack(index);
+                    playTrack();
+                }
             });
         });
 
         function selectTrack(index) {
             if (index < 0 || index >= cards.length) return;
+            const card = cards[index];
+            if (card.getAttribute("data-unlocked") !== "true") return; // Cannot play locked track
             
             cards.forEach(c => c.classList.remove("active"));
-            cards[index].classList.add("active");
+            card.classList.add("active");
             currentActiveIndex = index;
 
-            const card = cards[index];
             const title = card.getAttribute("data-title");
             const creator = card.getAttribute("data-creator");
             const desc = card.getAttribute("data-desc");
@@ -598,12 +627,14 @@
             const id = parseInt(card.getAttribute("data-id"));
 
             // Real audio fallback for demo purposes
-            if (url.includes("example.com") || url.includes("mock-podcast")) {
+            if (url && (url.includes("example.com") || url.includes("mock-podcast"))) {
                 url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-" + ((id % 8) + 1) + ".mp3";
             }
 
-            audio.src = url;
-            audio.load();
+            if (url) {
+                audio.src = url;
+                audio.load();
+            }
 
             // Update details
             currentSidebarTitle.textContent = title;
@@ -614,6 +645,7 @@
         }
 
         function playTrack() {
+            if (!audio.src) return;
             audio.play().then(() => {
                 isPlaying = true;
                 playIcon.className = "bi bi-pause-fill";
@@ -635,8 +667,16 @@
             if (isPlaying) {
                 pauseTrack();
             } else {
-                if (!audio.src) {
-                    selectTrack(0);
+                if (!audio.src && currentActiveIndex >= 0) {
+                    selectTrack(currentActiveIndex);
+                } else if (!audio.src) {
+                    // Try to find first unlocked track
+                    for (let i = 0; i < cards.length; i++) {
+                        if (cards[i].getAttribute("data-unlocked") === "true") {
+                            selectTrack(i);
+                            break;
+                        }
+                    }
                 }
                 playTrack();
             }
@@ -644,17 +684,35 @@
 
         // Skip Next/Prev
         btnNext.addEventListener("click", function () {
-            let nextIndex = currentActiveIndex + 1;
-            if (nextIndex >= cards.length) nextIndex = 0;
-            selectTrack(nextIndex);
-            playTrack();
+            let nextIndex = currentActiveIndex;
+            // Find next unlocked track
+            for (let i = 1; i <= cards.length; i++) {
+                let checkIdx = (currentActiveIndex + i) % cards.length;
+                if (cards[checkIdx].getAttribute("data-unlocked") === "true") {
+                    nextIndex = checkIdx;
+                    break;
+                }
+            }
+            if (nextIndex !== currentActiveIndex) {
+                selectTrack(nextIndex);
+                playTrack();
+            }
         });
 
         btnPrev.addEventListener("click", function () {
-            let prevIndex = currentActiveIndex - 1;
-            if (prevIndex < 0) prevIndex = cards.length - 1;
-            selectTrack(prevIndex);
-            playTrack();
+            let prevIndex = currentActiveIndex;
+            // Find prev unlocked track
+            for (let i = 1; i <= cards.length; i++) {
+                let checkIdx = (currentActiveIndex - i + cards.length) % cards.length;
+                if (cards[checkIdx].getAttribute("data-unlocked") === "true") {
+                    prevIndex = checkIdx;
+                    break;
+                }
+            }
+            if (prevIndex !== currentActiveIndex) {
+                selectTrack(prevIndex);
+                playTrack();
+            }
         });
 
         // Track progress update
@@ -713,9 +771,14 @@
             volumeFill.style.width = (percent * 100) + "%";
         });
 
-        // Select the first track on page load without auto-playing immediately
+        // Select the first unlocked track on page load
         if (cards.length > 0) {
-            selectTrack(0);
+            for (let i = 0; i < cards.length; i++) {
+                if (cards[i].getAttribute("data-unlocked") === "true") {
+                    selectTrack(i);
+                    break;
+                }
+            }
         }
     });
 </script>
