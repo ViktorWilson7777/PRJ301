@@ -5,6 +5,7 @@ import com.lucy.lms.repository.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -354,8 +355,7 @@ public class RoomWebController {
         return "redirect:/rooms/" + id + "?success=gift_sent";
     }
 
-    @GetMapping("/rooms/{id}/end")
-    public String endRoom(@PathVariable Long id) {
+    private void performRoomCleanup(Long id) {
         Room room = roomRepository.findById(id).orElse(null);
         if (room != null) {
             if (Boolean.TRUE.equals(room.getIsRecording())) {
@@ -404,6 +404,12 @@ public class RoomWebController {
             // Delete the room
             roomRepository.deleteById(id);
         }
+    }
+
+    @GetMapping("/rooms/{id}/end")
+    @Transactional
+    public String endRoom(@PathVariable Long id) {
+        performRoomCleanup(id);
         return "redirect:/rooms";
     }
 
@@ -518,11 +524,9 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms/delete/{id}")
+    @Transactional
     public String deleteRoom(@PathVariable Long id) {
-        // Delete participants and pinned materials first
-        participantRepository.findByRoomId(id).forEach(p -> participantRepository.deleteById(p.getId()));
-        pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
-        roomRepository.deleteById(id);
+        performRoomCleanup(id);
         return "redirect:/rooms";
     }
 

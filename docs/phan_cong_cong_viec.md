@@ -70,10 +70,10 @@
 - Biểu đồ doanh thu dùng [Chart.js](https://www.chartjs.org/) CDN
 
 ### Tiêu chí hoàn thành
-- [ ] Learner nghe được Podcast với giao diện đẹp
-- [ ] Luồng mua Premium Content hoạt động end-to-end
-- [ ] Learner nạp được credit
-- [ ] Admin xem được thống kê doanh thu
+- [x] Learner nghe được Podcast với giao diện đẹp
+- [x] Luồng mua Premium Content hoạt động end-to-end
+- [x] Learner nạp được credit
+- [x] Admin xem được thống kê doanh thu
 
 ---
 

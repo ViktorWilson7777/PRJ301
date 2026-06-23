@@ -3,7 +3,7 @@
         <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
             <c:set var="isAdmin"
-                value="${sessionScope.currentUser.role == 'ADMIN' || sessionScope.currentUser.role == 'SUPER_CREATOR'}" />
+                value="${sessionScope.currentUser.role == 'ADMIN'}" />
 
             <layout:main pageTitle="${isAdmin ? 'Admin Dashboard' : 'Home'}">
 
@@ -257,6 +257,95 @@
                                     style="background: #D97706; color: white; border-radius: 8px; padding: 6px 16px;">
                                     <i class="bi bi-plus-lg"></i> Create Live Room
                                 </a>
+                            </div>
+                        </c:if>
+
+                        <c:if test="${sessionScope.currentUser.role == 'SUPER_CREATOR'}">
+                            <!-- ============================================== -->
+                            <!--           SUPER CREATOR DASHBOARD              -->
+                            <!-- ============================================== -->
+
+                            <!-- Creator Stats Row -->
+                            <h4 style="font-weight: 700; color: #1E293B; margin-bottom: 20px; margin-top: 10px;"><i class="bi bi-lightning-charge-fill" style="color: #DB2777;"></i> Creator Hub</h4>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="stat-card" style="border-left: 4px solid #DB2777;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div class="stat-icon" style="background: #FDF2F8;"><i class="bi bi-mic-fill" style="color: #DB2777;"></i></div>
+                                            <a href="/my-rooms" class="text-decoration-none" style="font-size: 12px;">Manage →</a>
+                                        </div>
+                                        <div class="stat-value">${roomCount}</div>
+                                        <div class="stat-label">Live Rooms</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card" style="border-left: 4px solid #7C3AED;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div class="stat-icon" style="background: #F3E8FF;"><i class="bi bi-headphones" style="color: #7C3AED;"></i></div>
+                                            <a href="/podcasts" class="text-decoration-none" style="font-size: 12px;">View all →</a>
+                                        </div>
+                                        <div class="stat-value">${podcastCount}</div>
+                                        <div class="stat-label">Podcast Episodes</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-card" style="border-left: 4px solid #2563EB;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div class="stat-icon" style="background: #EFF6FF;"><i class="bi bi-gem" style="color: #2563EB;"></i></div>
+                                            <a href="/premium-content/learner" class="text-decoration-none" style="font-size: 12px;">Browse →</a>
+                                        </div>
+                                        <div class="stat-value">${importFileCount}</div>
+                                        <div class="stat-label">Premium Content</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Actions -->
+                            <div class="stat-card mb-4" style="background: linear-gradient(135deg, #FDF2F8, #FAE8FF); border: 1px solid #F9A8D4;">
+                                <h5 style="font-weight: 600; color: #831843; margin-bottom: 16px;"><i class="bi bi-lightning-charge-fill"></i> Super Creator Quick Actions</h5>
+                                <p style="font-size: 13px; color: #9D174D; margin-bottom: 20px;">As a Super Creator, you can host live rooms, publish podcasts, and sell premium course content.</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a href="/rooms/create" class="btn btn-sm" style="background: #DB2777; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
+                                        <i class="bi bi-plus-lg me-1"></i> Create Live Room
+                                    </a>
+                                    <a href="/podcasts/create" class="btn btn-sm" style="background: #7C3AED; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
+                                        <i class="bi bi-headphones me-1"></i> New Podcast
+                                    </a>
+                                    <a href="/premium-content/learner" class="btn btn-sm" style="background: #2563EB; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
+                                        <i class="bi bi-gem me-1"></i> Premium Content
+                                    </a>
+                                    <a href="/billing/topup" class="btn btn-sm" style="background: #D97706; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
+                                        <i class="bi bi-coin me-1"></i> Top Up Credits
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Creator Perks Info -->
+                            <div class="stat-card" style="background: linear-gradient(135deg, #F0F9FF, #E0F2FE); border: 1px solid #BAE6FD;">
+                                <h5 style="font-weight: 600; color: #0C4A6E; margin-bottom: 16px;"><i class="bi bi-trophy-fill" style="color: #0284C7;"></i> Your Super Creator Perks</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div style="background: #fff; padding: 16px; border-radius: 12px; text-align: center; border: 1px solid #E0F2FE;">
+                                            <div style="font-size: 28px; margin-bottom: 8px;">🎙️</div>
+                                            <div style="font-weight: 600; color: #1E293B; font-size: 14px;">Audio Recording</div>
+                                            <div style="font-size: 12px; color: #64748B; margin-top: 4px;">Record live classroom sessions</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div style="background: #fff; padding: 16px; border-radius: 12px; text-align: center; border: 1px solid #E0F2FE;">
+                                            <div style="font-size: 28px; margin-bottom: 8px;">🎧</div>
+                                            <div style="font-weight: 600; color: #1E293B; font-size: 14px;">Auto-Publish Podcasts</div>
+                                            <div style="font-size: 12px; color: #64748B; margin-top: 4px;">Convert recordings to podcasts</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div style="background: #fff; padding: 16px; border-radius: 12px; text-align: center; border: 1px solid #E0F2FE;">
+                                            <div style="font-size: 28px; margin-bottom: 8px;">💎</div>
+                                            <div style="font-weight: 600; color: #1E293B; font-size: 14px;">Sell Premium Content</div>
+                                            <div style="font-size: 12px; color: #64748B; margin-top: 4px;">Monetize your course materials</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </c:if>
 

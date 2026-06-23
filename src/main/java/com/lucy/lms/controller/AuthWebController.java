@@ -220,8 +220,8 @@ public class AuthWebController {
                     userRepository.save(user);
                     session.setAttribute("currentUser", user);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (java.io.IOException | java.lang.IllegalStateException e) {
+                // Log error properly in a real app
                 return "redirect:/profile?error=upload_failed";
             }
         }

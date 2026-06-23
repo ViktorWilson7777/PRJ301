@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ attribute name="pageTitle" required="true" type="java.lang.String" %>
 
-<c:set var="isAdminMode" value="${sessionScope.currentUser.role == 'ADMIN' || sessionScope.currentUser.role == 'SUPER_CREATOR'}" />
+<c:set var="isAdminMode" value="${sessionScope.currentUser.role == 'ADMIN'}" />
 
 <!DOCTYPE html>
 <html lang="en">
@@ -154,6 +154,9 @@
                     <a href="/podcasts" class="learner-nav-link">Podcasts</a>
                     <c:if test="${sessionScope.currentUser.role != 'LEARNER'}">
                         <a href="/my-rooms" class="learner-nav-link">My Live Rooms</a>
+                    </c:if>
+                    <c:if test="${sessionScope.currentUser.role == 'SUPER_CREATOR'}">
+                        <a href="/premium-content/learner" class="learner-nav-link">Premium Content</a>
                     </c:if>
                 </div>
             </div>

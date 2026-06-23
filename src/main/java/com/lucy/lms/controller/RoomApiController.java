@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -325,6 +326,7 @@ public class RoomApiController {
 
     @PostMapping("/api/rooms/{id}/end")
     @Operation(summary = "End a room and optionally publish podcast")
+    @Transactional
     public ResponseEntity<Map<String, Object>> endRoom(@PathVariable Long id) {
         Room room = roomRepository.findById(id).orElse(null);
         if (room != null) {

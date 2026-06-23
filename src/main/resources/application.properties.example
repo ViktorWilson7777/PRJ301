@@ -2,8 +2,8 @@ spring.application.name=lucy-lms
 
 # === DATABASE CONFIG ===
 spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=Lucy;encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true
-spring.datasource.username=YOUR_DB_USERNAME
-spring.datasource.password=YOUR_DB_PASSWORD
+spring.datasource.username=sa
+spring.datasource.password=sa
 spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
 
 spring.jpa.database-platform=org.hibernate.dialect.SQLServerDialect
@@ -25,5 +25,5 @@ server.port=8081
 
 # === AI API KEY ===
 # Get your OpenRouter API key at https://openrouter.ai/keys
-gemini.api.key=YOUR_OPENROUTER_API_KEY
+gemini.api.key=
 server.forward-headers-strategy=framework
