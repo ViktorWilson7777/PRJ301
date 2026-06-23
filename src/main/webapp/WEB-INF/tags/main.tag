@@ -156,7 +156,7 @@
                         <a href="/my-rooms" class="learner-nav-link">My Live Rooms</a>
                     </c:if>
                     <c:if test="${sessionScope.currentUser.role == 'SUPER_CREATOR'}">
-                        <a href="/premium-content/learner" class="learner-nav-link">Premium Content</a>
+                        <a href="/premium-content" class="learner-nav-link">Premium Content</a>
                     </c:if>
                 </div>
             </div>

@@ -292,7 +292,7 @@
                                     <div class="stat-card" style="border-left: 4px solid #2563EB;">
                                         <div class="d-flex align-items-center justify-content-between mb-2">
                                             <div class="stat-icon" style="background: #EFF6FF;"><i class="bi bi-gem" style="color: #2563EB;"></i></div>
-                                            <a href="/premium-content/learner" class="text-decoration-none" style="font-size: 12px;">Browse →</a>
+                                            <a href="/premium-content" class="text-decoration-none" style="font-size: 12px;">Browse →</a>
                                         </div>
                                         <div class="stat-value">${importFileCount}</div>
                                         <div class="stat-label">Premium Content</div>
@@ -311,7 +311,7 @@
                                     <a href="/podcasts/create" class="btn btn-sm" style="background: #7C3AED; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
                                         <i class="bi bi-headphones me-1"></i> New Podcast
                                     </a>
-                                    <a href="/premium-content/learner" class="btn btn-sm" style="background: #2563EB; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
+                                    <a href="/premium-content" class="btn btn-sm" style="background: #2563EB; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
                                         <i class="bi bi-gem me-1"></i> Premium Content
                                     </a>
                                     <a href="/billing/topup" class="btn btn-sm" style="background: #D97706; color: white; border-radius: 10px; padding: 8px 18px; font-weight: 500;">
