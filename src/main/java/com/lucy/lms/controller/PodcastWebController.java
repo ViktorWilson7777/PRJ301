@@ -6,9 +6,18 @@ import com.lucy.lms.repository.AppUserRepository;
 import com.lucy.lms.repository.PodcastEpisodeRepository;
 import com.lucy.lms.repository.RoomRepository;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 @Controller
 @SuppressWarnings("null")
@@ -18,6 +27,9 @@ public class PodcastWebController {
     private final RoomRepository roomRepository;
     private final AppUserRepository userRepository;
 
+    @Value("${podcast.upload.dir:uploads/podcasts}")
+    private String podcastUploadDir;
+
     public PodcastWebController(PodcastEpisodeRepository podcastRepository,
                                 RoomRepository roomRepository,
                                 AppUserRepository userRepository) {
@@ -26,28 +38,45 @@ public class PodcastWebController {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Check if the user has podcast creator privileges.
+     */
+    private boolean canCreatePodcast(AppUser user) {
+        if (user == null) return false;
+        String role = user.getRole();
+        return "SUPER_CREATOR".equals(role) || "ADMIN".equals(role);
+    }
+
     @GetMapping("/podcasts")
     public String podcasts(Model model, HttpSession session) {
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
+        String role = currentUser != null ? currentUser.getRole() : "LEARNER";
+
+        boolean isAdmin = "ADMIN".equals(role) || "SUPER_CREATOR".equals(role);
 
         if (isAdmin) {
+            // Admin/Super Creator sees ALL podcasts in manage view
             model.addAttribute("podcasts", podcastRepository.findAll());
+            model.addAttribute("canManage", true);
             return "podcasts";
         } else {
-            // Need fresh currentUser for unlocked info
+            // LEARNER and PRO_MENTOR: player-only view with published podcasts
             AppUser freshUser = currentUser != null ? userRepository.findById(currentUser.getId()).orElse(currentUser) : null;
             model.addAttribute("currentUser", freshUser);
             model.addAttribute("podcasts", podcastRepository.findByStatus("PUBLISHED"));
+            model.addAttribute("canCreatePodcast", false);
             return "podcast-player";
         }
     }
 
     @GetMapping("/podcasts/create")
-    public String createPodcastPage(Model model) {
+    public String createPodcastPage(Model model, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (!canCreatePodcast(currentUser)) {
+            return "redirect:/podcasts?error=access_denied";
+        }
         model.addAttribute("podcast", new PodcastEpisode());
         model.addAttribute("rooms", roomRepository.findAll());
-        model.addAttribute("users", userRepository.findAll());
         return "podcast-form";
     }
 
@@ -56,45 +85,99 @@ public class PodcastWebController {
                               @RequestParam String title,
                               @RequestParam(required = false) String description,
                               @RequestParam(required = false) Long roomId,
-                              @RequestParam(required = false) Long creatorId,
-                              @RequestParam(required = false) String audioUrl,
+                              @RequestParam(required = false, name = "audioFile") MultipartFile audioFile,
                               @RequestParam(required = false) Integer durationSeconds,
                               @RequestParam String status,
                               @RequestParam(required = false) String isPremium,
-                              @RequestParam(required = false) Integer price) {
+                              @RequestParam(required = false) Integer price,
+                              HttpSession session) {
+
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (!canCreatePodcast(currentUser)) {
+            return "redirect:/podcasts?error=access_denied";
+        }
+
         PodcastEpisode podcast;
         if (id != null) {
             podcast = podcastRepository.findById(id).orElse(new PodcastEpisode());
         } else {
             podcast = new PodcastEpisode();
         }
+
         podcast.setTitle(title);
         podcast.setDescription(description);
         podcast.setStatus(status);
-        podcast.setAudioUrl(audioUrl != null && !audioUrl.isBlank() ? audioUrl : "https://example.com/mock-podcast-" + System.currentTimeMillis() + ".mp3");
         podcast.setDurationSeconds(durationSeconds != null ? durationSeconds : 0);
         podcast.setIsPremium(isPremium != null);
         podcast.setPrice(price != null ? price : 0);
 
-        if (roomId != null) podcast.setRoom(roomRepository.findById(roomId).orElse(null));
-        if (creatorId != null) podcast.setCreator(userRepository.findById(creatorId).orElse(null));
+        // Handle audio file upload
+        if (audioFile != null && !audioFile.isEmpty()) {
+            try {
+                String audioUrl = saveAudioFile(audioFile);
+                podcast.setAudioUrl(audioUrl);
+            } catch (IOException e) {
+                return "redirect:/podcasts?error=upload_failed";
+            }
+        } else if (podcast.getAudioUrl() == null || podcast.getAudioUrl().isBlank()) {
+            // Keep existing URL on edit, or set placeholder for new
+            podcast.setAudioUrl("https://example.com/mock-podcast-" + System.currentTimeMillis() + ".mp3");
+        }
+
+        if (roomId != null) {
+            podcast.setRoom(roomRepository.findById(roomId).orElse(null));
+        }
+
+        // Auto-set creator to current user for new podcasts
+        if (podcast.getCreator() == null) {
+            podcast.setCreator(userRepository.findById(currentUser.getId()).orElse(currentUser));
+        }
 
         podcastRepository.save(podcast);
         return "redirect:/podcasts";
     }
 
+    /**
+     * Save uploaded audio file and return the URL path.
+     */
+    private String saveAudioFile(MultipartFile file) throws IOException {
+        Path uploadPath = Paths.get(podcastUploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String safeFilename = System.currentTimeMillis() + "_" +
+                (originalFilename != null ? originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_") : "audio.mp3");
+
+        Path filePath = uploadPath.resolve(safeFilename);
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        return "/uploads/podcasts/" + safeFilename;
+    }
+
     @GetMapping("/podcasts/edit/{id}")
-    public String editPodcastPage(@PathVariable Long id, Model model) {
+    public String editPodcastPage(@PathVariable Long id, Model model, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (!canCreatePodcast(currentUser)) {
+            return "redirect:/podcasts?error=access_denied";
+        }
+
         PodcastEpisode podcast = podcastRepository.findById(id).orElse(null);
         if (podcast == null) return "redirect:/podcasts";
+
         model.addAttribute("podcast", podcast);
         model.addAttribute("rooms", roomRepository.findAll());
-        model.addAttribute("users", userRepository.findAll());
         return "podcast-form";
     }
 
     @GetMapping("/podcasts/publish/{id}")
-    public String publishPodcast(@PathVariable Long id) {
+    public String publishPodcast(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (!canCreatePodcast(currentUser)) {
+            return "redirect:/podcasts?error=access_denied";
+        }
+
         PodcastEpisode podcast = podcastRepository.findById(id).orElse(null);
         if (podcast != null) {
             podcast.setStatus("PUBLISHED");
@@ -129,8 +212,16 @@ public class PodcastWebController {
     }
 
     @GetMapping("/podcasts/delete/{id}")
-    public String deletePodcast(@PathVariable Long id) {
-        podcastRepository.deleteById(id);
+    public String deletePodcast(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (!canCreatePodcast(currentUser)) {
+            return "redirect:/podcasts?error=access_denied";
+        }
+
+        PodcastEpisode podcast = podcastRepository.findById(id).orElse(null);
+        if (podcast != null) {
+            podcastRepository.deleteById(id);
+        }
         return "redirect:/podcasts";
     }
 }

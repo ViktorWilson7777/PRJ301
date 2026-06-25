@@ -417,9 +417,9 @@
         <div class="spotify-logo-icon">
             <i class="bi bi-headphones"></i>
         </div>
-        <div>
+        <div style="flex: 1;">
             <div class="spotify-title">LUCY Premium Podcasts</div>
-            <p class="text-muted mb-0" style="font-size: 12.5px;">Enjoy recorded audio sessions from our Super Creators</p>
+            <p class="text-muted mb-0" style="font-size: 12.5px;">Enjoy recorded audio sessions from our Creators</p>
         </div>
     </div>
 
@@ -431,6 +431,11 @@
     <c:if test="${param.error == 'insufficient_credits'}">
         <div class="alert alert-danger" style="border-radius: 12px;">
             <i class="bi bi-x-circle-fill me-2"></i> Insufficient credits. Please recharge your account.
+        </div>
+    </c:if>
+    <c:if test="${param.error == 'access_denied'}">
+        <div class="alert alert-warning" style="border-radius: 12px;">
+            <i class="bi bi-shield-exclamation me-2"></i> You do not have permission to upload podcasts. Only Super Creators can post content.
         </div>
     </c:if>
 
@@ -450,12 +455,14 @@
                         <c:forEach var="p" items="${podcasts}" varStatus="status">
                             <c:set var="isUnlocked" value="${!p.isPremium || (p.unlockedByUsers != null && p.unlockedByUsers.contains(currentUser))}" />
                             
+                            <c:set var="audioSrc" value="${p.audioUrl}" />
+                            
                             <div class="episode-card ${!isUnlocked ? 'locked' : ''} ${status.first && isUnlocked ? 'active' : ''}" 
                                  data-id="${p.id}" 
                                  data-title="${p.title}" 
                                  data-creator="${p.creator.displayName}" 
                                  data-desc="${p.description}" 
-                                 data-url="${isUnlocked ? p.audioUrl : ''}" 
+                                 data-url="${isUnlocked ? audioSrc : ''}" 
                                  data-duration="${p.durationSeconds}"
                                  data-unlocked="${isUnlocked}">
                                 <div class="episode-info">

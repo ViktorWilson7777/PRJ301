@@ -71,6 +71,18 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // Podcast creator routes: PRO_MENTOR, SUPER_CREATOR, ADMIN
+        boolean isPodcastCreatorRoute = uri.equals("/podcasts/create")
+                || uri.equals("/podcasts/save")
+                || uri.matches("/podcasts/edit/\\d+")
+                || uri.matches("/podcasts/delete/\\d+")
+                || uri.matches("/podcasts/publish/\\d+");
+
+        if (isPodcastCreatorRoute && !("SUPER_CREATOR".equals(role) || "ADMIN".equals(role))) {
+            response.sendRedirect("/podcasts?error=access_denied");
+            return false;
+        }
+
         return true;
     }
 }
