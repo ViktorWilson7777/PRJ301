@@ -627,7 +627,7 @@
             const id = parseInt(card.getAttribute("data-id"));
 
             // Real audio fallback for demo purposes
-            if (url && (url.includes("example.com") || url.includes("mock-podcast"))) {
+            if (url && (url.includes("example.com") || url.includes("mock-podcast") || url.includes("/audio/recordings/"))) {
                 url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-" + ((id % 8) + 1) + ".mp3";
             }
 

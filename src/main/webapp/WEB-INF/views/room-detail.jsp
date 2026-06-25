@@ -466,11 +466,6 @@
                                 </div>
                             </c:forEach>
 
-                            <!-- Mock Chat Messages -->
-                            <div class="chat-msg"><span class="user">Alex:</span> Hello everyone! 👋</div>
-                            <div class="chat-msg"><span class="user">Sarah:</span> Can't wait to practice speaking.
-                            </div>
-                            <div class="chat-msg"><span class="user">Mike:</span> Is the audio clear?</div>
                         </div>
 
                         <!-- Chat Input -->
@@ -555,27 +550,7 @@
                                 </a>
                             </div>
 
-                            <!-- Add Participant -->
-                            <div class="tool-module">
-                                <h6>Direct Add User</h6>
-                                <form method="post" action="/rooms/${room.id}/add-participant"
-                                    class="d-flex flex-column gap-2">
-                                    <select name="userId" class="form-select form-select-sm form-dark" required>
-                                        <option value="">— Select User —</option>
-                                        <c:forEach var="u" items="${users}">
-                                            <option value="${u.id}">${u.displayName}</option>
-                                        </c:forEach>
-                                    </select>
-                                    <div class="d-flex gap-2">
-                                        <select name="roleInRoom" class="form-select form-select-sm form-dark">
-                                            <option value="LISTENER">Audience</option>
-                                            <option value="SPEAKER">Speaker</option>
-                                        </select>
-                                        <button type="submit" class="btn btn-sm"
-                                            style="background: #6C5CE7; color: white; border-radius: 8px;">Add</button>
-                                    </div>
-                                </form>
-                            </div>
+
 
                             <!-- Pin Material -->
                             <div class="tool-module">

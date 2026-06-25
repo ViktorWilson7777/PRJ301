@@ -59,8 +59,31 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms")
-    public String rooms(Model model) {
-        model.addAttribute("rooms", roomRepository.findAll());
+    public String rooms(@RequestParam(required = false) Integer level,
+                        Model model, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
+
+        if (isAdmin) {
+            model.addAttribute("rooms", roomRepository.findAll());
+        } else {
+            // For learners: show all live/scheduled rooms, optionally filtered by level
+            java.util.List<String> activeStatuses = java.util.Arrays.asList("LIVE", "SCHEDULED");
+            if (level != null && level > 0) {
+                model.addAttribute("rooms", roomRepository.findByLevelNumberAndStatusInOrderByIdDesc(level, activeStatuses));
+                model.addAttribute("selectedLevel", level);
+            } else {
+                model.addAttribute("rooms", roomRepository.findByStatusInOrderByLevelNumberAsc(activeStatuses));
+            }
+
+            // Calculate user level for display
+            int userLevel = 1;
+            if (currentUser != null) {
+                int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
+                userLevel = 1 + score / 100;
+            }
+            model.addAttribute("userLevel", userLevel);
+        }
         return "rooms";
     }
 
@@ -165,7 +188,28 @@ public class RoomWebController {
         if (room == null) return "redirect:/rooms";
 
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        if (currentUser == null) return "redirect:/login";
+        if (currentUser == null) {
+            model.addAttribute("room", room);
+            model.addAttribute("participants", participantRepository.findByRoomId(id));
+            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomIdAndActiveTrue(id));
+            model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
+            model.addAttribute("users", userRepository.findAll());
+            model.addAttribute("lessons", getLevelFilteredLessons(room));
+            model.addAttribute("gifts", giftRepository.findByActiveTrue());
+            model.addAttribute("currentParticipant", null);
+            ensureCurrentLessonPinned(room);
+
+            // Calculate remaining seconds for AI transition
+            long elapsedSec = 0;
+            if (room.getStageStartedAt() != null) {
+                elapsedSec = java.time.Duration.between(room.getStageStartedAt(), java.time.LocalDateTime.now()).getSeconds();
+            }
+            long remainingSec = 600 - elapsedSec;
+            if (remainingSec < 0) remainingSec = 0;
+            model.addAttribute("remainingSec", remainingSec);
+            
+            return "room-detail-learner";
+        }
 
         boolean isHost = room.getHostUser() != null && room.getHostUser().getId().equals(currentUser.getId());
         boolean isAdmin = "ADMIN".equals(currentUser.getRole());
@@ -173,27 +217,54 @@ public class RoomWebController {
         if (isHost || isAdmin) {
             model.addAttribute("room", room);
             model.addAttribute("participants", participantRepository.findByRoomId(id));
-            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomId(id));
+            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomIdAndActiveTrue(id));
             model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
             model.addAttribute("users", userRepository.findAll());
-            model.addAttribute("lessons", lessonRepository.findAll());
+            // Filter lessons by room level for topic selection
+            model.addAttribute("lessons", getLevelFilteredLessons(room));
             model.addAttribute("gifts", giftRepository.findByActiveTrue());
             model.addAttribute("pendingRequests", joinRequestRepository.findByRoomIdAndStatus(id, "PENDING"));
             return "room-detail-host";
+        }
+
+        // Level check for LEARNER role (before checking participant status)
+        if ("LEARNER".equals(currentUser.getRole()) && room.getLevelNumber() != null) {
+            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
+            int userLevel = 1 + score / 100;
+            boolean isParticipantAlready = participantRepository.existsByRoomIdAndUserId(id, currentUser.getId());
+            if (userLevel < room.getLevelNumber() && !isParticipantAlready) {
+                model.addAttribute("room", room);
+                model.addAttribute("userLevel", userLevel);
+                model.addAttribute("requiredLevel", room.getLevelNumber());
+                return "redirect:/rooms?error=level_too_low&required=" + room.getLevelNumber() + "&current=" + userLevel;
+            }
         }
 
         boolean isParticipant = participantRepository.existsByRoomIdAndUserId(id, currentUser.getId());
         if (isParticipant) {
             model.addAttribute("room", room);
             model.addAttribute("participants", participantRepository.findByRoomId(id));
-            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomId(id));
+            // Show only active pinned materials
+            model.addAttribute("pinnedMaterials", pinnedMaterialRepository.findByRoomIdAndActiveTrue(id));
             model.addAttribute("giftTransactions", giftTransactionRepository.findByRoomId(id));
             model.addAttribute("users", userRepository.findAll());
-            model.addAttribute("lessons", lessonRepository.findAll());
+            model.addAttribute("lessons", getLevelFilteredLessons(room));
             model.addAttribute("gifts", giftRepository.findByActiveTrue());
             
             RoomParticipant currentParticipant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
             model.addAttribute("currentParticipant", currentParticipant);
+            
+            // Auto-pin current lesson if no active pin exists
+            ensureCurrentLessonPinned(room);
+
+            // Calculate remaining seconds for AI transition
+            long elapsedSec = 0;
+            if (room.getStageStartedAt() != null) {
+                elapsedSec = java.time.Duration.between(room.getStageStartedAt(), java.time.LocalDateTime.now()).getSeconds();
+            }
+            long remainingSec = 600 - elapsedSec;
+            if (remainingSec < 0) remainingSec = 0;
+            model.addAttribute("remainingSec", remainingSec);
             
             return "room-detail-learner";
         }
@@ -213,17 +284,46 @@ public class RoomWebController {
             }
         }
 
-        // Level check
-        if (room.getLevelNumber() != null) {
-            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
-            int userLevel = 1 + score / 100;
-            if (userLevel < room.getLevelNumber()) {
-                return "redirect:/courses/" + (room.getCourse() != null ? room.getCourse().getId() : "") + "?error=level_too_low";
-            }
-        }
-
         model.addAttribute("room", room);
         return "room-join-request";
+    }
+
+    /**
+     * Returns lessons filtered by the room's level. If room has a levelNumber,
+     * only lessons with levelNumber <= room.levelNumber are returned.
+     * Falls back to all lessons in the chapter if no level-matched lessons exist.
+     */
+    private List<Lesson> getLevelFilteredLessons(Room room) {
+        if (room.getChapter() != null && room.getLevelNumber() != null) {
+            List<Lesson> filtered = lessonRepository.findByChapterIdAndLevelNumberLessThanEqualOrderByOrderIndexAsc(
+                    room.getChapter().getId(), room.getLevelNumber());
+            if (!filtered.isEmpty()) {
+                return filtered;
+            }
+        }
+        if (room.getChapter() != null) {
+            return lessonRepository.findByChapterIdOrderByOrderIndexAsc(room.getChapter().getId());
+        }
+        return lessonRepository.findAll();
+    }
+
+    /**
+     * If a room has a current lesson but no active pinned material,
+     * automatically pin the current lesson.
+     */
+    private void ensureCurrentLessonPinned(Room room) {
+        if (room.getCurrentLesson() != null && "LIVE".equals(room.getStatus())) {
+            List<PinnedMaterial> activePins = pinnedMaterialRepository.findByRoomIdAndActiveTrue(room.getId());
+            if (activePins.isEmpty()) {
+                PinnedMaterial pm = new PinnedMaterial();
+                pm.setRoom(room);
+                pm.setLesson(room.getCurrentLesson());
+                pm.setTitle("📌 " + room.getCurrentLesson().getTitle());
+                pm.setContent(room.getCurrentLesson().getDescription() != null ? room.getCurrentLesson().getDescription() : "");
+                pm.setActive(true);
+                pinnedMaterialRepository.save(pm);
+            }
+        }
     }
 
 
@@ -360,7 +460,7 @@ public class RoomWebController {
         try {
             encName = java.net.URLEncoder.encode(gift.getName(), "UTF-8");
             encIcon = java.net.URLEncoder.encode(gift.getIcon(), "UTF-8");
-        } catch(Exception e) {}
+        } catch(java.io.UnsupportedEncodingException e) {}
 
         return "redirect:/rooms/" + id + "?success=gift_sent&receiverId=" + receiverId + "&giftName=" + encName + "&giftIcon=" + encIcon + "&balance=" + sender.getCreditBalance();
     }

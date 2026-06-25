@@ -23,4 +23,8 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
                                   @org.springframework.data.repository.query.Param("statuses") java.util.List<String> statuses, 
                                   @org.springframework.data.repository.query.Param("hostName") String hostName, 
                                   @org.springframework.data.repository.query.Param("level") Integer level);
+
+    List<Room> findByLevelNumberAndStatusInOrderByIdDesc(Integer levelNumber, java.util.List<String> statuses);
+
+    List<Room> findByStatusInOrderByLevelNumberAsc(java.util.List<String> statuses);
 }

@@ -12,4 +12,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     Optional<Lesson> findByChapterIdAndOrderIndex(Long chapterId, Integer orderIndex);
 
+    List<Lesson> findByChapterIdAndLevelNumberOrderByOrderIndexAsc(Long chapterId, Integer levelNumber);
+
+    List<Lesson> findByChapterIdAndLevelNumberLessThanEqualOrderByOrderIndexAsc(Long chapterId, Integer levelNumber);
+
 }

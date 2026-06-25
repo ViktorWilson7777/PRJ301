@@ -385,6 +385,12 @@
                                         </div> LIVE
                                     </div>
                                 </c:if>
+                                <c:if test="${room.levelNumber != null}">
+                                    <div class="stat-pill" style="background: rgba(99,102,241,0.8); font-weight: 700;">
+                                        <i class="bi bi-bar-chart-fill" style="font-size: 10px;"></i>
+                                        Lvl ${room.levelNumber}
+                                    </div>
+                                </c:if>
                                 <div class="stat-pill"><i class="bi bi-eye-fill"></i> <span id="eyeCount">${participants.size()}</span></div>
                                 <div class="stat-pill" style="background: rgba(108,92,231,0.8);"><i
                                         class="bi bi-stars"></i> ${room.languageCode}</div>
@@ -486,11 +492,6 @@
                                 </div>
                             </c:forEach>
 
-                            <!-- Mock Chat Messages -->
-                            <div class="chat-msg"><span class="user">Alex:</span> Hello everyone! 👋</div>
-                            <div class="chat-msg"><span class="user">Sarah:</span> Can't wait to practice speaking.
-                            </div>
-                            <div class="chat-msg"><span class="user">Mike:</span> Is the audio clear?</div>
                         </div>
 
                         <!-- Chat Input -->
@@ -614,7 +615,8 @@
                                     <option value="practice">Practice Exercises</option>
                                     <option value="wrapup">Wrap-up Questions</option>
                                 </select>
-                                <button type="button" class="btn btn-sm w-100" style="background: #6C5CE7; color: white; border-radius: 8px;" onclick="generateAiQuestions(${room.currentLesson != null ? room.currentLesson.id : 0})">
+                                <c:set var="aiLessonId" value="${room.currentLesson != null ? room.currentLesson.id : 0}" />
+                                <button type="button" class="btn btn-sm w-100" style="background: #6C5CE7; color: white; border-radius: 8px;" onclick="generateAiQuestions(Number('${aiLessonId}'))">
                                     <i class="bi bi-magic me-1"></i> Suggest Questions
                                 </button>
                                 <div id="aiLoadingIndicator" style="display: none; text-align: center; margin-top: 8px;">
@@ -651,28 +653,6 @@
                             </div>
                         </div>
 
-                        <!-- Direct Add User -->
-                        <div class="tool-module">
-                            <h6>Direct Add User</h6>
-                            <form method="post" action="/rooms/${room.id}/add-participant"
-                                class="d-flex flex-column gap-2">
-                                <select name="userId" class="form-select form-select-sm form-dark" required>
-                                    <option value="">— Select User —</option>
-                                    <c:forEach var="u" items="${users}">
-                                        <option value="${u.id}">${u.displayName}</option>
-                                    </c:forEach>
-                                </select>
-                                <div class="d-flex gap-2">
-                                    <select name="roleInRoom" class="form-select form-select-sm form-dark">
-                                        <option value="LISTENER">Audience</option>
-                                        <option value="SPEAKER">Speaker</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-sm"
-                                        style="background: #6C5CE7; color: white; border-radius: 8px;">Add</button>
-                                </div>
-                            </form>
-                        </div>
-
                         <!-- Current Participants -->
                         <div class="tool-module">
                             <h6>Current Participants</h6>
@@ -703,18 +683,44 @@
 
                         <!-- Pin Material -->
                         <div class="tool-module">
-                            <h6>Pin Material to Stream</h6>
+                            <h6>
+                                <i class="bi bi-pin-angle me-1"></i> Pin Material to Stream
+                                <c:if test="${room.levelNumber != null}">
+                                    <span class="badge" style="background: rgba(99,102,241,0.3); color: #A5B4FC; font-size: 9px; margin-left: 4px;">Level ${room.levelNumber} topics</span>
+                                </c:if>
+                            </h6>
+                            <c:if test="${room.currentLesson != null}">
+                                <div class="mb-2 p-2 rounded" style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); font-size: 11px;">
+                                    <div style="color: #A5B4FC; font-weight: 700;">Current Topic:</div>
+                                    <div style="color: #E0E7FF;">${room.currentLesson.title}</div>
+                                    <div style="color: #64748B; font-size: 10px; margin-top: 2px;"><i class="bi bi-robot me-1"></i>AI auto-transitions every 10 min</div>
+                                </div>
+                            </c:if>
                             <form method="post" action="/rooms/${room.id}/pin-material"
                                 class="d-flex flex-column gap-2">
                                 <select name="lessonId" class="form-select form-select-sm form-dark" required>
                                     <option value="">— Select Lesson —</option>
                                     <c:forEach var="l" items="${lessons}">
-                                        <option value="${l.id}">[${l.type}] ${l.title}</option>
+                                        <option value="${l.id}" ${room.currentLesson != null && room.currentLesson.id == l.id ? 'selected' : ''}>
+                                            <c:if test="${l.levelNumber != null}">[Lvl ${l.levelNumber}]</c:if>
+                                            [${l.type}] ${l.title}
+                                        </option>
                                     </c:forEach>
                                 </select>
                                 <button type="submit" class="btn btn-sm"
                                     style="background: rgba(255,255,255,0.1); color: white; border-radius: 8px;">Pin</button>
                             </form>
+                            <c:if test="${not empty pinnedMaterials}">
+                                <div class="mt-2">
+                                    <div style="font-size: 10px; color: #94A1B2; margin-bottom: 4px;">Active Pins:</div>
+                                    <c:forEach var="pm" items="${pinnedMaterials}">
+                                        <div class="d-flex justify-content-between align-items-center p-1 mb-1 rounded" style="background: rgba(0,0,0,0.2); font-size: 11px;">
+                                            <span style="color: #E0E7FF;"><i class="bi bi-pin-fill me-1" style="color: #6366F1;"></i>${pm.title}</span>
+                                            <a href="/rooms/${room.id}/unpin/${pm.id}" class="text-danger" style="font-size: 10px;" title="Unpin"><i class="bi bi-x-circle"></i></a>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:if>
                         </div>
 
                     </div>

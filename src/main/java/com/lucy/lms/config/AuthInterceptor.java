@@ -18,9 +18,10 @@ public class AuthInterceptor implements HandlerInterceptor {
     ) throws Exception {
         String uri = request.getRequestURI();
 
-        // Allow static resources, swagger, login, register, and public APIs
+        // Allow static resources, swagger, login, register, public APIs, and room browsing/viewing
         if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/css/") || uri.startsWith("/js/")
-                || uri.startsWith("/images/") || uri.startsWith("/api/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")) {
+                || uri.startsWith("/images/") || uri.startsWith("/api/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
+                || uri.equals("/rooms") || uri.matches("/rooms/\\d+")) {
             return true;
         }
 

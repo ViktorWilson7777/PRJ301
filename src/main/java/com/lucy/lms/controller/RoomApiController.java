@@ -140,13 +140,26 @@ public class RoomApiController {
         return ResponseEntity.ok(result);
     }
     @PostMapping("/api/rooms/{id}/join")
-    @Operation(summary = "Join a room as a participant")
+    @Operation(summary = "Join a room as a participant (level check enforced for LEARNER)")
     public ResponseEntity<Map<String, Object>> joinRoom(@PathVariable Long id,
                                                         @RequestParam Long userId,
                                                         @RequestParam String roleInRoom) {
         Room room = roomRepository.findById(id).orElse(null);
         com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
         if (room == null || user == null) return ResponseEntity.notFound().build();
+
+        // Level gating for LEARNER role
+        if ("LEARNER".equals(user.getRole()) && room.getLevelNumber() != null) {
+            int score = user.getReputationScore() != null ? user.getReputationScore() : 0;
+            int userLevel = 1 + score / 100;
+            if (userLevel < room.getLevelNumber()) {
+                Map<String, Object> error = new LinkedHashMap<>();
+                error.put("error", "Level too low");
+                error.put("userLevel", userLevel);
+                error.put("requiredLevel", room.getLevelNumber());
+                return ResponseEntity.status(403).body(error);
+            }
+        }
 
         RoomParticipant p = new RoomParticipant();
         p.setRoom(room);
@@ -554,7 +567,6 @@ public class RoomApiController {
             return ResponseEntity.ok(Map.of("status", status));
         } catch (Exception e) {
             System.out.println("[request-status] Unexpected error for room " + roomId + ": " + e.getMessage());
-            e.printStackTrace();
             // Return APPROVED on error to avoid false kicks
             return ResponseEntity.ok(Map.of("status", "APPROVED", "role", "LISTENER"));
         }

@@ -30,6 +30,8 @@ public class PinnedMaterial {
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String content;
 
+    private Boolean active = true;
+
     private LocalDateTime pinnedAt;
 
     @PrePersist

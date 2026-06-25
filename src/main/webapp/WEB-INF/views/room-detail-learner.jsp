@@ -331,19 +331,62 @@
                         top: 80px;
                         left: 24px;
                         right: 24px;
-                        background: rgba(15, 23, 42, 0.8);
-                        backdrop-filter: blur(12px);
-                        border: 1px solid rgba(255, 255, 255, 0.1);
-                        border-radius: 12px;
-                        padding: 12px 16px;
+                        background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,27,75,0.92));
+                        backdrop-filter: blur(16px);
+                        border: 1px solid rgba(99,102,241,0.3);
+                        border-radius: 14px;
+                        padding: 14px 18px;
                         z-index: 10;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                    }
+                    .pinned-topic-info {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    }
+                    .pinned-icon {
+                        width: 42px;
+                        height: 42px;
+                        background: linear-gradient(135deg, #6366F1, #8B5CF6);
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 18px;
+                        color: #fff;
+                        flex-shrink: 0;
+                    }
+                    .level-badge-stream {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                        background: rgba(99,102,241,0.8);
+                        padding: 5px 10px;
+                        border-radius: 20px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: #fff;
+                    }
+                    @keyframes stage-timer {
+                        0% { width: 100%; }
+                        100% { width: 0%; }
+                    }
+                    .stage-progress {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        height: 3px;
+                        background: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899);
+                        border-radius: 0 0 14px 14px;
+                        animation: stage-timer 600s linear forwards;
                     }
                 </style>
 
                 <div class="row g-0 w-100 h-100">
+                    <div id="roomSessionData" data-anonymous="${sessionScope.currentUser == null}" data-remaining-sec="${remainingSec != null ? remainingSec : 600}" style="display: none;"></div>
 
                     <!-- ========================================== -->
                     <!-- LEFT: THE STREAM (Immersive Stage)         -->
@@ -364,7 +407,7 @@
                                     </div>
                                     <span class="room-topic" style="opacity: 0.8; font-size: 12px; font-weight: normal;">Topic: ${room.title}</span>
                                 </div>
-                                <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
+                                <c:if test="${room.hostUser != null && sessionScope.currentUser != null && sessionScope.currentUser.id != room.hostUser.id}">
                                     <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
                                         style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
                                 </c:if>
@@ -377,25 +420,38 @@
                                         </div> LIVE
                                     </div>
                                 </c:if>
+                                <c:if test="${room.levelNumber != null}">
+                                    <div class="level-badge-stream">
+                                        <i class="bi bi-bar-chart-fill" style="font-size: 10px;"></i>
+                                        Lvl ${room.levelNumber}
+                                    </div>
+                                </c:if>
                                 <div class="stat-pill"><i class="bi bi-eye-fill"></i> <span id="eyeCount">${participants.size()}</span></div>
                                 <div class="stat-pill" style="background: rgba(108,92,231,0.8);"><i
                                         class="bi bi-stars"></i> ${room.languageCode}</div>
                             </div>
                         </div>
 
-                        <!-- Pinned Material Banner (Visitor view) -->
+                        <!-- Pinned Material Banner (Prominent Topic Display) -->
                         <c:if test="${not empty pinnedMaterials}">
                             <c:forEach var="pm" items="${pinnedMaterials}" varStatus="loop">
                                 <c:if test="${loop.last}">
                                     <div class="pinned-banner">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="bg-primary text-white rounded p-2" style="font-size: 14px;"><i class="bi bi-pin-angle-fill"></i></div>
+                                        <div class="pinned-topic-info">
+                                            <div class="pinned-icon">
+                                                <i class="bi bi-pin-angle-fill"></i>
+                                            </div>
                                             <div>
-                                                <div style="font-size: 12px; font-weight: 700; color: #fff;">PINNED MATERIAL</div>
-                                                <div style="font-size: 11px; color: #94A1B2;">${pm.title}</div>
+                                                <div style="font-size: 10px; font-weight: 700; color: #A5B4FC; text-transform: uppercase; letter-spacing: 1px;">CURRENT TOPIC</div>
+                                                <div style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">${pm.title}</div>
+                                                <c:if test="${room.levelNumber != null}">
+                                                    <div style="font-size: 10px; color: #94A3B8; margin-top: 2px;">Level ${room.levelNumber} · AI auto-transitions every 10 min</div>
+                                                </c:if>
                                             </div>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-light" style="font-size: 11px; border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#pinnedMaterialModal_${pm.id}">View Details</button>
+                                        <button class="btn btn-sm" style="background: rgba(99,102,241,0.3); color: #E0E7FF; font-size: 11px; border-radius: 8px; border: 1px solid rgba(99,102,241,0.4);" data-bs-toggle="modal" data-bs-target="#pinnedMaterialModal_${pm.id}">View Details</button>
+                                        <!-- Stage progress bar -->
+                                        <div class="stage-progress" id="stageProgress"></div>
                                     </div>
 
                                     <!-- Pinned Detail Modal -->
@@ -403,19 +459,39 @@
                                         <div class="modal-dialog modal-dialog-centered">
                                             <div class="modal-content" style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 16px;">
                                                 <div class="modal-header border-0 pb-0">
-                                                    <h5 class="modal-title fw-bold">📌 Pinned Material</h5>
+                                                    <h5 class="modal-title fw-bold">📌 Current Topic — Level ${room.levelNumber != null ? room.levelNumber : '—'}</h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
                                                     <h6 class="text-info">${pm.title}</h6>
                                                     <hr style="border-color: rgba(255,255,255,0.1);">
                                                     <p style="font-size: 13px; line-height: 1.6; color: #CBD5E1; white-space: pre-line;">${pm.content}</p>
+                                                    <div class="mt-3 p-2" style="background: rgba(99,102,241,0.1); border-radius: 8px; font-size: 11px; color: #A5B4FC;">
+                                                        <i class="bi bi-robot me-1"></i>
+                                                        AI will automatically transition to the next topic after 10 minutes.
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </c:if>
                             </c:forEach>
+                        </c:if>
+
+                        <!-- Current Lesson Info (always visible even without pin) -->
+                        <c:if test="${empty pinnedMaterials && room.currentLesson != null}">
+                            <div class="pinned-banner">
+                                <div class="pinned-topic-info">
+                                    <div class="pinned-icon">
+                                        <i class="bi bi-journal-text"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: #A5B4FC; text-transform: uppercase; letter-spacing: 1px;">CURRENT TOPIC</div>
+                                        <div style="font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px;">${room.currentLesson.title}</div>
+                                    </div>
+                                </div>
+                                <div class="stage-progress" id="stageProgress2"></div>
+                            </div>
                         </c:if>
 
                         <!-- The Stage (Avatars) -->
@@ -469,14 +545,18 @@
                             </button>
 
                             <!-- Send Gift triggers Modal -->
-                            <button class="fab-btn primary" title="Send Gift" data-bs-toggle="modal"
-                                data-bs-target="#giftModal">
-                                <i class="bi bi-gift-fill"></i>
-                            </button>
+                            <c:if test="${sessionScope.currentUser != null}">
+                                <button class="fab-btn primary" title="Send Gift" data-bs-toggle="modal"
+                                    data-bs-target="#giftModal">
+                                    <i class="bi bi-gift-fill"></i>
+                                </button>
+                            </c:if>
 
-                            <button id="btnRaiseHand" class="fab-btn" title="Request to Speak">
-                                ✋
-                            </button>
+                            <c:if test="${sessionScope.currentUser != null}">
+                                <button id="btnRaiseHand" class="fab-btn" title="Request to Speak">
+                                    ✋
+                                </button>
+                            </c:if>
                         </div>
 
                     </div>
@@ -503,17 +583,20 @@
                                 </div>
                             </c:forEach>
 
-                            <!-- Mock Chat Messages -->
-                            <div class="chat-msg"><span class="user">Alex:</span> Hello everyone! 👋</div>
-                            <div class="chat-msg"><span class="user">Sarah:</span> Can't wait to practice speaking.
-                            </div>
-                            <div class="chat-msg"><span class="user">Mike:</span> Is the audio clear?</div>
                         </div>
 
                         <!-- Chat Input -->
                         <div class="chat-input-area">
-                            <input type="text" id="chatInput" class="chat-input" placeholder="Say something nice...">
-                            <button id="btnSendChat" class="btn-send"><i class="bi bi-send-fill"></i></button>
+                            <c:choose>
+                                <c:when test="${sessionScope.currentUser != null}">
+                                    <input type="text" id="chatInput" class="chat-input" placeholder="Say something nice...">
+                                    <button id="btnSendChat" class="btn-send"><i class="bi bi-send-fill"></i></button>
+                                </c:when>
+                                <c:otherwise>
+                                    <input type="text" id="chatInput" class="chat-input" placeholder="Log in to chat..." disabled style="opacity: 0.6;">
+                                    <a href="/login" class="btn btn-sm btn-lucy px-3" style="border-radius: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; height: 34px;">Login</a>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
 
                     </div>
@@ -590,6 +673,20 @@
                 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
                 <script>
+                    var sessionData = document.getElementById('roomSessionData');
+                    var isAnonymous = sessionData ? sessionData.getAttribute('data-anonymous') === 'true' : true;
+                    var remainingSec = sessionData ? parseInt(sessionData.getAttribute('data-remaining-sec'), 10) : 600;
+
+                    // Apply remaining seconds animation duration
+                    var sp = document.getElementById('stageProgress');
+                    if (sp) {
+                        sp.style.animationDuration = remainingSec + 's';
+                    }
+                    var sp2 = document.getElementById('stageProgress2');
+                    if (sp2) {
+                        sp2.style.animationDuration = remainingSec + 's';
+                    }
+
                     var roomId = '${room.id}';
                     var currentUser = '${currentParticipant != null ? currentParticipant.displayName : (sessionScope.currentUser != null ? sessionScope.currentUser.displayName : "Guest")}';
                     
@@ -743,23 +840,29 @@
                     }
 
                     // Gửi Chat
-                    document.getElementById('btnSendChat').onclick = function() {
-                        var input = document.getElementById('chatInput');
-                        if (input.value.trim() !== '') {
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'CHAT', senderName: currentUser, content: input.value }));
-                            input.value = '';
-                        }
-                    };
-                    document.getElementById('chatInput').addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') document.getElementById('btnSendChat').click();
-                    });
+                    var btnSendChat = document.getElementById('btnSendChat');
+                    var chatInput = document.getElementById('chatInput');
+                    if (btnSendChat && chatInput) {
+                        btnSendChat.onclick = function() {
+                            if (chatInput.value.trim() !== '') {
+                                stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'CHAT', senderName: currentUser, content: chatInput.value }));
+                                chatInput.value = '';
+                            }
+                        };
+                        chatInput.addEventListener('keypress', function (e) {
+                            if (e.key === 'Enter') btnSendChat.click();
+                        });
+                    }
 
                     // Giơ tay
-                    document.getElementById('btnRaiseHand').onclick = function() {
-                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'RAISE_HAND', senderName: currentUser }));
-                        this.style.background = '#F59E0B'; // Đổi màu thành vàng báo hiệu đang giơ tay
-                        this.style.color = '#fff';
-                    };
+                    var btnRaiseHand = document.getElementById('btnRaiseHand');
+                    if (btnRaiseHand) {
+                        btnRaiseHand.onclick = function() {
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'RAISE_HAND', senderName: currentUser }));
+                            this.style.background = '#F59E0B'; // Đổi màu thành vàng báo hiệu đang giơ tay
+                            this.style.color = '#fff';
+                        };
+                    }
 
                     // Follow
                     var btnFollow = document.getElementById('btnFollow');
@@ -929,6 +1032,9 @@
                     // Check if kicked, room ended, or role changed
                     var kickCheckFailCount = 0;
                     function checkKickedStatus() {
+                        if (isAnonymous) {
+                            return;
+                        }
                         fetch('/api/rooms/' + roomId + '/request-status', { credentials: 'same-origin' })
                             .then(res => {
                                 if (!res.ok) {

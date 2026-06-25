@@ -25,6 +25,8 @@ public class Lesson {
 
     private Integer orderIndex;
 
+    private Integer levelNumber;
+
     @Column(columnDefinition = "NVARCHAR(MAX)")
     private String contentData;
 
