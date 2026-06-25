@@ -15,9 +15,11 @@ import java.util.List;
 public class UserApiController {
 
     private final AppUserRepository userRepository;
+    private final com.lucy.lms.repository.UserFollowRepository userFollowRepository;
 
-    public UserApiController(AppUserRepository userRepository) {
+    public UserApiController(AppUserRepository userRepository, com.lucy.lms.repository.UserFollowRepository userFollowRepository) {
         this.userRepository = userRepository;
+        this.userFollowRepository = userFollowRepository;
     }
 
     @GetMapping("/api/users")
@@ -35,5 +37,50 @@ public class UserApiController {
         return userRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/api/users/{id}/toggle-follow")
+    @Operation(summary = "Toggle follow status for a user")
+    public ResponseEntity<java.util.Map<String, Object>> toggleFollow(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        if (currentUser.getId().equals(id)) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Cannot follow yourself"));
+        }
+
+        AppUser targetUser = userRepository.findById(id).orElse(null);
+        if (targetUser == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        boolean isFollowing = userFollowRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), id);
+        if (isFollowing) {
+            userFollowRepository.findByFollowerIdAndFollowingId(currentUser.getId(), id).ifPresent(userFollowRepository::delete);
+            isFollowing = false;
+        } else {
+            com.lucy.lms.entity.UserFollow newFollow = new com.lucy.lms.entity.UserFollow();
+            newFollow.setFollower(currentUser);
+            newFollow.setFollowing(targetUser);
+            userFollowRepository.save(newFollow);
+            isFollowing = true;
+        }
+
+        long followerCount = userFollowRepository.countByFollowingId(id);
+        return ResponseEntity.ok(java.util.Map.of("isFollowing", isFollowing, "followerCount", followerCount));
+    }
+
+    @GetMapping("/api/users/{id}/follow-status")
+    @Operation(summary = "Get follow status and count for a user")
+    public ResponseEntity<java.util.Map<String, Object>> getFollowStatus(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        boolean isFollowing = false;
+        if (currentUser != null) {
+            isFollowing = userFollowRepository.existsByFollowerIdAndFollowingId(currentUser.getId(), id);
+        }
+        long followerCount = userFollowRepository.countByFollowingId(id);
+        return ResponseEntity.ok(java.util.Map.of("isFollowing", isFollowing, "followerCount", followerCount));
     }
 }

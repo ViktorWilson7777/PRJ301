@@ -13,6 +13,6 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
 
     boolean existsByRoomIdAndUserId(Long roomId, Long userId);
 
-    java.util.Optional<RoomParticipant> findByRoomIdAndUserId(Long roomId, Long userId);
+    java.util.Optional<RoomParticipant> findFirstByRoomIdAndUserId(Long roomId, Long userId);
 }
 

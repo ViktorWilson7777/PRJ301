@@ -339,6 +339,16 @@
                         color: #fff;
                         border-radius: 8px;
                     }
+
+                    @media (max-width: 991.98px) {
+                        .stream-area {
+                            height: 50vh !important;
+                        }
+                        .chat-area {
+                            height: 50vh !important;
+                            border-top: 1px solid rgba(255, 255, 255, 0.1);
+                        }
+                    }
                 </style>
 
                 <div class="row g-0 w-100 h-100">
@@ -356,12 +366,16 @@
                                     'H'}
                                 </div>
                                 <div class="host-info">
-                                    <span class="host-name">${room.hostUser != null ? room.hostUser.displayName :
-                                        'Unknown Host'}</span>
-                                    <span class="room-topic">${room.title}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="host-name">${room.hostUser != null ? room.hostUser.displayName : 'Unknown Host'}</span>
+                                        <span style="font-size: 11px; color: #A29BFE; white-space: nowrap;">(<span id="followerCount">0</span> Followers)</span>
+                                    </div>
+                                    <span class="room-topic" style="opacity: 0.8; font-size: 12px; font-weight: normal;">Topic: ${room.title}</span>
                                 </div>
-                                <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
-                                    style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
+                                <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
+                                    <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
+                                        style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
+                                </c:if>
                             </div>
                             <div class="live-stats">
                                 <c:if test="${room.status == 'LIVE'}">
@@ -503,15 +517,18 @@
                                     data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <form method="post" action="/rooms/${room.id}/send-gift">
+                                <div class="text-center mb-3">
+                                    <span class="badge" style="background: rgba(108,92,231,0.2); color: #A29BFE; font-size: 13px;">
+                                        Your Balance: <span id="currentBalanceDisplay">${sessionScope.currentUser.creditBalance != null ? sessionScope.currentUser.creditBalance : 0}</span> cr
+                                    </span>
+                                </div>
+                                <form method="post" action="/rooms/${room.id}/send-gift" id="formSendGift">
                                     <input type="hidden" name="senderId" value="${sessionScope.currentUser.id}">
+                                    <input type="hidden" id="currentBalance" value="${sessionScope.currentUser.creditBalance != null ? sessionScope.currentUser.creditBalance : 0}">
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">To
                                             User</label>
                                         <select name="receiverId" class="form-select form-select-sm form-dark" required>
-                                            <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
-                                                <option value="${room.hostUser.id}">👑 ${room.hostUser.displayName} (Host)</option>
-                                            </c:if>
                                             <c:forEach var="p" items="${participants}">
                                                 <c:if test="${sessionScope.currentUser.id != p.user.id}">
                                                     <option value="${p.user.id}">${p.displayName}</option>
@@ -522,9 +539,9 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
-                                        <select name="giftId" class="form-select form-select-sm form-dark" required>
+                                        <select name="giftId" id="giftSelect" class="form-select form-select-sm form-dark" required>
                                             <c:forEach var="g" items="${gifts}">
-                                                <option value="${g.id}">${g.icon} ${g.name} (${g.creditCost} cr)
+                                                <option value="${g.id}" data-cost="${g.creditCost}">${g.icon} ${g.name} (${g.creditCost} cr)
                                                 </option>
                                             </c:forEach>
                                         </select>
@@ -534,6 +551,21 @@
                                         Send 💖
                                     </button>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Up Iframe Modal -->
+                <div class="modal fade" id="topupModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content" style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;">
+                            <div class="modal-header border-0 pb-0">
+                                <h6 class="modal-title text-white fw-bold">Top Up Credits 💳</h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0" style="height: 60vh;">
+                                <iframe src="/billing/topup" style="width: 100%; height: 100%; border: none; border-radius: 0 0 20px 20px;"></iframe>
                             </div>
                         </div>
                     </div>
@@ -732,6 +764,11 @@
                                 div.innerHTML = '💖 <b>' + msg.senderName + '</b> followed the host!';
                                 chatStream.appendChild(div);
                                 chatStream.scrollTop = chatStream.scrollHeight;
+                                
+                                var fc = document.getElementById('followerCount');
+                                if (fc) {
+                                    fc.innerText = parseInt(fc.innerText) + 1;
+                                }
                             }
                             // Xử lý bật/tắt Mic
                             else if (msg.type === 'MIC_TOGGLE') {
@@ -753,11 +790,95 @@
                                     pollPendingRequests();
                                 }
                             }
+                            // Xử lý Quà tặng
+                            else if (msg.type === 'GIFT') {
+                                var isReceiver = ('${sessionScope.currentUser.id}' === String(msg.receiverId));
+                                var isHost = ('${room.hostUser.id}' === String(msg.receiverId));
+                                
+                                if (isReceiver) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'You got a gift! 🎁',
+                                        text: msg.senderName + ' sent you a ' + msg.content + '!',
+                                        background: '#1E1B4B', color: '#fff',
+                                        toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+                                    });
+                                }
+                                
+                                // Nếu host là người nhận thì ai trong phòng cũng thấy trên chat
+                                if (isHost) {
+                                    var div = document.createElement('div');
+                                    div.className = 'chat-msg gift-alert';
+                                    div.innerHTML = '<span class="user">' + msg.senderName + '</span> sent <strong>' + msg.content + '</strong> to the host!';
+                                    chatStream.appendChild(div);
+                                    chatStream.scrollTop = chatStream.scrollHeight;
+                                }
+                            }
                         });
 
                         // Báo cho toàn server biết mình đã Join để tăng mắt xem
                         stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'JOIN', senderName: currentUser }));
+                        
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('success') === 'gift_sent') {
+                            var encName = urlParams.get('giftName');
+                            var encIcon = urlParams.get('giftIcon');
+                            var rId = urlParams.get('receiverId');
+                            var balance = urlParams.get('balance');
+                            var giftContent = decodeURIComponent(encIcon) + ' ' + decodeURIComponent(encName);
+                            
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({
+                                type: 'GIFT',
+                                senderName: currentUser,
+                                content: giftContent,
+                                receiverId: parseInt(rId)
+                            }));
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Gift Sent!',
+                                text: 'Your remaining balance is: ' + balance + ' cr',
+                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7',
+                                toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+                            });
+                            
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
                     });
+
+                    // Gift Form Intercept
+                    var formSendGift = document.getElementById('formSendGift');
+                    if (formSendGift) {
+                        formSendGift.addEventListener('submit', function(e) {
+                            var currentBalance = parseFloat(document.getElementById('currentBalance').value);
+                            var giftSelect = document.getElementById('giftSelect');
+                            var selectedOption = giftSelect.options[giftSelect.selectedIndex];
+                            var cost = parseFloat(selectedOption.getAttribute('data-cost'));
+                            
+                            if (currentBalance < cost) {
+                                e.preventDefault();
+                                
+                                var giftModalEl = document.getElementById('giftModal');
+                                var giftModal = bootstrap.Modal.getInstance(giftModalEl);
+                                if (giftModal) giftModal.hide();
+                                
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Insufficient Credits',
+                                    text: 'You do not have enough credits for this gift. Would you like to top up?',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Yes, Top Up',
+                                    cancelButtonText: 'Cancel',
+                                    background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7', cancelButtonColor: '#EF4444'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        var topupModal = new bootstrap.Modal(document.getElementById('topupModal'));
+                                        topupModal.show();
+                                    }
+                                });
+                            }
+                        });
+                    }
 
                     // Gửi Chat
                     document.getElementById('btnSendChat').onclick = function() {
@@ -779,12 +900,34 @@
                     };
 
                     // Follow
-                    document.getElementById('btnFollow').onclick = function() {
-                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'FOLLOW', senderName: currentUser }));
-                        this.innerHTML = 'Following';
-                        this.className = 'btn btn-sm btn-light ms-2';
-                        this.disabled = true; // Bấm 1 lần thôi
-                    };
+                    var btnFollow = document.getElementById('btnFollow');
+                    if (btnFollow) {
+                        fetch('/api/users/${room.hostUser.id}/follow-status')
+                            .then(res => res.json())
+                            .then(data => {
+                                document.getElementById('followerCount').innerText = data.followerCount;
+                                if (data.isFollowing) {
+                                    btnFollow.innerHTML = 'Following';
+                                    btnFollow.className = 'btn btn-sm btn-light ms-2';
+                                }
+                            });
+
+                        btnFollow.onclick = function() {
+                            fetch('/api/users/${room.hostUser.id}/toggle-follow', { method: 'POST' })
+                                .then(res => res.json())
+                                .then(data => {
+                                    document.getElementById('followerCount').innerText = data.followerCount;
+                                    if (data.isFollowing) {
+                                        this.innerHTML = 'Following';
+                                        this.className = 'btn btn-sm btn-light ms-2';
+                                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'FOLLOW', senderName: currentUser }));
+                                    } else {
+                                        this.innerHTML = '+ Follow';
+                                        this.className = 'btn btn-sm btn-outline-light ms-2';
+                                    }
+                                });
+                        };
+                    }
 
                     // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
                     window.addEventListener('beforeunload', function() {
@@ -1015,19 +1158,23 @@
                 </script>
 
                 <script>
-                    // Update leave button to end the room for the host
                     var leaveBtn = document.getElementById('globalLeaveBtn');
                     if (leaveBtn) {
-                        leaveBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i> End Live Room';
-                        leaveBtn.href = '/rooms/${room.id}/end';
-                        leaveBtn.style.background = '#EF4444';
-                        leaveBtn.style.color = '#FFFFFF';
+                        <c:choose>
+                            <c:when test="${room.status == 'SCHEDULED'}">
+                                leaveBtn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Start Live Room';
+                                leaveBtn.href = '/rooms/${room.id}/go-live';
+                                leaveBtn.style.background = '#10B981';
+                                leaveBtn.style.color = '#FFFFFF';
+                            </c:when>
+                            <c:otherwise>
+                                leaveBtn.innerHTML = '<i class="bi bi-stop-circle-fill"></i> End Live Room';
+                                leaveBtn.href = '/rooms/${room.id}/end';
+                                leaveBtn.style.background = '#EF4444';
+                                leaveBtn.style.color = '#FFFFFF';
+                            </c:otherwise>
+                        </c:choose>
                     }
-
-                    // Handle tab closure to end the room automatically
-                    window.addEventListener('beforeunload', function (e) {
-                        navigator.sendBeacon('/api/rooms/${room.id}/end');
-                    });
                 </script>
 
             </layout:room>

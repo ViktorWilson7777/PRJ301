@@ -192,7 +192,7 @@ public class RoomWebController {
             model.addAttribute("lessons", lessonRepository.findAll());
             model.addAttribute("gifts", giftRepository.findByActiveTrue());
             
-            RoomParticipant currentParticipant = participantRepository.findByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
+            RoomParticipant currentParticipant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
             model.addAttribute("currentParticipant", currentParticipant);
             
             return "room-detail-learner";
@@ -235,14 +235,17 @@ public class RoomWebController {
         AppUser user = userRepository.findById(userId).orElse(null);
         if (room == null || user == null) return "redirect:/rooms";
 
-        RoomParticipant p = new RoomParticipant();
-        p.setRoom(room);
-        p.setUser(user);
-        p.setDisplayName(user.getAnonymousMode() != null && user.getAnonymousMode() ? user.getAvatarPersona() : user.getDisplayName());
-        p.setRoleInRoom(roleInRoom);
-        p.setMicOn(false);
-        p.setHandRaised(false);
-        participantRepository.save(p);
+        boolean exists = participantRepository.existsByRoomIdAndUserId(id, userId);
+        if (!exists) {
+            RoomParticipant p = new RoomParticipant();
+            p.setRoom(room);
+            p.setUser(user);
+            p.setDisplayName(user.getAnonymousMode() != null && user.getAnonymousMode() ? user.getAvatarPersona() : user.getDisplayName());
+            p.setRoleInRoom(roleInRoom);
+            p.setMicOn(false);
+            p.setHandRaised(false);
+            participantRepository.save(p);
+        }
 
         return "redirect:/rooms/" + id;
     }
@@ -351,8 +354,39 @@ public class RoomWebController {
         if (currentUser != null && currentUser.getId().equals(senderId)) {
             session.setAttribute("currentUser", userRepository.findById(senderId).orElse(currentUser));
         }
+        java.net.URLEncoder.encode(gift.getName(), java.nio.charset.StandardCharsets.UTF_8);
+        String encName = "";
+        String encIcon = "";
+        try {
+            encName = java.net.URLEncoder.encode(gift.getName(), "UTF-8");
+            encIcon = java.net.URLEncoder.encode(gift.getIcon(), "UTF-8");
+        } catch(Exception e) {}
 
-        return "redirect:/rooms/" + id + "?success=gift_sent";
+        return "redirect:/rooms/" + id + "?success=gift_sent&receiverId=" + receiverId + "&giftName=" + encName + "&giftIcon=" + encIcon + "&balance=" + sender.getCreditBalance();
+    }
+
+    @GetMapping("/rooms/{id}/go-live")
+    public String goLiveRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return "redirect:/rooms";
+
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+
+        boolean isHost = room.getHostUser() != null && room.getHostUser().getId().equals(currentUser.getId());
+        if (isHost && "SCHEDULED".equals(room.getStatus())) {
+            room.setStatus("LIVE");
+            room.setStartedAt(LocalDateTime.now());
+            if (room.getChapter() != null) {
+                List<Lesson> lessons = lessonRepository.findByChapterIdOrderByOrderIndexAsc(room.getChapter().getId());
+                if (!lessons.isEmpty()) {
+                    room.setCurrentLesson(lessons.get(0));
+                    room.setStageStartedAt(LocalDateTime.now());
+                }
+            }
+            roomRepository.save(room);
+        }
+        return "redirect:/rooms/" + id;
     }
 
     private void performRoomCleanup(Long id) {

@@ -515,24 +515,49 @@ public class RoomApiController {
     @GetMapping("/api/rooms/{roomId}/request-status")
     @Operation(summary = "Get current user's join request status")
     public ResponseEntity<Map<String, Object>> getMyRequestStatus(@PathVariable Long roomId, jakarta.servlet.http.HttpSession session) {
-        com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
-        if (currentUser == null) return ResponseEntity.status(401).build();
+        try {
+            com.lucy.lms.entity.AppUser currentUser = (com.lucy.lms.entity.AppUser) session.getAttribute("currentUser");
+            if (currentUser == null) {
+                System.out.println("[request-status] No currentUser in session for room " + roomId);
+                return ResponseEntity.status(401).build();
+            }
 
-        java.util.Optional<RoomParticipant> participantOpt = participantRepository.findByRoomIdAndUserId(roomId, currentUser.getId());
-        if (participantOpt.isPresent()) {
-            return ResponseEntity.ok(Map.of("status", "APPROVED", "role", participantOpt.get().getRoleInRoom()));
-        }
+            // Check if user is a participant (most reliable check)
+            boolean isParticipant = participantRepository.existsByRoomIdAndUserId(roomId, currentUser.getId());
+            if (isParticipant) {
+                String role = "LISTENER";
+                try {
+                    java.util.Optional<RoomParticipant> pOpt = participantRepository.findFirstByRoomIdAndUserId(roomId, currentUser.getId());
+                    if (pOpt.isPresent() && pOpt.get().getRoleInRoom() != null) {
+                        role = pOpt.get().getRoleInRoom();
+                    }
+                } catch (Exception e) {
+                    System.out.println("[request-status] Error getting role: " + e.getMessage());
+                }
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("status", "APPROVED");
+                result.put("role", role);
+                return ResponseEntity.ok(result);
+            }
 
-        List<JoinRequest> requests = joinRequestRepository.findByRoomIdAndUserIdOrderByRequestedAtDesc(roomId, currentUser.getId());
-        if (requests.isEmpty()) {
-            return ResponseEntity.ok(Map.of("status", "NONE"));
-        }
+            // Check join request history
+            List<JoinRequest> requests = joinRequestRepository.findByRoomIdAndUserIdOrderByRequestedAtDesc(roomId, currentUser.getId());
+            if (requests.isEmpty()) {
+                return ResponseEntity.ok(Map.of("status", "NONE"));
+            }
 
-        String status = requests.get(0).getStatus();
-        if ("APPROVED".equals(status)) {
-            status = "NONE";
+            String status = requests.get(0).getStatus();
+            if ("APPROVED".equals(status)) {
+                // Join request was approved but participant record is gone = was kicked
+                status = "NONE";
+            }
+            return ResponseEntity.ok(Map.of("status", status));
+        } catch (Exception e) {
+            System.out.println("[request-status] Unexpected error for room " + roomId + ": " + e.getMessage());
+            e.printStackTrace();
+            // Return APPROVED on error to avoid false kicks
+            return ResponseEntity.ok(Map.of("status", "APPROVED", "role", "LISTENER"));
         }
-        return ResponseEntity.ok(Map.of("status", status));
     }
 }
 

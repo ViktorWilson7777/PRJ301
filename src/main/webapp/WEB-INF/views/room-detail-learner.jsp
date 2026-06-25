@@ -204,12 +204,14 @@
                         background: rgba(255, 255, 255, 0.1);
                         border: none;
                         color: #fff;
-                        font-size: 20px;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        color: #fff;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        transition: 0.2s;
-                        position: relative;
+                        font-size: 20px;
+                        transition: all 0.2s;
+                        backdrop-filter: blur(10px);
                     }
 
                     .fab-btn:hover {
@@ -219,6 +221,17 @@
 
                     .fab-btn.primary {
                         background: linear-gradient(135deg, #FD79A8, #E84393);
+                        border: none;
+                    }
+
+                    @media (max-width: 991.98px) {
+                        .stream-area {
+                            height: 50vh !important;
+                        }
+                        .chat-area {
+                            height: 50vh !important;
+                            border-top: 1px solid rgba(255, 255, 255, 0.1);
+                        }
                     }
 
                     .fab-btn.primary:hover {
@@ -345,12 +358,16 @@
                                     'H'}
                                 </div>
                                 <div class="host-info">
-                                    <span class="host-name">${room.hostUser != null ? room.hostUser.displayName :
-                                        'Unknown Host'}</span>
-                                    <span class="room-topic">${room.title}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="host-name">${room.hostUser != null ? room.hostUser.displayName : 'Unknown Host'}</span>
+                                        <span style="font-size: 11px; color: #A29BFE; white-space: nowrap;">(<span id="followerCount">0</span> Followers)</span>
+                                    </div>
+                                    <span class="room-topic" style="opacity: 0.8; font-size: 12px; font-weight: normal;">Topic: ${room.title}</span>
                                 </div>
-                                <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
-                                    style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
+                                <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
+                                    <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
+                                        style="border-radius: 20px; font-size: 10px; padding: 2px 10px;">+ Follow</button>
+                                </c:if>
                             </div>
                             <div class="live-stats">
                                 <c:if test="${room.status == 'LIVE'}">
@@ -513,8 +530,14 @@
                                     data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <form method="post" action="/rooms/${room.id}/send-gift">
+                                <div class="text-center mb-3">
+                                    <span class="badge" style="background: rgba(108,92,231,0.2); color: #A29BFE; font-size: 13px;">
+                                        Your Balance: <span id="currentBalanceDisplay">${sessionScope.currentUser.creditBalance != null ? sessionScope.currentUser.creditBalance : 0}</span> cr
+                                    </span>
+                                </div>
+                                <form method="post" action="/rooms/${room.id}/send-gift" id="formSendGift">
                                     <input type="hidden" name="senderId" value="${sessionScope.currentUser.id}">
+                                    <input type="hidden" id="currentBalance" value="${sessionScope.currentUser.creditBalance != null ? sessionScope.currentUser.creditBalance : 0}">
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">To
                                             User</label>
@@ -532,9 +555,9 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
-                                        <select name="giftId" class="form-select form-select-sm form-dark" required>
+                                        <select name="giftId" id="giftSelect" class="form-select form-select-sm form-dark" required>
                                             <c:forEach var="g" items="${gifts}">
-                                                <option value="${g.id}">${g.icon} ${g.name} (${g.creditCost} cr)
+                                                <option value="${g.id}" data-cost="${g.creditCost}">${g.icon} ${g.name} (${g.creditCost} cr)
                                                 </option>
                                             </c:forEach>
                                         </select>
@@ -544,6 +567,21 @@
                                         Send 💖
                                     </button>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Up Iframe Modal -->
+                <div class="modal fade" id="topupModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content" style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;">
+                            <div class="modal-header border-0 pb-0">
+                                <h6 class="modal-title text-white fw-bold">Top Up Credits 💳</h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-0" style="height: 60vh;">
+                                <iframe src="/billing/topup" style="width: 100%; height: 100%; border: none; border-radius: 0 0 20px 20px;"></iframe>
                             </div>
                         </div>
                     </div>
@@ -593,6 +631,11 @@
                                 div.innerHTML = '💖 <b>' + msg.senderName + '</b> followed the host!';
                                 chatStream.appendChild(div);
                                 chatStream.scrollTop = chatStream.scrollHeight;
+                                
+                                var fc = document.getElementById('followerCount');
+                                if (fc) {
+                                    fc.innerText = parseInt(fc.innerText) + 1;
+                                }
                             }
                             // Xử lý bật/tắt Mic
                             else if (msg.type === 'MIC_TOGGLE') {
@@ -608,11 +651,96 @@
                                     }
                                 }
                             }
+                            // Xử lý Quà tặng
+                            else if (msg.type === 'GIFT') {
+                                var isReceiver = ('${sessionScope.currentUser.id}' === String(msg.receiverId));
+                                var isHost = ('${room.hostUser.id}' === String(msg.receiverId));
+                                
+                                if (isReceiver) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'You got a gift! 🎁',
+                                        text: msg.senderName + ' sent you a ' + msg.content + '!',
+                                        background: '#1E1B4B', color: '#fff',
+                                        toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+                                    });
+                                }
+                                
+                                // Nếu host là người nhận thì ai trong phòng cũng thấy trên chat
+                                if (isHost) {
+                                    var div = document.createElement('div');
+                                    div.className = 'chat-msg gift-alert';
+                                    div.innerHTML = '<span class="user">' + msg.senderName + '</span> sent <strong>' + msg.content + '</strong> to the host!';
+                                    chatStream.appendChild(div);
+                                    chatStream.scrollTop = chatStream.scrollHeight;
+                                }
+                            }
                         });
 
                         // Báo cho toàn server biết mình đã Join để tăng mắt xem
                         stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'JOIN', senderName: currentUser }));
+                        
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('success') === 'gift_sent') {
+                            var encName = urlParams.get('giftName');
+                            var encIcon = urlParams.get('giftIcon');
+                            var rId = urlParams.get('receiverId');
+                            var balance = urlParams.get('balance');
+                            var giftContent = decodeURIComponent(encIcon) + ' ' + decodeURIComponent(encName);
+                            
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({
+                                type: 'GIFT',
+                                senderName: currentUser,
+                                content: giftContent,
+                                receiverId: parseInt(rId)
+                            }));
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Gift Sent!',
+                                text: 'Your remaining balance is: ' + balance + ' cr',
+                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7',
+                                toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+                            });
+                            
+                            // Remove params from URL
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
                     });
+
+                    // Gift Form Intercept
+                    var formSendGift = document.getElementById('formSendGift');
+                    if (formSendGift) {
+                        formSendGift.addEventListener('submit', function(e) {
+                            var currentBalance = parseFloat(document.getElementById('currentBalance').value);
+                            var giftSelect = document.getElementById('giftSelect');
+                            var selectedOption = giftSelect.options[giftSelect.selectedIndex];
+                            var cost = parseFloat(selectedOption.getAttribute('data-cost'));
+                            
+                            if (currentBalance < cost) {
+                                e.preventDefault();
+                                
+                                var giftModalEl = document.getElementById('giftModal');
+                                var giftModal = bootstrap.Modal.getInstance(giftModalEl);
+                                if (giftModal) giftModal.hide();
+                                
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Insufficient Credits',
+                                    text: 'You do not have enough credits for this gift. Would you like to top up?',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Yes, Top Up',
+                                    cancelButtonText: 'Cancel',
+                                    background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7', cancelButtonColor: '#EF4444'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        var topupModal = new bootstrap.Modal(document.getElementById('topupModal'));
+                                        topupModal.show();
+                                    }
+                                });
+                            }
+                        });
+                    }
 
                     // Gửi Chat
                     document.getElementById('btnSendChat').onclick = function() {
@@ -634,12 +762,34 @@
                     };
 
                     // Follow
-                    document.getElementById('btnFollow').onclick = function() {
-                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'FOLLOW', senderName: currentUser }));
-                        this.innerHTML = 'Following';
-                        this.className = 'btn btn-sm btn-light ms-2';
-                        this.disabled = true; // Bấm 1 lần thôi
-                    };
+                    var btnFollow = document.getElementById('btnFollow');
+                    if (btnFollow) {
+                        fetch('/api/users/${room.hostUser.id}/follow-status')
+                            .then(res => res.json())
+                            .then(data => {
+                                document.getElementById('followerCount').innerText = data.followerCount;
+                                if (data.isFollowing) {
+                                    btnFollow.innerHTML = 'Following';
+                                    btnFollow.className = 'btn btn-sm btn-light ms-2';
+                                }
+                            });
+
+                        btnFollow.onclick = function() {
+                            fetch('/api/users/${room.hostUser.id}/toggle-follow', { method: 'POST' })
+                                .then(res => res.json())
+                                .then(data => {
+                                    document.getElementById('followerCount').innerText = data.followerCount;
+                                    if (data.isFollowing) {
+                                        this.innerHTML = 'Following';
+                                        this.className = 'btn btn-sm btn-light ms-2';
+                                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'FOLLOW', senderName: currentUser }));
+                                    } else {
+                                        this.innerHTML = '+ Follow';
+                                        this.className = 'btn btn-sm btn-outline-light ms-2';
+                                    }
+                                });
+                        };
+                    }
 
                     // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
                     window.addEventListener('beforeunload', function() {
@@ -692,7 +842,7 @@
                             }
                             stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: isMuted ? 'OFF' : 'ON' }));
                             if (participantId) {
-                                fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST' });
+                                fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
                             }
                         } catch (err) {
                             console.error("Failed to toggle mic:", err);
@@ -731,7 +881,7 @@
                                 btnToggleMic.style.display = 'flex';
                                 stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'ON' }));
                                 if (participantId) {
-                                    fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST' });
+                                    fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
                                 }
                             }
 
@@ -769,7 +919,7 @@
                         isAudioConnected = false;
                         stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'OFF' }));
                         if (participantId) {
-                            fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST' });
+                            fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
                         }
                     }
 
@@ -777,20 +927,44 @@
                     document.getElementById('btnDisconnectAudio').onclick = leaveChannel;
 
                     // Check if kicked, room ended, or role changed
+                    var kickCheckFailCount = 0;
                     function checkKickedStatus() {
-                        fetch('/api/rooms/' + roomId + '/request-status')
+                        fetch('/api/rooms/' + roomId + '/request-status', { credentials: 'same-origin' })
                             .then(res => {
-                                if (res.status === 404 || res.status === 401) {
-                                    return { status: 'NONE' };
+                                if (!res.ok) {
+                                    // Don't kick on server errors or auth issues - just skip this check
+                                    kickCheckFailCount++;
+                                    if (kickCheckFailCount >= 5) {
+                                        // Only after 5 consecutive failures (20 seconds), redirect
+                                        window.location.href = "/rooms";
+                                    }
+                                    return null;
                                 }
                                 return res.json();
                             })
                             .then(data => {
+                                if (data === null) return; // Skip if error response
+
+                                // Reset fail counter on successful response
+                                kickCheckFailCount = 0;
+
+                                if (data && data.status === 'KICKED') {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Disconnected',
+                                        text: 'Bạn đã bị mời ra khỏi phòng.',
+                                        background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                                    }).then(() => {
+                                        window.location.href = "/rooms";
+                                    });
+                                    return;
+                                }
+
                                 if (data && data.status !== 'APPROVED') {
                                     Swal.fire({
                                         icon: 'warning',
                                         title: 'Disconnected',
-                                        text: 'Bạn đã bị mời ra khỏi phòng hoặc phòng đã kết thúc.',
+                                        text: 'Phòng đã kết thúc hoặc bạn không còn trong phòng.',
                                         background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
                                     }).then(() => {
                                         window.location.href = "/rooms";
@@ -820,7 +994,9 @@
                                 }
                             })
                             .catch(err => {
-                                window.location.href = "/rooms";
+                                // Network error - don't kick, just increment fail counter
+                                kickCheckFailCount++;
+                                console.warn('checkKickedStatus network error:', err);
                             });
                     }
                     setInterval(checkKickedStatus, 4000);
