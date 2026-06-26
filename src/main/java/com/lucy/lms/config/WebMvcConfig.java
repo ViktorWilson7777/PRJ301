@@ -14,10 +14,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
     }
 
     @Override
-    @SuppressWarnings("null")
     public void addInterceptors(@org.springframework.lang.NonNull InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/css/**", "/js/**", "/images/**", "/webjars/**");
+                .excludePathPatterns("/css/**", "/js/**", "/images/**", "/webjars/**", "/uploads/**");
     }
 }
