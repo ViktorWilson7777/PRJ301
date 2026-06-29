@@ -26,6 +26,9 @@ public class Course {
     @Column(columnDefinition = "NVARCHAR(100)")
     private String level;
 
+    @Column(columnDefinition = "NVARCHAR(50)")
+    private String language;
+
     private Integer orderIndex;
 
     @ManyToOne

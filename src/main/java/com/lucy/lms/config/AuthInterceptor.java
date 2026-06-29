@@ -18,8 +18,8 @@ public class AuthInterceptor implements HandlerInterceptor {
     ) throws Exception {
         String uri = request.getRequestURI();
 
-        // Allow static resources, swagger, login, register, public APIs, and room browsing/viewing
-        if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/css/") || uri.startsWith("/js/")
+        // Allow static resources, swagger, login, register, send-otp, public APIs, and room browsing/viewing
+        if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/send-otp") || uri.startsWith("/css/") || uri.startsWith("/js/")
                 || uri.startsWith("/images/") || uri.startsWith("/api/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
                 || uri.equals("/rooms") || uri.matches("/rooms/\\d+")) {
             return true;
@@ -82,7 +82,6 @@ public class AuthInterceptor implements HandlerInterceptor {
             response.sendRedirect("/podcasts?error=access_denied");
             return false;
         }
-
         return true;
     }
 }

@@ -27,6 +27,7 @@
                     <input type="text" name="code" class="form-control" value="${course.code}" required placeholder="e.g. EN-S1" />
                 </div>
 
+
                 <div class="mb-3">
                     <label class="form-label">Title <span class="text-danger">*</span></label>
                     <input type="text" name="title" class="form-control" value="${course.title}" required placeholder="e.g. English Stage 1" />
@@ -35,6 +36,11 @@
                 <div class="mb-3">
                     <label class="form-label">Level</label>
                     <input type="text" name="level" class="form-control" value="${course.level}" placeholder="e.g. Beginner" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Language</label>
+                    <input type="text" name="language" class="form-control" value="${course.language}" placeholder="e.g. English" />
                 </div>
 
                 <div class="mb-3">
@@ -53,6 +59,7 @@
                 </div>
             </form>
         </div>
+
     </div>
 </div>
 

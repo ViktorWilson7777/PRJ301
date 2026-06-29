@@ -93,14 +93,22 @@
         </div>
     </c:if>
 
-    <form method="post" action="/register" class="text-start">
+    <form method="post" action="${pageContext.request.contextPath}/register" class="text-start">
         <div class="mb-3">
             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">Full Name</label>
             <input type="text" name="fullName" class="form-control" placeholder="John Doe" required />
         </div>
         <div class="mb-3">
             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">Email Address</label>
-            <input type="email" name="email" class="form-control" placeholder="john@example.com" required />
+            <div class="input-group">
+                <input type="email" id="email" name="email" class="form-control" placeholder="john@example.com" required />
+                <button type="button" id="btnSendOtp" class="btn" style="background-color: var(--lucy-primary-light); color: #fff; font-size: 14px; font-weight: 600; border: none; border-radius: 0 10px 10px 0;">Send OTP</button>
+            </div>
+            <div id="otpFeedback" class="form-text" style="font-size: 12px; display: none; margin-top: 5px;"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">OTP Code</label>
+            <input type="text" name="otp" class="form-control" placeholder="Enter 6-digit OTP sent to email" required maxlength="6" pattern="\d{6}" />
         </div>
         <div class="mb-3">
             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">Display Name (Nickname)</label>
@@ -108,15 +116,127 @@
         </div>
         <div class="mb-4">
             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">Password</label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required />
+            <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required />
+            <div id="passwordStrength" class="mt-2" style="font-size: 12.5px; font-weight: 600;"></div>
         </div>
         <button type="submit" class="btn btn-lucy w-100 mb-3">Sign Up</button>
     </form>
 
     <div style="font-size: 13.5px; color: #6B7280;">
-        Already have an account? <a href="/login" class="login-link">Sign In</a>
+        Already have an account? <a href="${pageContext.request.contextPath}/login" class="login-link">Sign In</a>
     </div>
 </div>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- OTP Logic ---
+        const btnSendOtp = document.getElementById("btnSendOtp");
+        const emailInput = document.getElementById("email");
+        const otpFeedback = document.getElementById("otpFeedback");
+
+        btnSendOtp.addEventListener("click", function() {
+            const email = emailInput.value.trim();
+            if (!email) {
+                otpFeedback.style.display = "block";
+                otpFeedback.style.color = "#DC2626";
+                otpFeedback.textContent = "Please enter an email address first.";
+                return;
+            }
+
+            // Simple email validation
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                otpFeedback.style.display = "block";
+                otpFeedback.style.color = "#DC2626";
+                otpFeedback.textContent = "Please enter a valid email address.";
+                return;
+            }
+
+            btnSendOtp.disabled = true;
+            btnSendOtp.textContent = "Sending...";
+            otpFeedback.style.display = "none";
+
+            fetch('${pageContext.request.contextPath}/send-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'email=' + encodeURIComponent(email)
+            })
+            .then(response => response.json())
+            .then(data => {
+                otpFeedback.style.display = "block";
+                if (data.success) {
+                    otpFeedback.style.color = "#059669"; // Green
+                    otpFeedback.textContent = data.message;
+                    
+                    // Countdown
+                    let countdown = 60;
+                    const interval = setInterval(() => {
+                        countdown--;
+                        if (countdown <= 0) {
+                            clearInterval(interval);
+                            btnSendOtp.disabled = false;
+                            btnSendOtp.textContent = "Resend OTP";
+                        } else {
+                            btnSendOtp.textContent = "Wait " + countdown + "s";
+                        }
+                    }, 1000);
+                } else {
+                    otpFeedback.style.color = "#DC2626"; // Red
+                    otpFeedback.textContent = data.message;
+                    btnSendOtp.disabled = false;
+                    btnSendOtp.textContent = "Send OTP";
+                }
+            })
+            .catch(error => {
+                otpFeedback.style.display = "block";
+                otpFeedback.style.color = "#DC2626";
+                otpFeedback.textContent = "An error occurred. Please try again.";
+                btnSendOtp.disabled = false;
+                btnSendOtp.textContent = "Send OTP";
+            });
+        });
+
+        // --- Password Strength Logic ---
+        const passwordInput = document.getElementById("password");
+        const strengthIndicator = document.getElementById("passwordStrength");
+
+        passwordInput.addEventListener("input", function() {
+            const val = passwordInput.value;
+            if (!val) {
+                strengthIndicator.textContent = "";
+                return;
+            }
+
+            let hasLower = /[a-z]/.test(val);
+            let hasUpper = /[A-Z]/.test(val);
+            let hasNumber = /\d/.test(val);
+            let hasSpecial = /[^A-Za-z0-9]/.test(val);
+
+            // Weak: only 1 type
+            // Medium: letters and numbers
+            // Strong: letters, numbers, special characters, uppercase/lowercase
+
+            let strength = "Yếu"; // Weak
+            let color = "#DC2626"; // Red
+
+            let typesCount = 0;
+            if (hasLower || hasUpper) typesCount++;
+            if (hasNumber) typesCount++;
+            if (hasSpecial) typesCount++;
+
+            if (typesCount >= 3 && hasLower && hasUpper) {
+                strength = "Mạnh (Strong)";
+                color = "#059669"; // Green
+            } else if (typesCount >= 2 || ((hasLower || hasUpper) && hasNumber)) {
+                strength = "Trung bình (Medium)";
+                color = "#D97706"; // Orange
+            }
+
+            strengthIndicator.textContent = "Độ mạnh mật khẩu: " + strength;
+            strengthIndicator.style.color = color;
+        });
+    });
+</script>
 </body>
 </html>
