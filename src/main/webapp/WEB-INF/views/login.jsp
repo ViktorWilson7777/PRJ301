@@ -93,7 +93,7 @@
         </div>
     </c:if>
 
-    <form method="post" action="/login" class="text-start">
+    <form method="post" action="${pageContext.request.contextPath}/login" class="text-start">
         <div class="mb-3">
             <label class="form-label" style="font-size: 13px; font-weight: 500; color: #4B5563;">Email Address</label>
             <div class="input-group">
@@ -112,7 +112,7 @@
     </form>
 
     <div style="font-size: 13.5px; color: #6B7280;">
-        New to LUCY? <a href="/register" class="register-link">Create an account</a>
+        New to LUCY? <a href="${pageContext.request.contextPath}/register" class="register-link">Create an account</a>
     </div>
 </div>
 
