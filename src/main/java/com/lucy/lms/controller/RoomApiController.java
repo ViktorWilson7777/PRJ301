@@ -1,5 +1,6 @@
 package com.lucy.lms.controller;
 
+import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.entity.JoinRequest;
 import com.lucy.lms.entity.Room;
 import com.lucy.lms.entity.RoomParticipant;
@@ -31,6 +32,7 @@ public class RoomApiController {
     private final com.lucy.lms.repository.CourseRepository courseRepository;
     private final com.lucy.lms.repository.ChapterRepository chapterRepository;
     private final JoinRequestRepository joinRequestRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     public RoomApiController(RoomRepository roomRepository,
                              RoomParticipantRepository participantRepository,
@@ -42,7 +44,8 @@ public class RoomApiController {
                              com.lucy.lms.repository.PodcastEpisodeRepository podcastEpisodeRepository,
                              com.lucy.lms.repository.CourseRepository courseRepository,
                              com.lucy.lms.repository.ChapterRepository chapterRepository,
-                             JoinRequestRepository joinRequestRepository) {
+                             JoinRequestRepository joinRequestRepository,
+                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.userRepository = userRepository;
@@ -54,6 +57,7 @@ public class RoomApiController {
         this.courseRepository = courseRepository;
         this.chapterRepository = chapterRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @GetMapping("/api/rooms")
@@ -88,6 +92,9 @@ public class RoomApiController {
             pm.put("roleInRoom", p.getRoleInRoom());
             pm.put("micOn", p.getMicOn());
             pm.put("handRaised", p.getHandRaised());
+            if (p.getUser() != null) {
+                pm.put("userId", p.getUser().getId());
+            }
             return pm;
         }).toList());
         return ResponseEntity.ok(result);
@@ -139,6 +146,28 @@ public class RoomApiController {
         result.put("status", saved.getStatus());
         return ResponseEntity.ok(result);
     }
+    
+    @PostMapping("/api/rooms/{id}/leave")
+    @Operation(summary = "Leave a room as a participant")
+    public ResponseEntity<Map<String, Object>> leaveRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return ResponseEntity.status(401).build();
+
+        RoomParticipant participant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
+        if (participant != null) {
+            participantRepository.delete(participant);
+            // Send STOMP message to notify others
+            Map<String, Object> msg = new HashMap<>();
+            msg.put("type", "LEAVE");
+            msg.put("senderName", currentUser.getDisplayName());
+            messagingTemplate.convertAndSend("/topic/room/" + id, msg);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/api/rooms/{id}/join")
     @Operation(summary = "Join a room as a participant (level check enforced for LEARNER)")
     public ResponseEntity<Map<String, Object>> joinRoom(@PathVariable Long id,
@@ -436,10 +465,11 @@ public class RoomApiController {
             @RequestParam Long userId,
             @RequestParam(defaultValue = "LISTENER") String roleRequested) {
 
-        Room room = roomRepository.findById(id).orElse(null);
-        com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
+        try {
+            Room room = roomRepository.findById(id).orElse(null);
+            com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
 
-        if (room == null || user == null) return ResponseEntity.notFound().build();
+            if (room == null || user == null) return ResponseEntity.notFound().build();
         if (!"LIVE".equals(room.getStatus())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Room is not live"));
         }
@@ -455,14 +485,40 @@ public class RoomApiController {
         jr.setDisplayName(user.getAnonymousMode() != null && user.getAnonymousMode()
                 ? user.getAvatarPersona() : user.getDisplayName());
         jr.setRoleRequested(roleRequested);
-        jr.setStatus("PENDING");
-        JoinRequest saved = joinRequestRepository.save(jr);
+        
+        if ("LISTENER".equals(roleRequested)) {
+            jr.setStatus("APPROVED");
+            jr = joinRequestRepository.save(jr);
+            
+            // Auto create participant
+            RoomParticipant p = new RoomParticipant();
+            p.setRoom(room);
+            p.setUser(user);
+            p.setDisplayName(jr.getDisplayName());
+            p.setRoleInRoom("LISTENER");
+            p.setMicOn(false);
+            p.setHandRaised(false);
+            participantRepository.save(p);
+        } else {
+            jr.setStatus("PENDING");
+            jr = joinRequestRepository.save(jr);
+            
+            // Send WebSocket notification to host about pending request
+            Map<String, Object> msg = new HashMap<>();
+            msg.put("type", "JOIN_REQUEST");
+            msg.put("senderName", jr.getDisplayName());
+            messagingTemplate.convertAndSend("/topic/room/" + id, msg);
+        }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("requestId", saved.getId());
-        result.put("displayName", saved.getDisplayName());
-        result.put("status", "PENDING");
-        return ResponseEntity.ok(result);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("requestId", jr.getId());
+            result.put("displayName", jr.getDisplayName());
+            result.put("status", jr.getStatus());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.getClass().getName()));
+        }
     }
 
     @GetMapping("/api/rooms/{id}/pending-requests")

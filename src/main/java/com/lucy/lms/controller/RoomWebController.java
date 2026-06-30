@@ -31,6 +31,7 @@ public class RoomWebController {
     private final GiftTransactionRepository giftTransactionRepository;
     private final PodcastEpisodeRepository podcastEpisodeRepository;
     private final JoinRequestRepository joinRequestRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     public RoomWebController(RoomRepository roomRepository,
                              ProgramRepository programRepository,
@@ -43,7 +44,8 @@ public class RoomWebController {
                              GiftRepository giftRepository,
                              GiftTransactionRepository giftTransactionRepository,
                              PodcastEpisodeRepository podcastEpisodeRepository,
-                             JoinRequestRepository joinRequestRepository) {
+                             JoinRequestRepository joinRequestRepository,
+                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
         this.roomRepository = roomRepository;
         this.programRepository = programRepository;
         this.userRepository = userRepository;
@@ -56,6 +58,7 @@ public class RoomWebController {
         this.giftTransactionRepository = giftTransactionRepository;
         this.podcastEpisodeRepository = podcastEpisodeRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @GetMapping("/rooms")
@@ -326,6 +329,23 @@ public class RoomWebController {
         }
     }
 
+    @GetMapping("/rooms/{id}/leave")
+    public String leaveRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser != null) {
+            RoomParticipant participant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
+            if (participant != null) {
+                participantRepository.delete(participant);
+                
+                // Send STOMP LEAVE message to update other participants' UI
+                java.util.Map<String, Object> msg = new java.util.HashMap<>();
+                msg.put("type", "LEAVE");
+                msg.put("senderName", currentUser.getDisplayName());
+                messagingTemplate.convertAndSend("/topic/room/" + id, msg);
+            }
+        }
+        return "redirect:/rooms";
+    }
 
     @PostMapping("/rooms/{id}/add-participant")
     public String addParticipant(@PathVariable Long id,

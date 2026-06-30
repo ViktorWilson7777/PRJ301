@@ -189,12 +189,21 @@
                 </select>
             </div>
 
-            <button id="btnRequest" class="btn-submit">Send Request to Join</button>
+            <button id="btnRequest" class="btn-submit">Join Room (For Listeners)</button>
             <a href="/rooms" class="btn-back">Back to Rooms</a>
         </div>
     </div>
 
     <script>
+        document.getElementById('roleRequested').addEventListener('change', function() {
+            var btn = document.getElementById('btnRequest');
+            if (this.value === 'SPEAKER') {
+                btn.innerHTML = 'Send Request to Join (For Speakers)';
+            } else {
+                btn.innerHTML = 'Join Room (For Listeners)';
+            }
+        });
+
         document.getElementById('btnRequest').onclick = function() {
             const btn = this;
             btn.disabled = true;
@@ -219,7 +228,7 @@
                         confirmButtonColor: '#6C5CE7'
                     });
                     btn.disabled = false;
-                    btn.innerHTML = 'Send Request to Join';
+                    btn.innerHTML = (roleRequested === 'SPEAKER') ? 'Send Request to Join (For Speakers)' : 'Join Room (For Listeners)';
                 } else {
                     // Reload to trigger roomDetail logic, which will now show room-waiting.jsp
                     window.location.reload();
@@ -235,7 +244,7 @@
                     confirmButtonColor: '#6C5CE7'
                 });
                 btn.disabled = false;
-                btn.innerHTML = 'Send Request to Join';
+                btn.innerHTML = (roleRequested === 'SPEAKER') ? 'Send Request to Join (For Speakers)' : 'Join Room (For Listeners)';
             });
         };
     </script>

@@ -2,7 +2,7 @@
     <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
         <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
-            <layout:room pageTitle="${room.title}">
+            <layout:room pageTitle="${room.title}" roomId="${room.id}">
 
                 <style>
                     /* ── TIKTOK LIVE STYLE OVERRIDES ── */
@@ -105,23 +105,110 @@
                     /* ── SÂN KHẤU (AVATARS) ── */
                     .stage-container {
                         position: relative;
+                        flex-grow: 1;
+                        width: 100%;
+                        overflow: hidden;
+                    }
+
+                    #network-lines-svg {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: 1;
+                        pointer-events: none;
+                    }
+
+                    .host-node-wrapper {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        z-index: 10;
+                    }
+
+                    .speaker-node-wrapper {
+                        position: absolute;
                         z-index: 5;
+                        transition: all 0.5s ease-in-out;
+                        /* Initial position at center, will move out via JS */
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        opacity: 0; 
+                    }
+
+                    .listeners-box {
+                        position: absolute;
+                        bottom: 100px;
+                        right: 20px;
+                        background: rgba(0, 0, 0, 0.4);
+                        backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 12px;
+                        padding: 12px;
+                        z-index: 20;
+                        max-width: 250px;
+                        max-height: 200px;
+                        overflow-y: auto;
+                    }
+                    .listeners-box::-webkit-scrollbar { width: 4px; }
+                    .listeners-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+                    .listeners-box h6 {
+                        color: #fff;
+                        font-size: 12px;
+                        margin-bottom: 8px;
+                        font-weight: 600;
+                    }
+
+                    .listeners-grid {
                         display: flex;
                         flex-direction: column;
+                        gap: 8px;
+                    }
+
+                    .listener-item {
+                        display: flex;
                         align-items: center;
-                        gap: 40px;
+                        gap: 8px;
+                    }
+
+                    .listener-name {
+                        color: #E2E8F0;
+                        font-size: 13px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 150px;
+                    }
+
+                    .listener-avatar {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 50%;
+                        background: rgba(108, 92, 231, 0.6);
+                        color: #fff;
+                        font-size: 12px;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 1px solid rgba(255,255,255,0.2);
+                        flex-shrink: 0;
                     }
 
                     .host-avatar-big {
-                        width: 160px;
-                        height: 160px;
+                        width: 100px;
+                        height: 100px;
                         border-radius: 50%;
                         background: linear-gradient(135deg, #00CEC9, #6C5CE7);
                         border: 4px solid #fff;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        font-size: 64px;
+                        font-size: 40px;
                         font-weight: 700;
                         color: #fff;
                         position: relative;
@@ -133,21 +220,12 @@
                         0% {
                             box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.6);
                         }
-
                         70% {
                             box-shadow: 0 0 0 25px rgba(108, 92, 231, 0);
                         }
-
                         100% {
                             box-shadow: 0 0 0 0 rgba(108, 92, 231, 0);
                         }
-                    }
-
-                    .speaker-grid {
-                        display: flex;
-                        gap: 20px;
-                        justify-content: center;
-                        flex-wrap: wrap;
                     }
 
                     .speaker-avatar {
@@ -226,11 +304,18 @@
 
                     @media (max-width: 991.98px) {
                         .stream-area {
+                            width: 100% !important;
+                            flex: 0 0 100% !important;
+                            max-width: 100% !important;
                             height: 50vh !important;
                         }
                         .chat-area {
+                            width: 100% !important;
+                            flex: 0 0 100% !important;
+                            max-width: 100% !important;
                             height: 50vh !important;
                             border-top: 1px solid rgba(255, 255, 255, 0.1);
+                            border-left: none !important;
                         }
                     }
 
@@ -240,13 +325,14 @@
 
                     /* ── CHAT SIDEBAR ── */
                     .chat-messages {
-                        flex: 1;
+                        flex-grow: 1;
+                        flex-shrink: 1;
                         overflow-y: auto;
                         padding: 20px;
                         display: flex;
                         flex-direction: column;
                         gap: 12px;
-                        scrollbar-width: none;
+                         scrollbar-width: none;
                     }
 
                     .chat-messages::-webkit-scrollbar {
@@ -284,6 +370,7 @@
                     }
 
                     .chat-input-area {
+                        flex-shrink: 0;
                         padding: 16px;
                         border-top: 1px solid rgba(255, 255, 255, 0.08);
                         display: flex;
@@ -405,7 +492,6 @@
                                         <span class="host-name">${room.hostUser != null ? room.hostUser.displayName : 'Unknown Host'}</span>
                                         <span style="font-size: 11px; color: #A29BFE; white-space: nowrap;">(<span id="followerCount">0</span> Followers)</span>
                                     </div>
-                                    <span class="room-topic" style="opacity: 0.8; font-size: 12px; font-weight: normal;">Topic: ${room.title}</span>
                                 </div>
                                 <c:if test="${room.hostUser != null && sessionScope.currentUser != null && sessionScope.currentUser.id != room.hostUser.id}">
                                     <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
@@ -478,6 +564,7 @@
                             </c:forEach>
                         </c:if>
 
+<<<<<<< HEAD
                         <!-- Current Lesson Info (always visible even without pin) -->
                         <c:if test="${empty pinnedMaterials && room.currentLesson != null}">
                             <div class="pinned-banner">
@@ -496,48 +583,42 @@
 
                         <!-- The Stage (Avatars) -->
                         <div class="stage-container">
+=======
+                        <!-- The Stage (Network Graph) -->
+                        <div class="stage-container" id="networkStage">
+                            <svg id="network-lines-svg"></svg>
+                            
+>>>>>>> d02f3ce (Fix WebSocket mute and join synchronization bugs)
                             <!-- Host -->
-                            <div class="d-flex flex-column align-items-center gap-3">
-                                <div class="host-avatar-big">
-                                    ${room.hostUser != null ? room.hostUser.displayName.substring(0,1).toUpperCase() : 'H'}
-                                    <div class="mic-icon-stage bg-danger" id="micIconStage_${room.hostUser.displayName}" style="width: 32px; height: 32px; font-size: 16px;">
-                                        <i class="bi bi-mic-mute-fill" id="micIconStageInner_${room.hostUser.displayName}"></i>
+                            <div class="host-node-wrapper" id="hostNode">
+                                <div class="d-flex flex-column align-items-center gap-2">
+                                    <div class="host-avatar-big">
+                                        ${room.hostUser != null ? room.hostUser.displayName.substring(0,1).toUpperCase() : 'H'}
+                                        <div class="mic-icon-stage bg-danger" id="micIconStage_${room.hostUser.displayName}" style="width: 32px; height: 32px; font-size: 16px;">
+                                            <i class="bi bi-mic-mute-fill" id="micIconStageInner_${room.hostUser.displayName}"></i>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="text-center">
-                                    <div style="font-size: 18px; font-weight: 700; color: #fff;">${room.hostUser != null
-                                        ? room.hostUser.displayName : 'Host'}</div>
-                                    <div style="font-size: 13px; color: #A29BFE; font-weight: 500;">Host</div>
+                                    <div class="text-center">
+                                        <div style="font-size: 16px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 8px;">${room.hostUser != null ? room.hostUser.displayName : 'Host'}</div>
+                                        <div style="font-size: 12px; color: #A29BFE; font-weight: 500;">Host</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Speakers -->
-                            <div class="speaker-grid">
-                                <c:forEach var="p" items="${participants}">
-                                    <c:if test="${p.roleInRoom == 'SPEAKER' || p.roleInRoom == 'MODERATOR'}">
-                                        <div class="d-flex flex-column align-items-center gap-2">
-                                            <div class="speaker-avatar">
-                                                ${p.displayName.substring(0,1).toUpperCase()}
-                                                <div class="mic-icon-stage ${p.micOn ? '' : 'bg-danger'}" id="micIconStage_${p.displayName}">
-                                                    <i class="bi ${p.micOn ? 'bi-mic-fill' : 'bi-mic-mute-fill'}" id="micIconStageInner_${p.displayName}"></i>
-                                                </div>
-                                            </div>
-                                            <div style="font-size: 12px; color: #E2E8F0;">${p.displayName}</div>
-                                        </div>
-                                    </c:if>
-                                </c:forEach>
+                            <!-- Speakers (dynamically rendered by JS) -->
+                            <div id="speakersContainer"></div>
+
+                            <!-- Listeners Box -->
+                            <div class="listeners-box">
+                                <h6>Listeners</h6>
+                                <div class="listeners-grid" id="listenersContainer">
+                                </div>
                             </div>
                         </div>
 
                         <!-- Floating Action Bar -->
                         <div class="floating-action-bar">
-                            <button id="btnConnectAudio" class="fab-btn" title="Connect Audio">
-                                <i class="bi bi-headset"></i>
-                            </button>
-                            <button id="btnDisconnectAudio" class="fab-btn" title="Disconnect"
-                                style="display:none; color: #EF4444;">
-                                <i class="bi bi-telephone-x"></i>
-                            </button>
+
 
                             <!-- Toggle Mic Button -->
                             <button id="btnToggleMic" class="fab-btn" title="Mute/Unmute Mic" style="display:none;">
@@ -624,12 +705,12 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">To
                                             User</label>
-                                        <select name="receiverId" class="form-select form-select-sm form-dark" required>
+                                        <select id="receiverSelect" name="receiverId" class="form-select form-select-sm form-dark" required>
                                             <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
                                                 <option value="${room.hostUser.id}">👑 ${room.hostUser.displayName} (Host)</option>
                                             </c:if>
                                             <c:forEach var="p" items="${participants}">
-                                                <c:if test="${sessionScope.currentUser.id != p.user.id}">
+                                                <c:if test="${sessionScope.currentUser.id != p.user.id && (p.roleInRoom == 'SPEAKER' || p.roleInRoom == 'MODERATOR')}">
                                                     <option value="${p.user.id}">${p.displayName}</option>
                                                 </c:if>
                                             </c:forEach>
@@ -698,11 +779,6 @@
                         stompClient.subscribe('/topic/room/' + roomId, function (message) {
                             var msg = JSON.parse(message.body);
                             
-                            // Cập nhật mắt xem real-time
-                            if (msg.viewCount !== undefined) {
-                                document.getElementById('eyeCount').innerText = msg.viewCount;
-                            }
-
                             var chatStream = document.getElementById('chatStream');
 
                             // Xử lý Chat
@@ -713,11 +789,17 @@
                                 chatStream.appendChild(div);
                                 chatStream.scrollTop = chatStream.scrollHeight;
                             } 
-                            // Xử lý Giơ tay
                             else if (msg.type === 'RAISE_HAND') {
+                                refreshParticipantsUI();
                                 var div = document.createElement('div');
-                                div.className = 'chat-msg system-alert';
-                                div.innerHTML = '✋ <b>' + msg.senderName + '</b> wants to speak!';
+                                if (msg.content === 'OFF') {
+                                    div.className = 'chat-msg system-alert';
+                                    div.style = 'opacity: 0.6; color: #CBD5E1;';
+                                    div.innerHTML = '✋ <b>' + msg.senderName + '</b> lowered their hand.';
+                                } else {
+                                    div.className = 'chat-msg system-alert';
+                                    div.innerHTML = '✋ <b>' + msg.senderName + '</b> wants to speak!';
+                                }
                                 chatStream.appendChild(div);
                                 chatStream.scrollTop = chatStream.scrollHeight;
                             }
@@ -736,6 +818,7 @@
                             }
                             // Xử lý bật/tắt Mic
                             else if (msg.type === 'MIC_TOGGLE') {
+                                refreshParticipantsUI();
                                 var micStage = document.getElementById('micIconStage_' + msg.senderName);
                                 var micInner = document.getElementById('micIconStageInner_' + msg.senderName);
                                 if (micStage && micInner) {
@@ -747,6 +830,40 @@
                                         micStage.classList.add('bg-danger');
                                     }
                                 }
+                            }
+                            // Bị Host ép tắt Mic
+                            else if (msg.type === 'FORCE_MUTE' && currentUser === msg.receiverName) {
+                                if (!isMuted) {
+                                    isMuted = true;
+                                    if (rtc.localAudioTrack) {
+                                        rtc.localAudioTrack.setEnabled(false);
+                                    }
+                                    if (btnToggleMic) {
+                                        btnToggleMic.style.background = 'rgba(239, 68, 68, 0.2)';
+                                        btnToggleMic.style.color = '#EF4444';
+                                    }
+                                    if (micIcon) {
+                                        micIcon.className = 'bi bi-mic-mute-fill';
+                                    }
+                                    stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'OFF' }));
+                                    var participantId = '${currentParticipant != null ? currentParticipant.id : ""}';
+                                    if (participantId) {
+                                        fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
+                                    }
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Muted by Host',
+                                        text: 'The host has muted your microphone.',
+                                        toast: true,
+                                        position: 'top-end',
+                                        showConfirmButton: false,
+                                        timer: 3000
+                                    });
+                                }
+                            }
+                            // Xử lý khi có người được chấp nhận vào phòng, người mới vào, ra, hoặc bị kick
+                            else if (msg.type === 'JOIN_APPROVED' || msg.type === 'PARTICIPANT_KICKED' || msg.type === 'JOIN' || msg.type === 'LEAVE') {
+                                refreshParticipantsUI();
                             }
                             // Xử lý Quà tặng
                             else if (msg.type === 'GIFT') {
@@ -806,6 +923,7 @@
                     });
 
                     // Gift Form Intercept
+                    window.isGiftSubmitting = false;
                     var formSendGift = document.getElementById('formSendGift');
                     if (formSendGift) {
                         formSendGift.addEventListener('submit', function(e) {
@@ -835,6 +953,8 @@
                                         topupModal.show();
                                     }
                                 });
+                            } else {
+                                window.isGiftSubmitting = true;
                             }
                         });
                     }
@@ -855,14 +975,35 @@
                     }
 
                     // Giơ tay
+                    let isHandRaised = false;
                     var btnRaiseHand = document.getElementById('btnRaiseHand');
                     if (btnRaiseHand) {
                         btnRaiseHand.onclick = function() {
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'RAISE_HAND', senderName: currentUser }));
-                            this.style.background = '#F59E0B'; // Đổi màu thành vàng báo hiệu đang giơ tay
-                            this.style.color = '#fff';
+                            isHandRaised = !isHandRaised;
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'RAISE_HAND', senderName: currentUser, content: isHandRaised ? 'ON' : 'OFF' }));
+                            
+                            // Update UI
+                            if (isHandRaised) {
+                                this.style.background = '#F59E0B'; // Đổi màu thành vàng báo hiệu đang giơ tay
+                                this.style.color = '#fff';
+                            } else {
+                                this.style.background = ''; // Trở về bình thường
+                                this.style.color = '';
+                            }
+
+                            // Update backend
+                            if (typeof participantId !== 'undefined' && participantId) {
+                                fetch('/api/rooms/' + roomId + '/toggle-hand/' + participantId, { method: 'POST', credentials: 'same-origin' });
+                            }
                         };
                     }
+
+                    // Load follower count on page load
+                    fetch('/api/users/${room.hostUser.id}/follow-status')
+                        .then(res => res.json())
+                        .then(data => {
+                            document.getElementById('followerCount').innerText = data.followerCount;
+                        });
 
                     // Follow
                     var btnFollow = document.getElementById('btnFollow');
@@ -870,7 +1011,6 @@
                         fetch('/api/users/${room.hostUser.id}/follow-status')
                             .then(res => res.json())
                             .then(data => {
-                                document.getElementById('followerCount').innerText = data.followerCount;
                                 if (data.isFollowing) {
                                     btnFollow.innerHTML = 'Following';
                                     btnFollow.className = 'btn btn-sm btn-light ms-2';
@@ -894,10 +1034,10 @@
                         };
                     }
 
-                    // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
+                    // Khi đóng Tab hoặc tải lại trang thì báo cho server xóa khỏi DB
                     window.addEventListener('beforeunload', function() {
+                        navigator.sendBeacon('/api/rooms/' + roomId + '/leave');
                         if (stompClient !== null) {
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'LEAVE', senderName: currentUser }));
                             stompClient.disconnect();
                         }
                     });
@@ -943,9 +1083,20 @@
                                 btnToggleMic.style.background = 'rgba(239, 68, 68, 0.2)';
                                 btnToggleMic.style.color = '#EF4444';
                             }
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: isMuted ? 'OFF' : 'ON' }));
+                            
+                            var sendStomp = function() {
+                                stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: isMuted ? 'OFF' : 'ON' }));
+                            };
+                            
                             if (participantId) {
-                                fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
+                                fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' })
+                                    .then(sendStomp)
+                                    .catch(err => {
+                                        console.error("Error updating DB:", err);
+                                        sendStomp(); // Still send STOMP even if DB update fails
+                                    });
+                            } else {
+                                sendStomp();
                             }
                         } catch (err) {
                             console.error("Failed to toggle mic:", err);
@@ -954,10 +1105,6 @@
                     var isAudioConnected = false;
 
                     async function joinChannel() {
-                        var btnConnect = document.getElementById('btnConnectAudio');
-                        var btnDisconnect = document.getElementById('btnDisconnectAudio');
-                        btnConnect.disabled = true;
-
                         try {
                             const response = await fetch('/api/agora/token?channelName=' + options.channel + '&uid=' + options.uid + '&role=' + agoraRole);
                             const data = await response.json();
@@ -981,53 +1128,154 @@
                                     AGC: true
                                 });
                                 await rtc.client.publish([rtc.localAudioTrack]);
-                                btnToggleMic.style.display = 'flex';
-                                stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'ON' }));
-                                if (participantId) {
-                                    fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
+                                
+                                // Tắt mic mặc định khi vừa vào
+                                await rtc.localAudioTrack.setEnabled(false);
+                                isMuted = true;
+                                if (micIcon) micIcon.className = 'bi bi-mic-mute-fill';
+                                if (btnToggleMic) {
+                                    btnToggleMic.style.display = 'flex';
+                                    btnToggleMic.style.background = 'rgba(239, 68, 68, 0.2)';
+                                    btnToggleMic.style.color = '#EF4444';
                                 }
+                                stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'OFF' }));
                             }
 
-                            btnConnect.style.display = 'none'; 
-                            btnDisconnect.style.display = 'block';
                             isAudioConnected = true;
                         } catch (error) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Connection Failed',
-                                text: 'Agora Connection Failed: ' + error.message,
-                                background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
-                            });
-                            btnConnect.disabled = false;
+                            console.error("Auto-connect audio failed:", error);
                         }
                     }
 
-                    async function leaveChannel() {
-                        if (rtc.localAudioTrack) {
-                            rtc.localAudioTrack.close();
-                            rtc.localAudioTrack = null;
-                        }
-                        if (rtc.client) {
-                            await rtc.client.leave();
-                            rtc.client = null;
-                        }
-                        document.getElementById('btnConnectAudio').style.display = 'block';
-                        document.getElementById('btnConnectAudio').disabled = false;
-                        document.getElementById('btnDisconnectAudio').style.display = 'none';
-                        btnToggleMic.style.display = 'none';
-                        isMuted = false;
-                        micIcon.className = 'bi bi-mic-fill';
-                        btnToggleMic.style.background = '';
-                        btnToggleMic.style.color = '';
-                        isAudioConnected = false;
-                        stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: 'OFF' }));
-                        if (participantId) {
-                            fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
-                        }
+                    // ── Dynamic Participants Rendering ──
+                    function refreshParticipantsUI() {
+                        fetch('/api/rooms/' + roomId)
+                            .then(res => res.json())
+                            .then(data => {
+                                const participants = data.participants || [];
+                                const speakersContainer = document.getElementById('speakersContainer');
+                                const listenersContainer = document.getElementById('listenersContainer');
+                                
+                                // ── Render Speakers ──
+                                let speakersHtml = '';
+                                participants.forEach(p => {
+                                    if (p.roleInRoom === 'SPEAKER' || p.roleInRoom === 'MODERATOR') {
+                                        const initial = p.displayName.charAt(0).toUpperCase();
+                                        const micClass = p.micOn ? '' : 'bg-danger';
+                                        const micIcon = p.micOn ? 'bi-mic-fill' : 'bi-mic-mute-fill';
+                                        const handBorder = p.handRaised ? 'border: 3px solid #F59E0B;' : '';
+                                        speakersHtml += '<div class="speaker-node-wrapper speaker-node">' +
+                                            '<div class="d-flex flex-column align-items-center gap-1">' +
+                                                '<div class="speaker-avatar" style="' + handBorder + '">' +
+                                                    initial +
+                                                    '<div class="mic-icon-stage ' + micClass + '" id="micIconStage_' + p.displayName + '">' +
+                                                        '<i class="bi ' + micIcon + '" id="micIconStageInner_' + p.displayName + '"></i>' +
+                                                    '</div>' +
+                                                '</div>' +
+                                                '<div style="font-size: 11px; color: #E2E8F0; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">' + p.displayName + '</div>' +
+                                            '</div>' +
+                                        '</div>';
+                                    }
+                                });
+                                if (speakersContainer) speakersContainer.innerHTML = speakersHtml;
+
+                                // ── Render Listeners ──
+                                let listenersHtml = '';
+                                participants.forEach(p => {
+                                    if (p.roleInRoom === 'LISTENER') {
+                                        const initial = p.displayName.charAt(0).toUpperCase();
+                                        listenersHtml += '<div class="listener-item" title="' + p.displayName + '">' +
+                                            '<div class="listener-avatar">' + initial + '</div>' +
+                                            '<div class="listener-name">' + p.displayName + '</div>' +
+                                        '</div>';
+                                    }
+                                });
+                                if (listenersContainer) listenersContainer.innerHTML = listenersHtml;
+
+                                // Update eye count (participants + 1 host)
+                                var eyeEl = document.getElementById('eyeCount');
+                                if (eyeEl) eyeEl.innerText = participants.length + 1;
+
+                                // Update receiverSelect for gifts (Only Speakers and Host can receive gifts)
+                                var receiverSelect = document.getElementById('receiverSelect');
+                                if (receiverSelect) {
+                                    var currentUserId = '${sessionScope.currentUser.id}';
+                                    var hostId = '${room.hostUser != null ? room.hostUser.id : ""}';
+                                    var hostName = '${room.hostUser != null ? room.hostUser.displayName : ""}';
+                                    
+                                    var optionsHtml = '';
+                                    if (hostId && hostId != currentUserId) {
+                                        optionsHtml += '<option value="' + hostId + '">👑 ' + hostName + ' (Host)</option>';
+                                    }
+                                    
+                                    participants.forEach(p => {
+                                        if (p.userId && p.userId != currentUserId && (p.roleInRoom === 'SPEAKER' || p.roleInRoom === 'MODERATOR')) {
+                                            optionsHtml += '<option value="' + p.userId + '">' + p.displayName + '</option>';
+                                        }
+                                    });
+                                    receiverSelect.innerHTML = optionsHtml;
+                                }
+
+                                // Re-layout the network graph
+                                layoutNetworkStage();
+                            })
+                            .catch(err => console.error("Error refreshing participants:", err));
                     }
 
-                    document.getElementById('btnConnectAudio').onclick = joinChannel;
-                    document.getElementById('btnDisconnectAudio').onclick = leaveChannel;
+                    // Network stage layout logic
+                    function layoutNetworkStage() {
+                        const stage = document.getElementById('networkStage');
+                        const svg = document.getElementById('network-lines-svg');
+                        const hostNode = document.getElementById('hostNode');
+                        const speakers = document.querySelectorAll('.speaker-node');
+                        
+                        if (!stage || !svg || !hostNode) return;
+                        
+                        const rect = stage.getBoundingClientRect();
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+                        
+                        svg.innerHTML = '';
+                        
+                        const radius = Math.min(rect.width, rect.height) * 0.35;
+                        
+                        speakers.forEach((speaker, index) => {
+                            const angle = ((index * 360 / speakers.length) - 90) * (Math.PI / 180);
+                            const x = centerX + radius * Math.cos(angle);
+                            const y = centerY + radius * Math.sin(angle);
+                            
+                            speaker.style.left = x + 'px';
+                            speaker.style.top = y + 'px';
+                            speaker.style.opacity = '1';
+                            
+                            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            line.setAttribute('x1', centerX);
+                            line.setAttribute('y1', centerY);
+                            line.setAttribute('x2', x);
+                            line.setAttribute('y2', y);
+                            line.setAttribute('stroke', 'rgba(108, 92, 231, 0.4)');
+                            line.setAttribute('stroke-width', '2');
+                            line.setAttribute('stroke-dasharray', '6,6');
+                            
+                            const animate = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+                            animate.setAttribute('attributeName', 'stroke-dashoffset');
+                            animate.setAttribute('from', '24');
+                            animate.setAttribute('to', '0');
+                            animate.setAttribute('dur', '1.5s');
+                            animate.setAttribute('repeatCount', 'indefinite');
+                            line.appendChild(animate);
+                            
+                            svg.appendChild(line);
+                        });
+                    }
+
+                    // Auto-join audio when page loads
+                    window.addEventListener('load', () => {
+                        refreshParticipantsUI();
+                        joinChannel();
+                    });
+                    
+                    window.addEventListener('resize', layoutNetworkStage);
 
                     // Check if kicked, room ended, or role changed
                     var kickCheckFailCount = 0;

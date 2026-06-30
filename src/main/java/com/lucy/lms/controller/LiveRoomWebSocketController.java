@@ -14,11 +14,12 @@ public class LiveRoomWebSocketController {
     private final ConcurrentHashMap<String, Integer> roomViewers = new ConcurrentHashMap<>();
 
     public static class LiveRoomMessage {
-        public String type; // CHAT, JOIN, LEAVE, RAISE_HAND, FOLLOW, SYSTEM, GIFT
+        public String type; // CHAT, JOIN, LEAVE, RAISE_HAND, FOLLOW, SYSTEM, GIFT, FORCE_MUTE
         public String senderName;
         public String content;
         public int viewCount;
         public Long receiverId;
+        public String receiverName; // Required for FORCE_MUTE and specific targeted messages
     }
 
     @MessageMapping("/room/{roomId}")

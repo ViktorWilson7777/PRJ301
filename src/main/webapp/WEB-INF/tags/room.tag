@@ -1,6 +1,7 @@
 <%@ tag description="LUCY Full-screen Room Layout" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ attribute name="pageTitle" required="true" type="java.lang.String" %>
+<%@ attribute name="roomId" required="false" type="java.lang.Long" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -23,13 +24,23 @@
         .btn-leave { background: rgba(255,255,255,0.1); color: #fff; border: none; padding: 6px 16px; border-radius: 20px; font-size: 13px; text-decoration: none; transition: 0.2s; font-weight: 500; }
         .btn-leave:hover { background: rgba(239, 68, 68, 0.8); }
         .room-content { height: 100vh; padding-top: 56px; width: 100vw; display: flex; overflow: hidden; }
+        @media (max-width: 991.98px) {
+            .room-content { flex-wrap: wrap; overflow-y: auto; }
+        }
     </style>
 </head>
 <body>
 
 <nav class="room-nav">
     <a href="/dashboard" class="room-brand"><i class="bi bi-translate" style="color: #00CEC9;"></i> LUCY<span style="color: #6C5CE7;">.LIVE</span></a>
-    <a href="/rooms" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
+    <c:choose>
+        <c:when test="${roomId != null}">
+            <a href="/rooms/${roomId}/leave" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
+        </c:when>
+        <c:otherwise>
+            <a href="/rooms" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
+        </c:otherwise>
+    </c:choose>
 </nav>
 
 <div class="room-content">
