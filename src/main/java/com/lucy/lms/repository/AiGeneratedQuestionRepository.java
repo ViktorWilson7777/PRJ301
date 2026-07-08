@@ -9,5 +9,7 @@ public interface AiGeneratedQuestionRepository extends JpaRepository<AiGenerated
 
     List<AiGeneratedQuestion> findByLessonId(Long lessonId);
 
+    List<AiGeneratedQuestion> findByPromptType(String promptType);
+
     List<AiGeneratedQuestion> findByLessonIdAndPromptType(Long lessonId, String promptType);
 }

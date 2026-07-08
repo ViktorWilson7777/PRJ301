@@ -680,17 +680,18 @@
                         <!-- AI Support -->
                         <div class="tool-module" style="background: rgba(108, 92, 231, 0.1); border: 1px solid rgba(108, 92, 231, 0.2);">
                             <h6 style="color: #A29BFE;"><i class="bi bi-robot me-1"></i> AI Moderator Support</h6>
-                            <p class="text-muted" style="font-size: 11px; margin-bottom: 8px;">Generate questions for the current lesson</p>
+                            <p class="text-muted" style="font-size: 11px; margin-bottom: 8px;">Suggest discussion topics from the current lesson</p>
                             <div class="d-flex flex-column gap-2">
                                 <select id="aiPromptType" class="form-select form-select-sm form-dark">
+                                    <option value="discussion_topic">Discussion Topics</option>
                                     <option value="warmup">Warm-up Questions</option>
                                     <option value="discussion">Discussion Questions</option>
                                     <option value="practice">Practice Exercises</option>
                                     <option value="wrapup">Wrap-up Questions</option>
                                 </select>
                                 <c:set var="aiLessonId" value="${room.currentLesson != null ? room.currentLesson.id : 0}" />
-                                <button type="button" class="btn btn-sm w-100" style="background: #6C5CE7; color: white; border-radius: 8px;" onclick="generateAiQuestions(Number('${aiLessonId}'))">
-                                    <i class="bi bi-magic me-1"></i> Suggest Questions
+                                <button type="button" class="btn btn-sm w-100" style="background: #6C5CE7; color: white; border-radius: 8px;" onclick="generateAiSuggestions(Number('${aiLessonId}'))">
+                                    <i class="bi bi-magic me-1"></i> AI Suggest
                                 </button>
                                 <div id="aiLoadingIndicator" style="display: none; text-align: center; margin-top: 8px;">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -1147,8 +1148,8 @@
                     }
                     setInterval(pollPendingRequests, 10000);
 
-                    // AI Suggest Questions
-                    function generateAiQuestions(lessonId) {
+                    // AI Suggest topics/questions
+                    function generateAiSuggestions(lessonId) {
                         if (!lessonId || lessonId === 0) {
                             Swal.fire({
                                 icon: 'warning',
@@ -1165,7 +1166,11 @@
                         btnContainer.innerHTML = '';
                         loading.style.display = 'block';
 
-                        fetch('/api/ai/suggest-questions?lessonId=' + lessonId + '&promptType=' + promptType, { method: 'POST' })
+                        var url = promptType === 'discussion_topic'
+                            ? '/api/ai/suggest-topics?lessonId=' + lessonId
+                            : '/api/ai/suggest-questions?lessonId=' + lessonId + '&promptType=' + encodeURIComponent(promptType);
+
+                        fetch(url, { method: 'POST' })
                             .then(res => res.json())
                             .then(data => {
                                 loading.style.display = 'none';
@@ -1174,15 +1179,17 @@
                                     return;
                                 }
                                 if (data.questions && data.questions.length > 0) {
-                                    let html = '';
+                                    btnContainer.innerHTML = '';
                                     data.questions.forEach(q => {
-                                        html += '<div class="p-2 rounded mb-1" style="background: rgba(255,255,255,0.05); font-size: 12px;">' + 
-                                                '<div class="d-flex justify-content-between align-items-start">' +
-                                                '<div class="flex-grow-1">' + q.generatedQuestion + '</div>' +
-                                                '<button class="btn btn-xs btn-outline-light ms-2 py-0 px-1" onclick="sendAiQuestionToChat(this)" data-q="' + encodeURIComponent(q.generatedQuestion) + '"><i class="bi bi-send"></i></button>' +
-                                                '</div></div>';
+                                        var text = q.generatedQuestion || q;
+                                        var item = document.createElement('div');
+                                        item.className = 'p-2 rounded mb-1';
+                                        item.style.cssText = 'background: rgba(255,255,255,0.05); font-size: 12px;';
+                                        item.innerHTML = '<div class="d-flex justify-content-between align-items-start"><div class="flex-grow-1"></div><button class="btn btn-xs btn-outline-light ms-2 py-0 px-1" onclick="sendAiQuestionToChat(this)"><i class="bi bi-send"></i></button></div>';
+                                        item.querySelector('.flex-grow-1').textContent = text;
+                                        item.querySelector('button').setAttribute('data-q', encodeURIComponent(text));
+                                        btnContainer.appendChild(item);
                                     });
-                                    btnContainer.innerHTML = html;
                                 } else {
                                     btnContainer.innerHTML = '<div class="text-muted" style="font-size: 12px;">No questions generated.</div>';
                                 }

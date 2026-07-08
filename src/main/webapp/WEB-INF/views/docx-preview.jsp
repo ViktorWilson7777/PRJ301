@@ -15,16 +15,43 @@
                         <input type="file" name="file" class="form-control" accept=".docx" required />
                     </div>
                     <div class="col-md-3">
-                        <button type="submit" class="btn btn-lucy w-100"><i class="bi bi-search me-1"></i> Preview</button>
+                        <button type="submit" class="btn btn-outline-lucy w-100"><i class="bi bi-search me-1"></i> Preview Only</button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <c:if test="${fileName != null}">
+        <c:if test="${preview != null}">
             <div class="stat-card mb-3">
-                <h6 style="font-weight: 600;"><i class="bi bi-file-earmark-word me-1" style="color: #2563EB;"></i> ${fileName}</h6>
-                <p class="text-muted mb-0" style="font-size: 12px;">Total paragraphs: ${paragraphs.size()}</p>
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                    <div>
+                        <h6 style="font-weight: 600;"><i class="bi bi-file-earmark-word me-1" style="color: #2563EB;"></i> ${preview.fileName}</h6>
+                        <c:if test="${course != null}">
+                            <p class="text-muted mb-1" style="font-size: 12px;">Course: ${course.code} - ${course.title}</p>
+                        </c:if>
+                        <p class="text-muted mb-0" style="font-size: 12px;">${preview.message}</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge-status badge-info">Lines: ${preview.lineCount}</span>
+                        <span class="badge-status badge-purple">Chapters: ${preview.chapterCount}</span>
+                        <span class="badge-status badge-success">Lessons: ${preview.lessonCount}</span>
+                        <c:choose>
+                            <c:when test="${preview.valid}">
+                                <span class="badge-status badge-success">Valid</span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="badge-status badge-danger">Needs Fix</span>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                </div>
+
+                <c:if test="${confirmImport}">
+                    <form method="post" action="/import-files/confirm" class="mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-lucy"><i class="bi bi-cloud-upload me-1"></i> Confirm Import</button>
+                        <a href="/import-files/create" class="btn btn-light" style="border-radius: 8px;">Cancel</a>
+                    </form>
+                </c:if>
             </div>
         </c:if>
 

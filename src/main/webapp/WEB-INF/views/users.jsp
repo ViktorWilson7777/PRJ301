@@ -6,7 +6,10 @@
 
 <div class="d-flex align-items-center justify-content-between mb-4">
     <p class="text-muted mb-0" style="font-size: 13px;">Manage LUCY platform users and roles</p>
-    <a href="/users/create" class="btn btn-lucy"><i class="bi bi-plus-lg me-1"></i> New User</a>
+    <div class="d-flex gap-2">
+        <a href="/users/export" class="btn btn-outline-lucy"><i class="bi bi-file-earmark-excel me-1"></i> Export Excel</a>
+        <a href="/users/create" class="btn btn-lucy"><i class="bi bi-plus-lg me-1"></i> New User</a>
+    </div>
 </div>
 
 <div class="lucy-table">

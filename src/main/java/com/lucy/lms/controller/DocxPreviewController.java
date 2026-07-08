@@ -1,13 +1,11 @@
 package com.lucy.lms.controller;
 
-import com.lucy.lms.dto.DocxPreviewItem;
+import com.lucy.lms.dto.DocxPreviewResult;
 import com.lucy.lms.service.DocxImportService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @Controller
 public class DocxPreviewController {
@@ -28,10 +26,11 @@ public class DocxPreviewController {
             @RequestParam MultipartFile file,
             Model model
     ) {
-        List<DocxPreviewItem> paragraphs = docxImportService.previewDocx(file);
+        DocxPreviewResult preview = docxImportService.previewDocx(file);
 
         model.addAttribute("fileName", file.getOriginalFilename());
-        model.addAttribute("paragraphs", paragraphs);
+        model.addAttribute("preview", preview);
+        model.addAttribute("paragraphs", preview.getParagraphs());
 
         return "docx-preview";
     }

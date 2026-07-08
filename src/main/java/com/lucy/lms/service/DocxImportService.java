@@ -1,6 +1,7 @@
 package com.lucy.lms.service;
 
 import com.lucy.lms.dto.DocxPreviewItem;
+import com.lucy.lms.dto.DocxPreviewResult;
 import com.lucy.lms.entity.Chapter;
 import com.lucy.lms.entity.Course;
 import com.lucy.lms.entity.ImportFile;
@@ -14,6 +15,7 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -47,6 +49,22 @@ public class DocxImportService {
     }
 
     public ImportFile importDocx(Long courseId, MultipartFile file) {
+        try {
+            return importFromLines(courseId, file.getOriginalFilename(), extractLines(file));
+        } catch (Exception e) {
+            return saveFailedImport(courseId, file.getOriginalFilename(), e.getMessage());
+        }
+    }
+
+    public ImportFile importDocx(Long courseId, String fileName, byte[] fileBytes) {
+        try {
+            return importFromLines(courseId, fileName, extractLines(fileBytes));
+        } catch (Exception e) {
+            return saveFailedImport(courseId, fileName, e.getMessage());
+        }
+    }
+
+    private ImportFile importFromLines(Long courseId, String fileName, List<String> lines) {
         ImportFile importFile = new ImportFile();
 
         try {
@@ -54,12 +72,10 @@ public class DocxImportService {
                     .orElseThrow(() -> new RuntimeException("Course not found with id = " + courseId));
 
             importFile.setCourse(course);
-            importFile.setFileName(file.getOriginalFilename());
+            importFile.setFileName(fileName);
             importFile.setImportedAt(LocalDateTime.now());
             importFile.setStatus("PENDING");
             importFile.setErrorMessage(null);
-
-            List<String> lines = extractLines(file);
 
             if (lines.isEmpty()) {
                 throw new RuntimeException("DOCX file has no readable text.");
@@ -111,27 +127,73 @@ public class DocxImportService {
         return importFileRepository.save(importFile);
     }
 
-    public List<DocxPreviewItem> previewDocx(MultipartFile file) {
-        List<DocxPreviewItem> result = new ArrayList<>();
+    private ImportFile saveFailedImport(Long courseId, String fileName, String message) {
+        ImportFile importFile = new ImportFile();
+        importFile.setFileName(fileName);
+        importFile.setImportedAt(LocalDateTime.now());
+        importFile.setStatus("FAILED");
+        importFile.setErrorMessage(message);
+        courseRepository.findById(courseId).ifPresent(importFile::setCourse);
+        return importFileRepository.save(importFile);
+    }
+
+    public DocxPreviewResult previewDocx(MultipartFile file) {
+        return previewDocx(null, file);
+    }
+
+    public DocxPreviewResult previewDocx(Long courseId, MultipartFile file) {
+        DocxPreviewResult result = new DocxPreviewResult();
+        result.setFileName(file.getOriginalFilename());
 
         try {
             List<String> lines = extractLines(file);
+            List<DocxPreviewItem> paragraphs = new ArrayList<>();
 
             for (int i = 0; i < lines.size(); i++) {
-                result.add(new DocxPreviewItem(i + 1, lines.get(i)));
+                paragraphs.add(new DocxPreviewItem(i + 1, lines.get(i)));
             }
 
+            result.setParagraphs(paragraphs);
+            result.setLineCount(lines.size());
+
+            if (lines.isEmpty()) {
+                throw new RuntimeException("DOCX file has no readable text.");
+            }
+
+            List<ParsedChapter> parsedChapters = parseStandardFormat(lines);
+            if (courseId != null) {
+                validateNoDuplicateLevel(courseId, parsedChapters);
+            }
+
+            result.setChapterCount(parsedChapters.size());
+            result.setLessonCount(countLessons(parsedChapters));
+            result.setValid(true);
+            result.setMessage("Ready to import. Chapters: " + result.getChapterCount() +
+                    ", Lessons: " + result.getLessonCount() +
+                    ", Lines: " + result.getLineCount());
         } catch (Exception e) {
-            result.add(new DocxPreviewItem(0, "ERROR: " + e.getMessage()));
+            result.setValid(false);
+            result.setMessage(e.getMessage());
+            if (result.getParagraphs().isEmpty()) {
+                result.getParagraphs().add(new DocxPreviewItem(0, "ERROR: " + e.getMessage()));
+            }
         }
 
         return result;
     }
 
     private List<String> extractLines(MultipartFile file) throws Exception {
+        return extractLines(file.getInputStream());
+    }
+
+    private List<String> extractLines(byte[] fileBytes) throws Exception {
+        return extractLines(new ByteArrayInputStream(fileBytes));
+    }
+
+    private List<String> extractLines(InputStream inputStream) throws Exception {
         List<String> lines = new ArrayList<>();
 
-        try (InputStream inputStream = file.getInputStream();
+        try (inputStream;
              XWPFDocument document = new XWPFDocument(inputStream)) {
 
             for (XWPFParagraph paragraph : document.getParagraphs()) {
@@ -148,6 +210,14 @@ public class DocxImportService {
         }
 
         return lines;
+    }
+
+    private int countLessons(List<ParsedChapter> chapters) {
+        int count = 0;
+        for (ParsedChapter chapter : chapters) {
+            count += chapter.lessons.size();
+        }
+        return count;
     }
 
     private List<ParsedChapter> parseStandardFormat(List<String> lines) {

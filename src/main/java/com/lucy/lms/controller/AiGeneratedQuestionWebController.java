@@ -22,7 +22,7 @@ public class AiGeneratedQuestionWebController {
 
     @GetMapping("/ai-generated-questions")
     public String questions(Model model) {
-        model.addAttribute("questions", questionRepository.findAll());
+        model.addAttribute("questions", questionRepository.findByPromptType("quiz"));
         model.addAttribute("allLessons", lessonRepository.findAll());
         return "ai-generated-questions";
     }

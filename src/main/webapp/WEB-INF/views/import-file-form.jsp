@@ -10,7 +10,7 @@
         <!-- Upload Form -->
         <div class="lucy-form mb-4">
             <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-upload me-1"></i> Upload DOCX File</h6>
-            <form method="post" action="/import-files/upload" enctype="multipart/form-data">
+            <form method="post" action="/import-files/preview" enctype="multipart/form-data">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
                         <label class="form-label">Course <span class="text-danger">*</span></label>
@@ -26,7 +26,7 @@
                         <input type="file" name="file" class="form-control" accept=".docx" required />
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-lucy w-100"><i class="bi bi-cloud-upload me-1"></i> Import</button>
+                        <button type="submit" class="btn btn-lucy w-100"><i class="bi bi-eye me-1"></i> Preview</button>
                     </div>
                 </div>
             </form>
