@@ -48,19 +48,22 @@
                             <div style="width: 80px; height: 80px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #E2E8F0;">
                                 <c:choose>
                                     <c:when test="${not empty user.avatarUrl}">
-                                        <img src="${user.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
+                                        <img id="avatarPreview" src="${pageContext.request.contextPath}${user.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
                                     </c:when>
                                     <c:otherwise>
                                         <i class="bi bi-person-fill" style="font-size: 40px; color: #94A1B2;"></i>
                                     </c:otherwise>
                                 </c:choose>
                             </div>
-                            <form method="post" action="/profile/upload-avatar" enctype="multipart/form-data" class="flex-grow-1">
+                            <form method="post" action="${pageContext.request.contextPath}/profile/upload-avatar" enctype="multipart/form-data" class="flex-grow-1">
                                 <div class="input-group">
-                                    <input type="file" class="form-control" name="avatarFile" accept="image/*" required>
-                                    <button class="btn btn-lucy" type="submit">Upload</button>
+                                    <input id="avatarFile" type="file" class="form-control" name="avatarFile" accept="image/jpeg,image/png,image/webp,image/gif" required>
+                                    <button class="btn btn-lucy" type="submit"><i class="bi bi-cloud-arrow-up me-1"></i>Upload</button>
                                 </div>
                                 <small class="text-muted mt-1 d-block">Recommended: Square image, max 2MB.</small>
+                                <c:if test="${param.error == 'invalid_avatar'}"><div class="alert alert-danger mt-2 py-2">Choose a JPG, PNG, WebP, or GIF image under 2MB.</div></c:if>
+                                <c:if test="${param.error == 'upload_failed'}"><div class="alert alert-danger mt-2 py-2">The image could not be saved. Please try another file.</div></c:if>
+                                <c:if test="${param.success == 'avatar_uploaded'}"><div class="alert alert-success mt-2 py-2">Profile picture updated.</div></c:if>
                             </form>
                         </div>
                     </div>
@@ -77,7 +80,7 @@
                             </div>
                         </c:if>
 
-                        <form method="post" action="/profile/save" class="lucy-form" style="border: none; padding: 0;">
+                        <form method="post" action="${pageContext.request.contextPath}/profile/save" class="lucy-form" style="border: none; padding: 0;">
                             <div class="mb-3">
                                 <label class="form-label">Full Name</label>
                                 <input type="text" name="fullName" class="form-control" value="${user.fullName}" required />
@@ -95,10 +98,10 @@
                                 <input type="hidden" name="avatarPersona" id="avatarPersona" value="${user.avatarPersona}" />
                                 
                                 <div class="d-flex flex-wrap gap-2 mt-1" id="persona-picker">
-                                    <c:set var="personas" value="🐶,🐱,🐟,🐦,🦊,🐼,🐰,🐻,🦁,🐸" />
+                                    <c:set var="personas" value="🐶,🐱,🐬,🐧,🦊,🐼,🐰,🐻,🦁,🐸" />
                                     <c:forEach items="${personas}" var="p">
                                         <button type="button" class="btn btn-outline-secondary persona-btn ${user.avatarPersona == p ? 'active' : ''}" 
-                                                style="font-size: 24px; padding: 5px 12px; border-radius: 12px; border-color: #E2E8F0;"
+                                                style="font-size: 24px; padding: 5px 12px; border-radius: 8px; border-color: #E2E8F0;"
                                                 onclick="selectPersona('${p}', this)">
                                             ${p}
                                         </button>
@@ -140,6 +143,14 @@ document.addEventListener("DOMContentLoaded", function() {
         activeBtn.style.borderColor = 'var(--lucy-primary)';
         activeBtn.style.backgroundColor = 'rgba(108, 92, 231, 0.1)';
     }
+    const avatarFile = document.getElementById('avatarFile');
+    if (avatarFile) {
+        avatarFile.addEventListener('change', function () {
+            const file = avatarFile.files && avatarFile.files[0];
+            const preview = document.getElementById('avatarPreview');
+            if (file && preview) preview.src = URL.createObjectURL(file);
+        });
+    }
 });
 </script>
 
@@ -164,7 +175,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             </div>
                         </c:if>
 
-                        <form method="post" action="/profile/change-password" class="lucy-form" style="border: none; padding: 0;">
+                        <form method="post" action="${pageContext.request.contextPath}/profile/change-password" class="lucy-form" style="border: none; padding: 0;">
                             <div class="mb-3">
                                 <label class="form-label">Current Password</label>
                                 <input type="password" name="currentPassword" class="form-control" required />
@@ -210,21 +221,26 @@ document.addEventListener("DOMContentLoaded", function() {
                             </div>
                         </div>
 
-                        <!-- Gamification Status -->
-                        <c:set var="score" value="${user.reputationScore != null ? user.reputationScore : 0}" />
-                        <c:set var="level" value="${1 + (score - (score % 100)) / 100}" />
-                        <c:set var="nextLevelPoints" value="${level * 100}" />
-                        <c:set var="progress" value="${((score % 100) / 100) * 100}" />
-                        
-                        <div class="mb-4" style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 16px; border-radius: 12px;">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span style="font-weight: 700; color: #1E293B;">Lvl ${level} Speaker</span>
-                                <span style="font-size: 13px; color: #64748B; font-weight: 600;">⭐ ${score} / ${nextLevelPoints} XP</span>
-                            </div>
-                            <div class="progress" style="height: 8px; border-radius: 4px; background: #E2E8F0;">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: ${progress}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div style="font-size: 12px; color: #94A1B2; margin-top: 8px;">Gain 1 XP for every minute spent practicing in Live Rooms.</div>
+                        <div class="mb-4" style="background:#F8FAFC;border:1px solid #E2E8F0;padding:16px;border-radius:8px">
+                            <div class="d-flex justify-content-between mb-3"><strong>Language levels</strong><span class="text-muted" style="font-size:12px">1 XP / speaking minute</span></div>
+                            <c:choose>
+                                <c:when test="${empty programLevels}">
+                                    <div class="text-muted" style="font-size:13px">You start at Level 1 in every language program. A progress bar appears after your first speaking session.</div>
+                                </c:when>
+                                <c:otherwise>
+                                    <c:forEach var="programLevel" items="${programLevels}">
+                                        <c:set var="programProgress" value="${programLevel.experiencePoints % 100}" />
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span style="font-weight:700"><c:out value="${programLevel.program.title}"/> · Level ${programLevel.levelNumber}</span>
+                                                <span style="font-size:12px;color:#667085">${programLevel.experiencePoints} XP</span>
+                                            </div>
+                                            <div class="progress" style="height:8px"><div class="progress-bar bg-warning" style="width:${programProgress}%"></div></div>
+                                            <c:if test="${programLevel.maxHostingLevel > 0}"><div class="form-text">Can host through Level ${programLevel.maxHostingLevel}</div></c:if>
+                                        </div>
+                                    </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
 
                         <div class="row text-center g-2 mb-2">
@@ -265,42 +281,35 @@ document.addEventListener("DOMContentLoaded", function() {
                             </c:if>
 
                             <div class="d-grid gap-3">
-                                <!-- Option 1: Pro Mentor -->
-                                <div style="background: #F8F9FB; border-radius: 12px; padding: 16px; border: 1px solid #E8ECF1; position: relative;">
-                                    <span class="badge bg-purple position-absolute" style="top: 16px; right: 16px; font-size: 10px;">150 CREDITS</span>
+                                <div style="background: #F8F9FB; border-radius: 8px; padding: 16px; border: 1px solid #E8ECF1; position: relative;">
+                                    <span class="badge bg-purple position-absolute" style="top: 16px; right: 16px; font-size: 10px;">EARNED</span>
                                     <h6 style="font-weight: 700; margin-bottom: 6px;">Pro Mentor Tier</h6>
-                                    <p class="text-muted mb-3" style="font-size: 12px;">Host specialized learning rooms, pin documents, and manage student list in dashboard.</p>
+                                    <p class="text-muted mb-3" style="font-size: 12px;">Pro Mentor cannot be purchased. Complete every stage of a course or receive approval from an administrator.</p>
                                     
                                     <c:choose>
-                                        <c:when test="${user.role == 'PRO_MENTOR' || user.role == 'SUPER_CREATOR'}">
+                                        <c:when test="${user.role == 'PRO_MENTOR'}">
                                             <button class="btn btn-secondary btn-sm w-100" disabled style="border-radius: 8px;">Active / Unlocked</button>
                                         </c:when>
                                         <c:otherwise>
-                                            <form method="post" action="/profile/upgrade">
-                                                <input type="hidden" name="newRole" value="PRO_MENTOR" />
-                                                <button type="submit" class="btn btn-purple btn-sm w-100" style="border-radius: 8px; background: var(--lucy-primary); color: #fff; border: none;" onclick="return confirm('Upgrade to Pro Mentor for 150 credits?')">
-                                                    <i class="bi bi-unlock me-1"></i> Unlock Pro Mentor
-                                                </button>
-                                            </form>
+                                            <button class="btn btn-outline-secondary btn-sm w-100" disabled style="border-radius: 8px;"><i class="bi bi-mortarboard me-1"></i>Complete a course to unlock</button>
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
 
-                                <!-- Option 2: Super Creator -->
-                                <div style="background: #F8F9FB; border-radius: 12px; padding: 16px; border: 1px solid #E8ECF1; position: relative;">
-                                    <span class="badge bg-danger position-absolute" style="top: 16px; right: 16px; font-size: 10px; background-color: var(--lucy-accent2) !important;">300 CREDITS</span>
-                                    <h6 style="font-weight: 700; margin-bottom: 6px;">Super Creator Tier</h6>
-                                    <p class="text-muted mb-3" style="font-size: 12px;">Unlock live classroom Audio Recording, auto-publish Podcasts, and sell premium course content.</p>
+                                <div style="background: #F8F9FB; border-radius: 8px; padding: 16px; border: 1px solid #E8ECF1; position: relative;">
+                                    <span class="badge bg-danger position-absolute" style="top: 16px; right: 16px; font-size: 10px; background-color: var(--lucy-accent2) !important;">100,000 CREDITS</span>
+                                    <h6 style="font-weight: 700; margin-bottom: 6px;">Content Creator</h6>
+                                    <p class="text-muted mb-3" style="font-size: 12px;">Publish MP3 podcasts while keeping learner access. Storage can be expanded later with credits.</p>
                                     
                                     <c:choose>
-                                        <c:when test="${user.role == 'SUPER_CREATOR'}">
+                                        <c:when test="${user.accountType == 'CONTENT_CREATOR' || user.role == 'SUPER_CREATOR'}">
                                             <button class="btn btn-secondary btn-sm w-100" disabled style="border-radius: 8px;">Active / Unlocked</button>
                                         </c:when>
                                         <c:otherwise>
-                                            <form method="post" action="/profile/upgrade">
+                                            <form method="post" action="${pageContext.request.contextPath}/profile/upgrade">
                                                 <input type="hidden" name="newRole" value="SUPER_CREATOR" />
-                                                <button type="submit" class="btn btn-danger btn-sm w-100" style="border-radius: 8px; background: var(--lucy-accent2); color: #fff; border: none;" onclick="return confirm('Upgrade to Super Creator for 300 credits?')">
-                                                    <i class="bi bi-unlock me-1"></i> Unlock Super Creator
+                                                <button type="submit" class="btn btn-danger btn-sm w-100" style="border-radius: 8px; background: var(--lucy-accent2); color: #fff; border: none;">
+                                                    <i class="bi bi-mic me-1"></i> Upgrade to Content Creator
                                                 </button>
                                             </form>
                                         </c:otherwise>

@@ -92,12 +92,13 @@ public class BillingWebController {
 
     @PostMapping("/billing/topup")
     public String processTopup(
-            @RequestParam Long userId,
             @RequestParam Double amount,
             @RequestParam(required = false, defaultValue = "TOP_UP") String txType,
             jakarta.servlet.http.HttpSession session) {
 
-        AppUser user = userRepository.findById(userId).orElse(null);
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
         if (user == null) return "redirect:/billing/topup?error=user_not_found";
         if (amount == null || amount <= 0) return "redirect:/billing/topup?error=invalid_amount";
 
@@ -111,8 +112,7 @@ public class BillingWebController {
         tx.setDescription("Self-service top-up of " + amount + " credits");
         transactionRepository.save(tx);
 
-        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        if (currentUser != null && currentUser.getId().equals(userId)) {
+        if (user != null) {
             session.setAttribute("currentUser", user);
         }
 

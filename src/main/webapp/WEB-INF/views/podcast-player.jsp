@@ -453,7 +453,7 @@
                     </c:when>
                     <c:otherwise>
                         <c:forEach var="p" items="${podcasts}" varStatus="status">
-                            <c:set var="isUnlocked" value="${!p.isPremium || (p.unlockedByUsers != null && p.unlockedByUsers.contains(currentUser))}" />
+                            <c:set var="isUnlocked" value="true" />
                             
                             <c:set var="audioSrc" value="${p.audioUrl}" />
                             
@@ -486,7 +486,7 @@
                                         <c:choose>
                                             <c:when test="${!isUnlocked}">
                                                 <form method="post" action="/podcasts/buy/${p.id}" class="m-0">
-                                                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border-radius: 20px; font-size: 12px; font-weight: 600;" onclick="return confirm('Unlock this podcast for ${p.price} credits?')">
+                                                    <button class="btn btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border-radius: 20px; font-size: 12px; font-weight: 600;">
                                                         Unlock for ${p.price} <i class="bi bi-coin ms-1 text-warning"></i>
                                                     </button>
                                                 </form>

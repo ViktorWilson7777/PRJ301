@@ -661,7 +661,7 @@
                             <div class="d-flex flex-column gap-2">
                                 <a href="/rooms/${room.id}/end" class="btn w-100 btn-sm"
                                     style="background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid #EF4444; border-radius: 8px;"
-                                    onclick="return confirm('End this live session?')">
+                                    >
                                     <i class="bi bi-stop-fill me-1"></i> End Live Stream
                                 </a>
                                 <a href="/rooms/${room.id}/next-stage" class="btn w-100 btn-sm btn-outline-info" style="border-radius: 8px;">
@@ -746,7 +746,8 @@
                                                 </c:when>
                                                 <c:otherwise>
                                                     <a href="/rooms/${room.id}/toggle-role/${p.id}" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 9px; border-radius: 4px;" title="Promote or Demote">Role</a>
-                                                    <a href="/rooms/${room.id}/remove-participant/${p.id}" class="btn btn-xs btn-danger py-0 px-2" style="font-size: 9px; border-radius: 4px;" onclick="return confirm('Kick ${p.displayName} from this room?')" title="Kick User">Kick</a>
+                                                    <a href="/rooms/${room.id}/toggle-mic/${p.id}" class="btn btn-xs ${p.micAllowed ? 'btn-warning' : 'btn-outline-success'} py-0 px-2" style="font-size:9px;border-radius:4px" title="${p.micAllowed ? 'Revoke microphone' : 'Allow microphone'}"><i class="bi ${p.micAllowed ? 'bi-mic-mute' : 'bi-mic'}"></i></a>
+                                                    <button type="button" class="btn btn-xs btn-danger py-0 px-2" style="font-size:9px;border-radius:4px" onclick="kickSpeaker(${p.id}, '${p.displayName}')" title="Kick user">Kick</button>
                                                 </c:otherwise>
                                             </c:choose>
                                         </div>
@@ -1320,9 +1321,7 @@
                                                 '</div>' +
                                                 '<div style="font-size: 11px; color: #E2E8F0; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">' + p.displayName + '</div>' +
                                                 '<div class="mt-1 d-flex gap-1" style="position: absolute; bottom: -25px; white-space: nowrap;">' +
-                                                    (p.micOn ? 
-                                                    '<button class="badge bg-secondary border-0" title="Mute User" onclick="forceMuteSpeaker(\'' + p.displayName.replace(/'/g, "\\'") + '\')"><i class="bi bi-mic-mute-fill"></i></button>' :
-                                                    '<button class="badge bg-secondary border-0 opacity-50" title="Already Muted" disabled><i class="bi bi-mic-mute-fill"></i></button>') +
+                                                    '<button class="badge ' + (p.micAllowed ? 'bg-warning text-dark' : 'bg-success') + ' border-0" title="' + (p.micAllowed ? 'Revoke microphone' : 'Allow microphone') + '" onclick="setMicPermission(' + p.id + ')"><i class="bi ' + (p.micAllowed ? 'bi-mic-mute-fill' : 'bi-mic-fill') + '"></i></button>' +
                                                     '<button class="badge bg-danger border-0" title="Remove User" onclick="kickSpeaker(' + p.id + ', \'' + p.displayName.replace(/'/g, "\\'") + '\')"><i class="bi bi-x-circle"></i></button>' +
                                                 '</div>' +
                                             '</div>' +
@@ -1412,6 +1411,28 @@
                             text: displayName + ' has been muted.',
                             background: '#1E1B4B', color: '#fff',
                             toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
+                        });
+                    }
+
+                    function setMicPermission(participantId) {
+                        fetch('/api/rooms/' + roomId + '/mic-permission/' + participantId, {
+                            method: 'POST', credentials: 'same-origin'
+                        })
+                        .then(function(response) {
+                            if (!response.ok) return response.json().then(function(body) { throw new Error(body.error || 'Permission update failed.'); });
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            refreshParticipantsUI();
+                            Swal.fire({
+                                icon:'success',
+                                title:data.micAllowed ? 'Microphone enabled' : 'Microphone revoked',
+                                toast:true,position:'top-end',showConfirmButton:false,timer:2200,
+                                background:'#1E1B4B',color:'#fff'
+                            });
+                        })
+                        .catch(function(error) {
+                            Swal.fire({icon:'error',title:'Could not update microphone',text:error.message,background:'#1E1B4B',color:'#fff'});
                         });
                     }
 

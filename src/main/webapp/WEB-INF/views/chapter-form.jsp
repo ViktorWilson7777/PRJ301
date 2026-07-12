@@ -14,7 +14,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">Course <span class="text-danger">*</span></label>
-                    <select name="courseId" class="form-select" required>
+                    <select name="courseId" class="form-select" data-live-search required>
                         <option value="">— Select Course —</option>
                         <c:forEach var="c" items="${courses}">
                             <option value="${c.id}" <c:if test="${chapter.course != null && chapter.course.id == c.id}">selected</c:if>>${c.code} — ${c.title}</option>

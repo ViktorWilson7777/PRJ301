@@ -11,6 +11,7 @@ import com.lucy.lms.repository.CourseRepository;
 import com.lucy.lms.repository.LessonRepository;
 import com.lucy.lms.repository.ProgramRepository;
 import com.lucy.lms.repository.RoomRepository;
+import com.lucy.lms.service.ProgramProgressService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,17 +32,20 @@ public class CourseWebController {
     private final ChapterRepository chapterRepository;
     private final LessonRepository lessonRepository;
     private final RoomRepository roomRepository;
+    private final ProgramProgressService progressService;
 
     public CourseWebController(CourseRepository courseRepository,
             ProgramRepository programRepository,
             ChapterRepository chapterRepository,
             LessonRepository lessonRepository,
-            RoomRepository roomRepository) {
+            RoomRepository roomRepository,
+            ProgramProgressService progressService) {
         this.courseRepository = courseRepository;
         this.programRepository = programRepository;
         this.chapterRepository = chapterRepository;
         this.lessonRepository = lessonRepository;
         this.roomRepository = roomRepository;
+        this.progressService = progressService;
     }
 
     @GetMapping("/courses")
@@ -97,19 +101,43 @@ public class CourseWebController {
 
         // Calculate User Level
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        int userLevel = 1;
-        if (currentUser != null) {
-            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
-            userLevel = 1 + score / 100;
-        }
+        int userLevel = progressService.getLevel(currentUser, course.getProgram());
 
         model.addAttribute("course", course);
         model.addAttribute("chapters", chapters);
         model.addAttribute("chapterLessonsMap", chapterLessonsMap);
         model.addAttribute("liveRooms", liveRooms);
         model.addAttribute("userLevel", userLevel);
+        model.addAttribute("completedLessonIds", progressService.completedLessonIds(currentUser, course));
+        model.addAttribute("courseCompleted", progressService.isCourseCompleted(currentUser, course));
+        model.addAttribute("canHostCourse", progressService.canHostCourse(currentUser, course));
 
         return "course-detail";
+    }
+
+    @PostMapping("/courses/{courseId}/lessons/{lessonId}/complete")
+    public String completeLesson(@PathVariable Long courseId,
+                                 @PathVariable Long lessonId,
+                                 jakarta.servlet.http.HttpSession session,
+                                 org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
+        if (lesson == null || lesson.getChapter() == null || lesson.getChapter().getCourse() == null
+                || !courseId.equals(lesson.getChapter().getCourse().getId())) {
+            redirectAttributes.addFlashAttribute("error", "Lesson not found in this course.");
+            return "redirect:/courses/" + courseId;
+        }
+        boolean courseCompleted = progressService.markLessonComplete(currentUser, lesson);
+        AppUser freshUser = currentUser;
+        if (courseCompleted) {
+            redirectAttributes.addFlashAttribute("success",
+                    "Course completed. Pro Mentor hosting access has been unlocked for this course.");
+        } else {
+            redirectAttributes.addFlashAttribute("success", "Lesson marked as complete.");
+        }
+        session.setAttribute("currentUser", freshUser);
+        return "redirect:/courses/" + courseId;
     }
 
     @GetMapping("/courses/create")

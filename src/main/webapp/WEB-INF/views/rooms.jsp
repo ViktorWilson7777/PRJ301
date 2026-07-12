@@ -2,7 +2,7 @@
 <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
-<c:set var="isAdmin" value="${sessionScope.currentUser.role == 'ADMIN' || sessionScope.currentUser.role == 'SUPER_CREATOR'}" />
+<c:set var="isAdmin" value="${sessionScope.currentUser.role == 'ADMIN'}" />
 
 <layout:main pageTitle="Live Rooms">
 
@@ -285,12 +285,12 @@
             <div class="level-grid" id="levelGrid">
                 <c:forEach var="lvl" begin="1" end="100">
                     <a href="/rooms?level=${lvl}" 
-                       class="level-btn ${selectedLevel == lvl ? 'active' : ''} ${lvl > userLevel && sessionScope.currentUser.role == 'LEARNER' ? 'locked' : ''}"
+                       class="level-btn ${selectedLevel == lvl ? 'active' : ''} ${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? 'locked' : ''}"
                        id="levelBtn_${lvl}"
-                       title="Level ${lvl}${lvl > userLevel && sessionScope.currentUser.role == 'LEARNER' ? ' (Locked)' : ''}"
-                       ${lvl > userLevel && sessionScope.currentUser.role == 'LEARNER' ? 'onclick="event.preventDefault();"' : ''}>
+                       title="Level ${lvl}${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? ' (Locked)' : ''}"
+                       ${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? 'onclick="event.preventDefault();"' : ''}>
                         <c:choose>
-                            <c:when test="${lvl > userLevel && sessionScope.currentUser.role == 'LEARNER'}">
+                            <c:when test="${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN'}">
                                 <i class="bi bi-lock-fill" style="font-size: 11px;"></i>
                             </c:when>
                             <c:otherwise>
@@ -383,7 +383,7 @@
                                         </div>
                                         <c:set var="reqLevel" value="${r.levelNumber != null ? r.levelNumber : 1}" />
                                         <c:choose>
-                                            <c:when test="${userLevel >= reqLevel || sessionScope.currentUser.role != 'LEARNER'}">
+                                            <c:when test="${roomAccess[room.id]}">
                                                 <a href="/rooms/${r.id}" class="btn btn-lucy px-4" style="border-radius: 20px; font-size: 13px;">
                                                     <c:choose>
                                                         <c:when test="${r.status == 'LIVE'}"><i class="bi bi-broadcast me-1"></i>Join Now</c:when>

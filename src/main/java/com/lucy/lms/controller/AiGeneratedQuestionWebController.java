@@ -22,7 +22,12 @@ public class AiGeneratedQuestionWebController {
 
     @GetMapping("/ai-generated-questions")
     public String questions(Model model) {
-        model.addAttribute("questions", questionRepository.findByPromptType("quiz"));
+        model.addAttribute("questions", questionRepository.findAll().stream()
+                .filter(q -> !"quiz".equalsIgnoreCase(q.getPromptType()))
+                .sorted(java.util.Comparator.comparing(
+                        com.lucy.lms.entity.AiGeneratedQuestion::getGeneratedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .toList());
         model.addAttribute("allLessons", lessonRepository.findAll());
         return "ai-generated-questions";
     }

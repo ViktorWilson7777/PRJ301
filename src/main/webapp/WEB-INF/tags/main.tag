@@ -50,7 +50,8 @@
         .stat-value { font-size: 28px; font-weight: 700; color: #1E293B; }
         .stat-label { font-size: 12.5px; color: #64748B; font-weight: 500; }
 
-        .lucy-table { background: #fff; border-radius: 14px; border: 1px solid #E2E8F0; overflow: hidden; }
+        .lucy-table { background:#fff; border-radius:8px; border:1px solid #E2E8F0; overflow:auto; max-height:min(72vh,720px); }
+        .lucy-table thead { position:sticky; top:0; z-index:2; }
         .lucy-table thead th { background: #F8FAFC; font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; padding: 14px 16px; border-bottom: 1px solid #E2E8F0; }
         .lucy-table tbody td { padding: 14px 16px; font-size: 13.5px; color: #334155; vertical-align: middle; border-bottom: 1px solid #F1F5F9; }
         
@@ -97,6 +98,11 @@
 
         .lucy-content { padding: 28px 32px; }
         .lucy-topbar h1 { font-size: 20px; font-weight: 600; color: #1E293B; margin: 0; }
+        .live-search-select { position:relative; }
+        .live-search-results { position:absolute;z-index:1050;top:calc(100% + 4px);left:0;right:0;display:none;max-height:240px;overflow-y:auto;background:#fff;border:1px solid #DDE1EA;border-radius:8px;box-shadow:0 12px 28px rgba(16,24,40,.14); }
+        .live-search-results.open { display:block; }
+        .live-search-option { width:100%;border:0;border-bottom:1px solid #F2F4F7;background:#fff;text-align:left;padding:9px 11px;font-size:13px;color:#344054; }
+        .live-search-option:hover,.live-search-option:focus { background:#F4F3FF;color:#5145CD;outline:0; }
     </style>
 </head>
 <body>
@@ -155,7 +161,7 @@
                     <c:if test="${sessionScope.currentUser.role != 'LEARNER'}">
                         <a href="/my-rooms" class="learner-nav-link">My Live Rooms</a>
                     </c:if>
-                    <c:if test="${sessionScope.currentUser.role == 'SUPER_CREATOR'}">
+                    <c:if test="${sessionScope.currentUser.accountType == 'CONTENT_CREATOR'}">
                         <a href="/premium-content" class="learner-nav-link">Premium Content</a>
                     </c:if>
                 </div>
@@ -242,6 +248,56 @@
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
         return false;
     }
+    document.querySelectorAll('select[data-live-search]').forEach(function(select) {
+        if (select.dataset.enhanced === 'true') return;
+        select.dataset.enhanced = 'true';
+        const shell = document.createElement('div');
+        shell.className = 'live-search-select';
+        const input = document.createElement('input');
+        input.type = 'search';
+        input.className = select.classList.contains('form-select-sm') ? 'form-control form-control-sm' : 'form-control';
+        input.placeholder = select.dataset.searchPlaceholder || 'Type to search...';
+        input.autocomplete = 'off';
+        input.disabled = select.disabled;
+        const results = document.createElement('div');
+        results.className = 'live-search-results';
+        select.parentNode.insertBefore(shell, select);
+        shell.appendChild(input);
+        shell.appendChild(results);
+        select.style.position = 'absolute';
+        select.style.opacity = '0';
+        select.style.pointerEvents = 'none';
+        select.style.width = '1px';
+        select.style.height = '1px';
+        shell.appendChild(select);
+
+        function options() { return Array.from(select.options).filter(function(option) { return option.value && !option.disabled && option.style.display !== 'none'; }); }
+        function selectedLabel() { const option = select.options[select.selectedIndex]; return option && option.value ? option.text.trim() : ''; }
+        input.value = selectedLabel();
+        function render() {
+            const query = input.value.trim().toLowerCase();
+            results.innerHTML = '';
+            options().filter(function(option) { return !query || option.text.toLowerCase().includes(query); }).forEach(function(option) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'live-search-option';
+                button.textContent = option.text.trim();
+                button.addEventListener('mousedown', function(event) {
+                    event.preventDefault();
+                    select.value = option.value;
+                    input.value = option.text.trim();
+                    results.classList.remove('open');
+                    select.dispatchEvent(new Event('change', { bubbles:true }));
+                });
+                results.appendChild(button);
+            });
+            results.classList.toggle('open', results.children.length > 0);
+        }
+        input.addEventListener('focus', function() { input.select(); render(); });
+        input.addEventListener('input', render);
+        input.addEventListener('blur', function() { setTimeout(function() { results.classList.remove('open'); if (!select.value) input.value = ''; }, 120); });
+        select.addEventListener('change', function() { input.value = selectedLabel(); });
+    });
 </script>
 </body>
 </html>

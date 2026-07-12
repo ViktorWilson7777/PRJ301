@@ -1,39 +1,78 @@
 package com.lucy.lms.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    public void sendOtpEmail(String to, String otp) {
-        if (mailSender == null) {
-            System.out.println("==========================================================");
-            System.out.println("MOCK EMAIL SENT TO: " + to);
-            System.out.println("OTP CODE: " + otp);
-            System.out.println("Configure spring.mail properties to send real emails.");
-            System.out.println("==========================================================");
-            return;
-        }
+    @Value("${spring.mail.username:}")
+    private String senderAddress;
 
+    @Value("${lucy.admin.email:}")
+    private String adminEmail;
+
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
+        this.mailSender = mailSenderProvider.getIfAvailable();
+    }
+
+    public boolean sendOtpEmail(String to, String otp) {
+        return sendOtpEmail(to, otp, "registration");
+    }
+
+    public boolean sendOtpEmail(String to, String otp, String purpose) {
+        if (mailSender == null || senderAddress == null || senderAddress.isBlank()) return false;
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("lucy.lms.noreply@gmail.com");
+            message.setFrom(senderAddress);
             message.setTo(to);
-            message.setSubject("LUCY LMS - Your Registration OTP");
-            message.setText("Welcome to LUCY LMS!\n\nYour OTP for registration is: " + otp + "\n\nThis code will expire in 5 minutes.\n\nThank you!");
+            boolean reset = "password reset".equalsIgnoreCase(purpose);
+            message.setSubject(reset ? "LUCY LMS - Password reset code" : "LUCY LMS - Registration code");
+            message.setText("Your LUCY verification code is: " + otp
+                    + "\n\nThis code expires in 5 minutes. If you did not request it, ignore this email.");
             
             mailSender.send(message);
+            return true;
         } catch (Exception e) {
             System.err.println("Failed to send OTP email: " + e.getMessage());
-            System.out.println("==========================================================");
-            System.out.println("FALLBACK OTP CODE FOR " + to + ": " + otp);
-            System.out.println("==========================================================");
+            return false;
+        }
+    }
+
+    public void notifyAdminAboutProApplication(Long userId, String applicantName) {
+        if (mailSender == null || adminEmail == null || adminEmail.isBlank()
+                || senderAddress == null || senderAddress.isBlank()) return;
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(senderAddress);
+            message.setTo(adminEmail);
+            message.setSubject("LUCY LMS - New Pro Mentor application");
+            message.setText(applicantName + " submitted a Pro Mentor application.\n\nReview: http://localhost:8081/users?review=" + userId);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to notify admin: " + e.getMessage());
+        }
+    }
+
+    public void sendApplicationDecision(String recipient, boolean approved) {
+        if (mailSender == null || senderAddress == null || senderAddress.isBlank()
+                || recipient == null || recipient.isBlank()) return;
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(senderAddress);
+            message.setTo(recipient);
+            message.setSubject("LUCY LMS - Pro Mentor application update");
+            message.setText(approved
+                    ? "Your Pro Mentor application was approved. You can now sign in to LUCY."
+                    : "Your Pro Mentor application was not approved. Contact the administrator if you need more details.");
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send application decision: " + e.getMessage());
         }
     }
 }

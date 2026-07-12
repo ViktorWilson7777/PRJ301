@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
+import com.lucy.lms.service.ProgramProgressService;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,6 +34,7 @@ public class RoomApiController {
     private final com.lucy.lms.repository.ChapterRepository chapterRepository;
     private final JoinRequestRepository joinRequestRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final ProgramProgressService progressService;
 
     public RoomApiController(RoomRepository roomRepository,
                              RoomParticipantRepository participantRepository,
@@ -45,7 +47,8 @@ public class RoomApiController {
                              com.lucy.lms.repository.CourseRepository courseRepository,
                              com.lucy.lms.repository.ChapterRepository chapterRepository,
                              JoinRequestRepository joinRequestRepository,
-                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
+                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
+                             ProgramProgressService progressService) {
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.userRepository = userRepository;
@@ -58,6 +61,7 @@ public class RoomApiController {
         this.chapterRepository = chapterRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.messagingTemplate = messagingTemplate;
+        this.progressService = progressService;
     }
 
     @GetMapping("/api/rooms")
@@ -91,6 +95,7 @@ public class RoomApiController {
             pm.put("displayName", p.getDisplayName());
             pm.put("roleInRoom", p.getRoleInRoom());
             pm.put("micOn", p.getMicOn());
+            pm.put("micAllowed", Boolean.TRUE.equals(p.getMicAllowed()));
             pm.put("handRaised", p.getHandRaised());
             if (p.getUser() != null) {
                 pm.put("userId", p.getUser().getId());
@@ -155,6 +160,9 @@ public class RoomApiController {
 
         RoomParticipant participant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
         if (participant != null) {
+            if (Boolean.TRUE.equals(participant.getMicOn())) {
+                progressService.stopSpeakingAndAward(participant);
+            }
             participantRepository.delete(participant);
             // Send STOMP message to notify others
             Map<String, Object> msg = new HashMap<>();
@@ -177,10 +185,9 @@ public class RoomApiController {
         com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
         if (room == null || user == null) return ResponseEntity.notFound().build();
 
-        // Level gating for LEARNER role
-        if ("LEARNER".equals(user.getRole()) && room.getLevelNumber() != null) {
-            int score = user.getReputationScore() != null ? user.getReputationScore() : 0;
-            int userLevel = 1 + score / 100;
+        // Level gating applies to every participating account and is program-specific.
+        if (!"ADMIN".equals(user.getRole()) && room.getLevelNumber() != null && room.getCourse() != null) {
+            int userLevel = progressService.getLevel(user, room.getCourse().getProgram());
             if (userLevel < room.getLevelNumber()) {
                 Map<String, Object> error = new LinkedHashMap<>();
                 error.put("error", "Level too low");
@@ -208,17 +215,62 @@ public class RoomApiController {
 
     @PostMapping("/api/rooms/{roomId}/toggle-mic/{participantId}")
     @Operation(summary = "Toggle microphone for a participant")
-    public ResponseEntity<Map<String, Object>> toggleMic(@PathVariable Long roomId, @PathVariable Long participantId) {
+    public ResponseEntity<Map<String, Object>> toggleMic(@PathVariable Long roomId,
+                                                          @PathVariable Long participantId,
+                                                          jakarta.servlet.http.HttpSession session) {
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
         if (p == null || !p.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null || p.getUser() == null || !currentUser.getId().equals(p.getUser().getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "You can only control your own microphone."));
+        }
+        if (!Boolean.TRUE.equals(p.getMicAllowed())) {
+            return ResponseEntity.status(403).body(Map.of("error", "The host has not enabled your microphone."));
+        }
+        if (!("SPEAKER".equals(p.getRoleInRoom()) || "MODERATOR".equals(p.getRoleInRoom()))) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only speakers can use a microphone."));
+        }
 
-        p.setMicOn(!Boolean.TRUE.equals(p.getMicOn()));
+        boolean micOn = !Boolean.TRUE.equals(p.getMicOn());
+        p.setMicOn(micOn);
+        if (micOn) progressService.startSpeaking(p);
+        else progressService.stopSpeakingAndAward(p);
         participantRepository.save(p);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", p.getId());
         result.put("micOn", p.getMicOn());
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/api/rooms/{roomId}/mic-permission/{participantId}")
+    @Operation(summary = "Host grants or revokes a participant's microphone permission")
+    public ResponseEntity<Map<String, Object>> setMicPermission(@PathVariable Long roomId,
+                                                                @PathVariable Long participantId,
+                                                                jakarta.servlet.http.HttpSession session) {
+        Room room = roomRepository.findById(roomId).orElse(null);
+        RoomParticipant participant = participantRepository.findById(participantId).orElse(null);
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (room == null || participant == null || currentUser == null
+                || !participant.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        boolean isHost = room.getHostUser() != null && room.getHostUser().getId().equals(currentUser.getId());
+        if (!isHost && !"ADMIN".equals(currentUser.getRole())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Only the host can manage microphone access."));
+        }
+        boolean allowed = !Boolean.TRUE.equals(participant.getMicAllowed());
+        participant.setMicAllowed(allowed);
+        if (!allowed && Boolean.TRUE.equals(participant.getMicOn())) {
+            progressService.stopSpeakingAndAward(participant);
+            participant.setMicOn(false);
+        }
+        participantRepository.save(participant);
+
+        Map<String, Object> event = new LinkedHashMap<>();
+        event.put("type", "MIC_PERMISSION");
+        event.put("receiverName", participant.getDisplayName());
+        event.put("content", allowed ? "ALLOWED" : "REVOKED");
+        messagingTemplate.convertAndSend("/topic/room/" + roomId, event);
+        return ResponseEntity.ok(Map.of("micAllowed", allowed, "micOn", Boolean.TRUE.equals(participant.getMicOn())));
     }
 
     @PostMapping("/api/rooms/{roomId}/toggle-hand/{participantId}")
@@ -241,15 +293,7 @@ public class RoomApiController {
     public ResponseEntity<Void> removeParticipant(@PathVariable Long roomId, @PathVariable Long participantId) {
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
         if (p != null && p.getRoom().getId().equals(roomId)) {
-            if (p.getJoinedAt() != null) {
-                long durationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
-                int points = (int) (durationSec / 60);
-                if (points > 0 && p.getUser() != null) {
-                    com.lucy.lms.entity.AppUser user = p.getUser();
-                    user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
-                    userRepository.save(user);
-                }
-            }
+            if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
             participantRepository.deleteById(participantId);
         }
         return ResponseEntity.ok().build();
@@ -393,15 +437,7 @@ public class RoomApiController {
             
             // Clean up related entities
             participantRepository.findByRoomId(id).forEach(p -> {
-                if (p.getJoinedAt() != null) {
-                    long pDurationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
-                    int points = (int) (pDurationSec / 60);
-                    if (points > 0 && p.getUser() != null) {
-                        com.lucy.lms.entity.AppUser user = p.getUser();
-                        user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
-                        userRepository.save(user);
-                    }
-                }
+                if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
                 participantRepository.deleteById(p.getId());
             });
             pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
@@ -472,6 +508,15 @@ public class RoomApiController {
             if (room == null || user == null) return ResponseEntity.notFound().build();
         if (!"LIVE".equals(room.getStatus())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Room is not live"));
+        }
+        if (!"ADMIN".equals(user.getRole()) && room.getLevelNumber() != null && room.getCourse() != null) {
+            int userLevel = progressService.getLevel(user, room.getCourse().getProgram());
+            if (userLevel < room.getLevelNumber()) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "error", "Your level is too low for this room.",
+                        "userLevel", userLevel,
+                        "requiredLevel", room.getLevelNumber()));
+            }
         }
 
         // Prevent duplicate pending requests

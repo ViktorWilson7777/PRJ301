@@ -2,273 +2,135 @@
 <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
-<layout:main pageTitle="AI Generated Questions">
-
+<layout:main pageTitle="AI Speaking Questions">
 <style>
-    .quiz-shell { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
-    .quiz-question { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; background: #fff; margin-bottom: 14px; }
-    .quiz-option { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 10px; margin-top: 8px; cursor: pointer; }
-    .quiz-option:hover { border-color: #A29BFE; background: #F8F7FF; }
-    .quiz-option.correct { border-color: #10B981; background: #ECFDF5; }
-    .quiz-option.wrong { border-color: #EF4444; background: #FEF2F2; }
-    .quiz-result { display: none; border-radius: 12px; padding: 16px; background: #F8FAFC; border: 1px solid #E2E8F0; }
-    .quiz-empty { border: 1px dashed #CBD5E1; border-radius: 12px; padding: 32px; text-align: center; color: #64748B; background: #fff; }
-    @media (max-width: 900px) { .quiz-shell { grid-template-columns: 1fr; } }
+    .ai-shell{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
+    .search-select{position:relative}.search-results{position:absolute;z-index:30;top:100%;left:0;right:0;margin-top:4px;background:#fff;border:1px solid #DDE1EA;border-radius:8px;max-height:260px;overflow-y:auto;box-shadow:0 12px 28px rgba(16,24,40,.14);display:none}
+    .search-results.open{display:block}.lesson-option{display:block;width:100%;border:0;border-bottom:1px solid #F0F2F5;background:#fff;text-align:left;padding:10px 12px;font-size:13px;color:#344054}
+    .lesson-option:hover,.lesson-option:focus{background:#F4F3FF;color:#5145CD;outline:0}.lesson-option small{display:block;color:#98A2B3;margin-top:2px}
+    .question-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.question-card{border:1px solid #DDE1EA;border-radius:8px;padding:18px;background:#fff;min-height:170px;display:flex;flex-direction:column}
+    .question-number{width:32px;height:32px;border-radius:8px;background:#F0EEFF;color:#5145CD;display:grid;place-items:center;font-weight:700;margin-bottom:14px}.question-text{font-size:15px;line-height:1.6;color:#1D2939;font-weight:600;flex:1}
+    .copy-question{border:0;background:transparent;color:#6558E8;font-size:13px;font-weight:600;text-align:left;padding:8px 0 0}.result-empty{border:1px dashed #C8CEDA;border-radius:8px;background:#fff;min-height:230px;display:grid;place-items:center;text-align:center;color:#667085;padding:28px}
+    .inline-note{border:1px solid;border-radius:8px;padding:10px 12px;font-size:13px}.note-info{background:#EFF8FF;border-color:#B2DDFF;color:#175CD3}.note-error{background:#FEF3F2;border-color:#FECDCA;color:#B42318}
+    .history-scroll{max-height:430px;overflow-y:auto}.history-scroll thead{position:sticky;top:0;background:#F8FAFC;z-index:2}
+    .toast-note{position:fixed;right:22px;bottom:22px;background:#172033;color:#fff;padding:11px 14px;border-radius:8px;font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.2);display:none;z-index:2000}
+    @media(max-width:1000px){.ai-shell{grid-template-columns:1fr}.question-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="d-flex align-items-center justify-content-between mb-4">
-    <p class="text-muted mb-0" style="font-size: 13px;">Learners can generate a multiple-choice quiz from any lesson, submit answers, and see results instantly.</p>
-</div>
+<div class="ai-shell mb-4">
+    <section class="stat-card">
+        <h6 style="font-weight:700;margin-bottom:6px"><i class="bi bi-stars me-1"></i>Host prompt assistant</h6>
+        <p class="text-muted" style="font-size:12px;line-height:1.55">Choose the current lesson. LUCY creates exactly three open questions for the host to ask a speaker.</p>
 
-<div class="quiz-shell mb-4">
-    <div class="stat-card">
-        <h6 style="font-weight: 600; margin-bottom: 16px;"><i class="bi bi-stars me-1"></i> Generate Quiz</h6>
-
-        <div class="mb-3">
-            <label class="form-label" style="font-size: 12px;">Lesson</label>
-            <select id="aiLessonId" class="form-select form-select-sm">
-                <option value="">-- Select a Lesson --</option>
-                <c:forEach var="l" items="${allLessons}">
-                    <option value="${l.id}">[${l.type}] ${l.title}</option>
+        <label class="form-label" for="lessonSearch">Lesson</label>
+        <div class="search-select mb-3">
+            <input id="lessonSearch" class="form-control" type="search" placeholder="Type to find a lesson..." autocomplete="off">
+            <input id="aiLessonId" type="hidden">
+            <div id="lessonResults" class="search-results">
+                <c:forEach var="lesson" items="${allLessons}">
+                    <button type="button" class="lesson-option" data-id="${lesson.id}" data-search="${lesson.title} ${lesson.type}">
+                        <c:out value="${lesson.title}"/>
+                        <small><c:out value="${lesson.type}"/> · Level <c:out value="${lesson.levelNumber}"/></small>
+                    </button>
                 </c:forEach>
-            </select>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label" style="font-size: 12px;">Question Count</label>
-            <select id="quizCount" class="form-select form-select-sm">
-                <option value="5">5 questions</option>
-                <option value="3">3 questions</option>
-                <option value="10">10 questions</option>
-            </select>
-        </div>
+        <label class="form-label" for="promptType">Speaking stage</label>
+        <select id="promptType" class="form-select mb-3">
+            <option value="warmup">Warm-up</option>
+            <option value="discussion" selected>Discussion</option>
+            <option value="follow_up">Follow-up</option>
+            <option value="wrapup">Wrap-up</option>
+        </select>
 
-        <button id="btnGenerateQuiz" class="btn btn-lucy btn-sm w-100" onclick="generateAiQuiz()">
-            <i class="bi bi-magic me-1"></i> Generate Quiz
+        <button id="generateButton" class="btn btn-lucy w-100" type="button">
+            <i class="bi bi-magic me-1"></i>Generate 3 questions
         </button>
-
-        <div id="aiLoading" class="text-center mt-3" style="display: none;">
-            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-            <span style="font-size: 13px; margin-left: 8px;">Generating quiz...</span>
+        <div id="aiLoading" class="text-center mt-3" style="display:none">
+            <span class="spinner-border spinner-border-sm text-primary"></span>
+            <span class="ms-2" style="font-size:13px">Preparing questions...</span>
         </div>
+        <div id="aiError" class="inline-note note-error mt-3" style="display:none"></div>
+        <div id="mockNote" class="inline-note note-info mt-3" style="display:none">Preview mode is active. Add an OpenRouter key to generate fresh AI questions.</div>
+    </section>
 
-        <div id="aiError" class="alert alert-danger mt-3 mb-0 py-2" style="display: none; font-size: 13px;"></div>
-    </div>
-
-    <div>
-        <div id="quizResult" class="quiz-result mb-3"></div>
-        <div id="quizContainer" class="quiz-empty">
-            <i class="bi bi-ui-checks-grid" style="font-size: 28px;"></i>
-            <div class="mt-2">Select a lesson and generate a quiz to start.</div>
+    <section>
+        <div id="questionEmpty" class="result-empty">
+            <div><i class="bi bi-chat-square-quote" style="font-size:32px"></i><div class="mt-2">Search for a lesson and generate questions when the host needs inspiration.</div></div>
         </div>
-        <button id="btnSubmitQuiz" class="btn btn-outline-lucy btn-sm mt-3" style="display: none;" onclick="submitQuiz()">
-            <i class="bi bi-check2-circle me-1"></i> Submit Answers
-        </button>
-    </div>
+        <div id="questionGrid" class="question-grid" style="display:none"></div>
+    </section>
 </div>
 
-<div class="lucy-table">
+<section class="lucy-table">
+    <div class="px-3 pt-3"><h6 style="font-weight:700">Recent speaking questions</h6></div>
     <c:choose>
-        <c:when test="${empty questions}">
-            <div class="empty-state">
-                <i class="bi bi-chat-dots"></i>
-                <p>No quiz questions yet. Generate a quiz above to save questions.</p>
-            </div>
-        </c:when>
+        <c:when test="${empty questions}"><div class="empty-state"><i class="bi bi-chat-dots"></i><p>No speaking questions have been generated yet.</p></div></c:when>
         <c:otherwise>
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Question</th>
-                        <th>Lesson</th>
-                        <th>Answer</th>
-                        <th>Generated</th>
-                        <th style="width:80px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <c:forEach var="q" items="${questions}">
+            <div class="history-scroll">
+                <table class="table mb-0">
+                    <thead><tr><th>Question</th><th>Lesson</th><th>Stage</th><th>Used</th><th style="width:90px">Actions</th></tr></thead>
+                    <tbody>
+                    <c:forEach var="question" items="${questions}">
                         <tr>
-                            <td><strong>#${q.id}</strong></td>
-                            <td style="max-width: 420px;">${q.generatedQuestion}</td>
-                            <td><c:if test="${q.lesson != null}">${q.lesson.title}</c:if></td>
-                            <td><span class="badge-status badge-success">${q.correctOption}</span></td>
-                            <td style="font-size: 12px;">${q.generatedAt}</td>
+                            <td style="max-width:520px"><c:out value="${question.generatedQuestion}"/></td>
+                            <td><c:if test="${question.lesson != null}"><c:out value="${question.lesson.title}"/></c:if></td>
+                            <td><span class="badge-status badge-info"><c:out value="${question.promptType}"/></span></td>
+                            <td>${question.usedByModerator ? 'Yes' : 'No'}</td>
                             <td>
-                                <button class="btn-action delete" onclick="confirmDelete('/ai-generated-questions/delete/${q.id}')"><i class="bi bi-trash"></i></button>
+                                <a class="btn-action edit" href="${pageContext.request.contextPath}/ai-generated-questions/toggle-used/${question.id}" title="Mark used"><i class="bi bi-check2"></i></a>
+                                <a class="btn-action delete" href="${pageContext.request.contextPath}/ai-generated-questions/delete/${question.id}" title="Delete"><i class="bi bi-trash"></i></a>
                             </td>
                         </tr>
                     </c:forEach>
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </c:otherwise>
     </c:choose>
-</div>
+</section>
+<div id="toastNote" class="toast-note" role="status"></div>
 
 <script>
-var currentQuiz = [];
-var hasSubmitted = false;
+document.addEventListener('DOMContentLoaded',function(){
+    const search=document.getElementById('lessonSearch'),hidden=document.getElementById('aiLessonId'),results=document.getElementById('lessonResults');
+    const options=Array.from(results.querySelectorAll('.lesson-option')),button=document.getElementById('generateButton');
 
-function generateAiQuiz() {
-    var lessonId = document.getElementById('aiLessonId').value;
-    var count = document.getElementById('quizCount').value;
-
-    if (!lessonId) {
-        showQuizError('Please select a lesson first.');
-        return;
+    function filterLessons(){
+        const query=search.value.trim().toLowerCase();let visible=0;
+        hidden.value='';
+        options.forEach(function(option){const match=!query||option.dataset.search.toLowerCase().includes(query);option.style.display=match?'block':'none';if(match)visible++;});
+        results.classList.toggle('open',visible>0);
     }
+    search.addEventListener('focus',filterLessons);search.addEventListener('input',filterLessons);
+    options.forEach(function(option){option.addEventListener('click',function(){hidden.value=option.dataset.id;search.value=option.childNodes[0].textContent.trim();results.classList.remove('open');});});
+    document.addEventListener('click',function(event){if(!event.target.closest('.search-select'))results.classList.remove('open');});
 
-    var btn = document.getElementById('btnGenerateQuiz');
-    var loading = document.getElementById('aiLoading');
-    var errorDiv = document.getElementById('aiError');
-    var resultDiv = document.getElementById('quizResult');
-
-    btn.disabled = true;
-    loading.style.display = 'block';
-    errorDiv.style.display = 'none';
-    resultDiv.style.display = 'none';
-    hasSubmitted = false;
-
-    fetch('/api/ai/generate-quiz?lessonId=' + encodeURIComponent(lessonId) + '&count=' + encodeURIComponent(count), {
-        method: 'POST'
-    })
-    .then(function(response) { return response.json(); })
-    .then(function(data) {
-        loading.style.display = 'none';
-        btn.disabled = false;
-
-        if (data.message) {
-            showQuizError(data.message);
-            return;
-        }
-
-        currentQuiz = data.questions || [];
-        renderQuiz(currentQuiz, data.isMock);
-    })
-    .catch(function(err) {
-        loading.style.display = 'none';
-        btn.disabled = false;
-        showQuizError('Failed to connect: ' + err.message);
+    button.addEventListener('click',function(){
+        const lessonId=hidden.value,error=document.getElementById('aiError'),loading=document.getElementById('aiLoading');
+        if(!lessonId){error.textContent='Choose one lesson from the search results.';error.style.display='block';search.focus();return;}
+        error.style.display='none';button.disabled=true;loading.style.display='block';
+        fetch('${pageContext.request.contextPath}/api/ai/suggest-questions?lessonId='+encodeURIComponent(lessonId)+'&promptType='+encodeURIComponent(document.getElementById('promptType').value),{method:'POST'})
+        .then(function(response){return response.json();})
+        .then(function(data){if(data.message)throw new Error(data.message);renderQuestions(data.questions||[]);document.getElementById('mockNote').style.display=data.isMock?'block':'none';})
+        .catch(function(err){error.textContent=err.message||'Questions could not be generated.';error.style.display='block';})
+        .finally(function(){button.disabled=false;loading.style.display='none';});
     });
-}
+});
 
-function renderQuiz(questions, isMock) {
-    var container = document.getElementById('quizContainer');
-    var submitBtn = document.getElementById('btnSubmitQuiz');
-
-    if (!questions.length) {
-        container.className = 'quiz-empty';
-        container.innerHTML = '<i class="bi bi-exclamation-circle" style="font-size: 28px;"></i><div class="mt-2">No quiz questions generated.</div>';
-        submitBtn.style.display = 'none';
-        return;
-    }
-
-    container.className = '';
-    container.innerHTML = '';
-
-    if (isMock) {
-        var mock = document.createElement('div');
-        mock.className = 'alert alert-warning py-2';
-        mock.style.fontSize = '13px';
-        mock.textContent = 'Mock mode: add gemini.api.key to use the AI provider.';
-        container.appendChild(mock);
-    }
-
-    questions.forEach(function(q, index) {
-        var card = document.createElement('div');
-        card.className = 'quiz-question';
-        card.setAttribute('data-question-index', index);
-
-        var title = document.createElement('div');
-        title.style.fontWeight = '600';
-        title.style.color = '#1E293B';
-        title.textContent = (index + 1) + '. ' + (q.generatedQuestion || '');
-        card.appendChild(title);
-
-        ['A', 'B', 'C', 'D'].forEach(function(option) {
-            var label = document.createElement('label');
-            label.className = 'quiz-option';
-            label.setAttribute('data-option', option);
-
-            var input = document.createElement('input');
-            input.type = 'radio';
-            input.name = 'quiz_' + index;
-            input.value = option;
-            input.style.marginTop = '3px';
-
-            var text = document.createElement('span');
-            text.textContent = option + '. ' + (q['option' + option] || '');
-
-            label.appendChild(input);
-            label.appendChild(text);
-            card.appendChild(label);
-        });
-
-        var explanation = document.createElement('div');
-        explanation.className = 'quiz-explanation text-muted mt-2';
-        explanation.style.cssText = 'display:none; font-size: 12px;';
-        explanation.textContent = q.explanation || '';
-        card.appendChild(explanation);
-
-        container.appendChild(card);
+function renderQuestions(items){
+    const grid=document.getElementById('questionGrid'),empty=document.getElementById('questionEmpty');grid.innerHTML='';
+    items.slice(0,3).forEach(function(item,index){
+        const card=document.createElement('article');card.className='question-card';
+        const number=document.createElement('div');number.className='question-number';number.textContent=index+1;
+        const text=document.createElement('div');text.className='question-text';text.textContent=item.generatedQuestion||'';
+        const copy=document.createElement('button');copy.type='button';copy.className='copy-question';copy.innerHTML='<i class="bi bi-copy me-1"></i>Copy for the host';
+        copy.addEventListener('click',function(){navigator.clipboard.writeText(text.textContent).then(function(){showToast('Question copied.');});});
+        card.append(number,text,copy);grid.appendChild(card);
     });
-
-    submitBtn.style.display = 'inline-flex';
+    empty.style.display=items.length?'none':'grid';grid.style.display=items.length?'grid':'none';
 }
-
-function submitQuiz() {
-    if (!currentQuiz.length || hasSubmitted) {
-        return;
-    }
-
-    var correct = 0;
-    var unanswered = 0;
-
-    currentQuiz.forEach(function(q, index) {
-        var selected = document.querySelector('input[name="quiz_' + index + '"]:checked');
-        var card = document.querySelector('[data-question-index="' + index + '"]');
-        var selectedValue = selected ? selected.value : null;
-
-        if (!selectedValue) {
-            unanswered++;
-        }
-
-        if (selectedValue === q.correctOption) {
-            correct++;
-        }
-
-        card.querySelectorAll('.quiz-option').forEach(function(label) {
-            var option = label.getAttribute('data-option');
-            if (option === q.correctOption) {
-                label.classList.add('correct');
-            } else if (option === selectedValue) {
-                label.classList.add('wrong');
-            }
-            label.querySelector('input').disabled = true;
-        });
-
-        var explanation = card.querySelector('.quiz-explanation');
-        if (explanation && explanation.textContent) {
-            explanation.style.display = 'block';
-        }
-    });
-
-    hasSubmitted = true;
-    document.getElementById('btnSubmitQuiz').style.display = 'none';
-
-    var resultDiv = document.getElementById('quizResult');
-    resultDiv.style.display = 'block';
-    resultDiv.innerHTML = '<div style="font-weight:700; color:#1E293B;">Score: ' + correct + '/' + currentQuiz.length + '</div>'
-        + '<div class="text-muted" style="font-size: 13px;">Correct answers are highlighted in green. Your wrong answers are highlighted in red.'
-        + (unanswered > 0 ? ' Unanswered: ' + unanswered + '.' : '') + '</div>';
-}
-
-function showQuizError(message) {
-    var errorDiv = document.getElementById('aiError');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-}
+function showToast(message){const toast=document.getElementById('toastNote');toast.textContent=message;toast.style.display='block';clearTimeout(window.lucyToastTimer);window.lucyToastTimer=setTimeout(function(){toast.style.display='none';},2200);}
 </script>
-
 </layout:main>

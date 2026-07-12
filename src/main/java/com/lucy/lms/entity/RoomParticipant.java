@@ -29,6 +29,14 @@ public class RoomParticipant {
 
     private Boolean micOn = false;
 
+    private Boolean micAllowed = false;
+
+    private LocalDateTime speakingStartedAt;
+
+    private Integer speakingSeconds = 0;
+
+    private Integer awardedExperience = 0;
+
     private Boolean handRaised = false;
 
     @Column(columnDefinition = "NVARCHAR(20)")

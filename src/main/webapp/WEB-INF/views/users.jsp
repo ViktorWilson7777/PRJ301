@@ -12,6 +12,37 @@
     </div>
 </div>
 
+<c:if test="${not empty pendingApplications}">
+    <div class="stat-card mb-4" id="proApplications">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="mb-0" style="font-weight:700"><i class="bi bi-patch-check me-1"></i>Pro Mentor applications</h5>
+            <span class="badge bg-warning text-dark">${pendingApplications.size()} pending</span>
+        </div>
+        <div style="max-height:380px;overflow-y:auto">
+            <c:forEach var="application" items="${pendingApplications}">
+                <div class="border rounded p-3 mb-2" style="border-radius:8px!important">
+                    <div class="d-flex justify-content-between gap-3 flex-wrap">
+                        <div>
+                            <strong><c:out value="${application.fullName}"/></strong>
+                            <div class="text-muted" style="font-size:12px"><c:out value="${application.email}"/></div>
+                        </div>
+                        <a href="${application.evidenceUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Open evidence</a>
+                    </div>
+                    <div class="mt-2" style="font-size:13px;white-space:pre-wrap"><c:out value="${application.achievements}"/></div>
+                    <div class="d-flex gap-2 mt-3">
+                        <form method="post" action="${pageContext.request.contextPath}/users/${application.id}/application">
+                            <input type="hidden" name="decision" value="APPROVE"><button class="btn btn-sm btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Approve</button>
+                        </form>
+                        <form method="post" action="${pageContext.request.contextPath}/users/${application.id}/application">
+                            <input type="hidden" name="decision" value="REJECT"><button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-lg me-1"></i>Reject</button>
+                        </form>
+                    </div>
+                </div>
+            </c:forEach>
+        </div>
+    </div>
+</c:if>
+
 <div class="lucy-table">
     <c:choose>
         <c:when test="${empty users}">
@@ -21,7 +52,7 @@
             </div>
         </c:when>
         <c:otherwise>
-            <table class="table mb-0">
+            <div style="max-height:620px;overflow-y:auto"><table class="table mb-0">
                 <thead>
                     <tr><th>ID</th><th>Name</th><th>Display</th><th>Email</th><th>Role</th><th>Credits</th><th>Rep</th><th>Status</th><th style="width:100px;">Actions</th></tr>
                 </thead>
@@ -48,7 +79,7 @@
                                     <c:when test="${u.role == 'LEARNER'}"><span class="badge-status badge-info">Learner</span></c:when>
                                     <c:when test="${u.role == 'MODERATOR'}"><span class="badge-status badge-warning">Moderator</span></c:when>
                                     <c:when test="${u.role == 'PRO_MENTOR'}"><span class="badge-status badge-purple">Pro Mentor</span></c:when>
-                                    <c:when test="${u.role == 'SUPER_CREATOR'}"><span class="badge-status badge-pink">Super Creator</span></c:when>
+                                    <c:when test="${u.role == 'SUPER_CREATOR'}"><span class="badge-status badge-pink">Content Creator</span></c:when>
                                     <c:otherwise><span class="badge-status badge-gray">${u.role}</span></c:otherwise>
                                 </c:choose>
                             </td>
@@ -67,7 +98,7 @@
                         </tr>
                     </c:forEach>
                 </tbody>
-            </table>
+            </table></div>
         </c:otherwise>
     </c:choose>
 </div>

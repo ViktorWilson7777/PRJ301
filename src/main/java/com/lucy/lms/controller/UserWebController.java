@@ -2,6 +2,9 @@ package com.lucy.lms.controller;
 
 import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.repository.AppUserRepository;
+import com.lucy.lms.repository.ProgramRepository;
+import com.lucy.lms.service.EmailService;
+import com.lucy.lms.service.ProgramProgressService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -23,16 +26,27 @@ import java.util.List;
 public class UserWebController {
 
     private final AppUserRepository userRepository;
+    private final ProgramRepository programRepository;
+    private final ProgramProgressService progressService;
+    private final EmailService emailService;
     private static final DateTimeFormatter EXPORT_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    public UserWebController(AppUserRepository userRepository) {
+    public UserWebController(AppUserRepository userRepository,
+                             ProgramRepository programRepository,
+                             ProgramProgressService progressService,
+                             EmailService emailService) {
         this.userRepository = userRepository;
+        this.programRepository = programRepository;
+        this.progressService = progressService;
+        this.emailService = emailService;
     }
 
     @GetMapping("/users")
     public String users(Model model) {
         model.addAttribute("users", userRepository.findAll());
+        model.addAttribute("pendingApplications",
+                userRepository.findByRegistrationStatusOrderByCreatedAtDesc("PENDING"));
         return "users";
     }
 
@@ -89,6 +103,7 @@ public class UserWebController {
     @GetMapping("/users/create")
     public String createUserPage(Model model) {
         model.addAttribute("user", new AppUser());
+        model.addAttribute("programs", programRepository.findAll());
         return "user-form";
     }
 
@@ -118,6 +133,15 @@ public class UserWebController {
         user.setDisplayName(displayName);
         user.setAvatarPersona(avatarPersona);
         user.setRole(role);
+        if ("SUPER_CREATOR".equals(role)) user.setAccountType("CONTENT_CREATOR");
+        else if ("PRO_MENTOR".equals(role)) {
+            user.setAccountType("PRO_MENTOR");
+            user.setProGrantedByAdmin(true);
+        }
+        else if (user.getAccountType() == null) user.setAccountType("LEARNER");
+        if (user.getRegistrationStatus() == null || "PENDING".equals(user.getRegistrationStatus())) {
+            user.setRegistrationStatus("APPROVED");
+        }
         user.setAnonymousMode(anonymousMode != null);
         user.setCreditBalance(creditBalance != null ? creditBalance : 0.0);
         user.setReputationScore(reputationScore != null ? reputationScore : 0);
@@ -132,7 +156,41 @@ public class UserWebController {
         AppUser user = userRepository.findById(id).orElse(null);
         if (user == null) return "redirect:/users";
         model.addAttribute("user", user);
+        model.addAttribute("programs", programRepository.findAll());
+        model.addAttribute("programLevels", progressService.levelsForUser(user));
         return "user-form";
+    }
+
+    @PostMapping("/users/{id}/application")
+    public String reviewProApplication(@PathVariable Long id,
+                                       @RequestParam String decision) {
+        AppUser user = userRepository.findById(id).orElse(null);
+        if (user == null) return "redirect:/users";
+        boolean approved = "APPROVE".equalsIgnoreCase(decision);
+        user.setRegistrationStatus(approved ? "APPROVED" : "REJECTED");
+        user.setActive(approved);
+        if (approved) {
+            user.setRole("PRO_MENTOR");
+            user.setAccountType("PRO_MENTOR");
+            user.setProGrantedByAdmin(true);
+        }
+        userRepository.save(user);
+        emailService.sendApplicationDecision(user.getEmail(), approved);
+        return "redirect:/users?success=application_" + (approved ? "approved" : "rejected");
+    }
+
+    @PostMapping("/users/{id}/program-level")
+    public String saveProgramLevel(@PathVariable Long id,
+                                   @RequestParam Long programId,
+                                   @RequestParam Integer levelNumber,
+                                   @RequestParam(defaultValue = "0") Integer maxHostingLevel) {
+        AppUser user = userRepository.findById(id).orElse(null);
+        com.lucy.lms.entity.Program program = programRepository.findById(programId).orElse(null);
+        if (user == null || program == null) return "redirect:/users";
+        progressService.setLevel(user, program,
+                levelNumber == null ? 1 : levelNumber,
+                maxHostingLevel == null ? 0 : maxHostingLevel);
+        return "redirect:/users/edit/" + id + "?success=level_saved";
     }
 
     @GetMapping("/users/delete/{id}")

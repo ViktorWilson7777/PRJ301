@@ -545,7 +545,7 @@
                                 <h6>Room Controls</h6>
                                 <a href="/rooms/${room.id}/end" class="btn w-100 btn-sm"
                                     style="background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid #EF4444; border-radius: 8px;"
-                                    onclick="return confirm('End this live session?')">
+                                    >
                                     <i class="bi bi-stop-fill me-1"></i> End Live Stream
                                 </a>
                             </div>
@@ -579,7 +579,7 @@
                                     </select>
                                     <button class="btn btn-sm w-100"
                                         style="background: rgba(0, 206, 201, 0.2); color: #00CEC9; border: 1px solid #00CEC9; border-radius: 8px;"
-                                        onclick="alert('AI Feature called!')">
+                                        >
                                         Generate Topic Ideas <i class="bi bi-stars"></i>
                                     </button>
                                 </div>
@@ -708,7 +708,7 @@
 
                             btnConnect.style.display = 'none'; btnDisconnect.style.display = 'block';
                         } catch (error) {
-                            alert('Agora Connection Failed: ' + error.message);
+                            console.error('Agora Connection Failed:', error);
                             btnConnect.disabled = false;
                         }
                     };

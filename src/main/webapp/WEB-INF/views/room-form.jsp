@@ -20,7 +20,7 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label class="form-label">Program <span class="text-danger">*</span></label>
-                        <select id="programSelect" class="form-select" required>
+                        <select id="programSelect" class="form-select" data-live-search required>
                             <option value="">— Select Program —</option>
                             <c:forEach var="p" items="${programs}">
                                 <option value="${p.id}" data-code="${p.code}" <c:if test="${room.course != null && room.course.program.id == p.id}">selected</c:if>>${p.title}</option>
@@ -53,7 +53,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Chapter (Level) <span class="text-danger">*</span></label>
-                        <select name="chapterId" id="chapterSelect" class="form-select" required disabled>
+                        <select name="chapterId" id="chapterSelect" class="form-select" data-live-search required disabled>
                             <option value="">— Select Chapter —</option>
                             <c:forEach var="ch" items="${chapters}">
                                 <option value="${ch.id}" data-program-id="${ch.course.program.id}" <c:if test="${room.chapter != null && room.chapter.id == ch.id}">selected</c:if>>${ch.course.title} — ${ch.title}</option>
@@ -116,10 +116,19 @@
             } else {
                 chapterSelect.disabled = false;
             }
+            const searchShell = chapterSelect.closest('.live-search-select');
+            if (searchShell) {
+                const searchInput = searchShell.querySelector('input[type="search"]');
+                if (searchInput) {
+                    searchInput.disabled = !programId;
+                    if (!programId) searchInput.value = '';
+                }
+            }
 
             // Reset chapter selection if currently selected option is hidden
             if (chapterSelect.selectedIndex > 0 && chapterSelect.options[chapterSelect.selectedIndex].style.display === 'none') {
                 chapterSelect.value = '';
+                chapterSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
 

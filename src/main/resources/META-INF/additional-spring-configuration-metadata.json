@@ -1,9 +1,15 @@
 {
   "properties": [
     {
-      "name": "gemini.api.key",
+      "name": "openrouter.api.key",
       "type": "java.lang.String",
-      "description": "Google Gemini API Key for AI Suggest feature."
+      "description": "OpenRouter API key for speaking-question generation."
+    },
+    {
+      "name": "openrouter.model",
+      "type": "java.lang.String",
+      "description": "OpenRouter model identifier used for AI generation.",
+      "defaultValue": "openrouter/auto"
     }
   ]
 }

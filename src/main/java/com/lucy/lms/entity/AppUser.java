@@ -34,6 +34,24 @@ public class AppUser {
     @Column(columnDefinition = "NVARCHAR(30)")
     private String role; // ADMIN, LEARNER, MODERATOR, PRO_MENTOR, SUPER_CREATOR
 
+    @Column(columnDefinition = "NVARCHAR(30)")
+    private String accountType; // LEARNER, PRO_MENTOR, CONTENT_CREATOR
+
+    @Column(columnDefinition = "NVARCHAR(20)")
+    private String registrationStatus; // APPROVED, PENDING, REJECTED
+
+    @Column(columnDefinition = "NVARCHAR(1000)")
+    private String evidenceUrl;
+
+    @Column(columnDefinition = "NVARCHAR(MAX)")
+    private String achievements;
+
+    private Long storageLimitBytes = 104857600L;
+
+    private Long storageUsedBytes = 0L;
+
+    private Boolean proGrantedByAdmin = false;
+
     private Boolean anonymousMode = false;
 
     private Double creditBalance = 0.0;
@@ -51,6 +69,11 @@ public class AppUser {
     public void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (password == null) password = "123456";
+        if (accountType == null) accountType = "LEARNER";
+        if (registrationStatus == null) registrationStatus = "APPROVED";
+        if (storageLimitBytes == null) storageLimitBytes = 104857600L;
+        if (storageUsedBytes == null) storageUsedBytes = 0L;
+        if (proGrantedByAdmin == null) proGrantedByAdmin = false;
     }
 
     public Long getId() {
@@ -148,4 +171,19 @@ public class AppUser {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public String getAccountType() { return accountType; }
+    public void setAccountType(String accountType) { this.accountType = accountType; }
+    public String getRegistrationStatus() { return registrationStatus; }
+    public void setRegistrationStatus(String registrationStatus) { this.registrationStatus = registrationStatus; }
+    public String getEvidenceUrl() { return evidenceUrl; }
+    public void setEvidenceUrl(String evidenceUrl) { this.evidenceUrl = evidenceUrl; }
+    public String getAchievements() { return achievements; }
+    public void setAchievements(String achievements) { this.achievements = achievements; }
+    public Long getStorageLimitBytes() { return storageLimitBytes; }
+    public void setStorageLimitBytes(Long storageLimitBytes) { this.storageLimitBytes = storageLimitBytes; }
+    public Long getStorageUsedBytes() { return storageUsedBytes; }
+    public void setStorageUsedBytes(Long storageUsedBytes) { this.storageUsedBytes = storageUsedBytes; }
+    public Boolean getProGrantedByAdmin() { return proGrantedByAdmin; }
+    public void setProGrantedByAdmin(Boolean proGrantedByAdmin) { this.proGrantedByAdmin = proGrantedByAdmin; }
 }

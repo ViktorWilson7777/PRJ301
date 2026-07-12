@@ -128,7 +128,7 @@
             <i class="bi bi-coin"></i>
         </div>
         <h4 style="font-weight: 800; color: #1e293b;">Top Up Credits</h4>
-        <p class="text-muted" style="font-size: 13px;">Acquire credits to purchase premium lessons and support creators</p>
+        <p class="text-muted" style="font-size:13px">Mock top-up for every account type · 1,000 credits = 1,000 VND</p>
     </div>
 
     <!-- Alert Notifications -->

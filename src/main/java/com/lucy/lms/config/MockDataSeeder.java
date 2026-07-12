@@ -17,6 +17,7 @@ import com.lucy.lms.entity.PremiumContent;
 import com.lucy.lms.entity.Program;
 import com.lucy.lms.entity.Room;
 import com.lucy.lms.entity.RoomParticipant;
+import com.lucy.lms.entity.UserProgramLevel;
 import com.lucy.lms.repository.AiGeneratedQuestionRepository;
 import com.lucy.lms.repository.AiPromptTemplateRepository;
 import com.lucy.lms.repository.AppUserRepository;
@@ -34,6 +35,7 @@ import com.lucy.lms.repository.PremiumContentRepository;
 import com.lucy.lms.repository.ProgramRepository;
 import com.lucy.lms.repository.RoomParticipantRepository;
 import com.lucy.lms.repository.RoomRepository;
+import com.lucy.lms.repository.UserProgramLevelRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -66,6 +68,7 @@ public class MockDataSeeder implements CommandLineRunner {
     private final AiGeneratedQuestionRepository aiQuestionRepository;
     private final PodcastEpisodeRepository podcastRepository;
     private final PremiumContentRepository premiumContentRepository;
+    private final UserProgramLevelRepository programLevelRepository;
 
     public MockDataSeeder(AppUserRepository userRepository,
                           ProgramRepository programRepository,
@@ -83,7 +86,8 @@ public class MockDataSeeder implements CommandLineRunner {
                           AiPromptTemplateRepository promptTemplateRepository,
                           AiGeneratedQuestionRepository aiQuestionRepository,
                           PodcastEpisodeRepository podcastRepository,
-                          PremiumContentRepository premiumContentRepository) {
+                          PremiumContentRepository premiumContentRepository,
+                          UserProgramLevelRepository programLevelRepository) {
         this.userRepository = userRepository;
         this.programRepository = programRepository;
         this.courseRepository = courseRepository;
@@ -101,6 +105,7 @@ public class MockDataSeeder implements CommandLineRunner {
         this.aiQuestionRepository = aiQuestionRepository;
         this.podcastRepository = podcastRepository;
         this.premiumContentRepository = premiumContentRepository;
+        this.programLevelRepository = programLevelRepository;
     }
 
     @Override
@@ -127,6 +132,10 @@ public class MockDataSeeder implements CommandLineRunner {
 
         Program english = program("EN", "English", "Mock English language program");
         Program japanese = program("JA", "Japanese", "Mock Japanese language program");
+        programLevel(learner, english, 1, 12, 0);
+        programLevel(learner, japanese, 1, 0, 0);
+        programLevel(mentor, english, 3, 250, 3);
+        programLevel(creator, english, 2, 120, 0);
 
         Course beginner = course(english, "EN-MOCK-1", "English Mock Stage 1", "Beginner conversation test course", "Beginner", "English", 1);
         Course advanced = course(english, "EN-MOCK-2", "English Mock Stage 2", "Discussion and debate test course", "Intermediate", "English", 2);
@@ -190,6 +199,10 @@ public class MockDataSeeder implements CommandLineRunner {
         user.setDisplayName(displayName);
         user.setAvatarPersona(displayName);
         user.setRole(role);
+        user.setAccountType("SUPER_CREATOR".equals(role) ? "CONTENT_CREATOR"
+                : ("PRO_MENTOR".equals(role) ? "PRO_MENTOR" : "LEARNER"));
+        user.setRegistrationStatus("APPROVED");
+        user.setProGrantedByAdmin("PRO_MENTOR".equals(role));
         user.setPassword(DEMO_PASSWORD);
         user.setAnonymousMode(false);
         user.setCreditBalance(credits);
@@ -197,6 +210,16 @@ public class MockDataSeeder implements CommandLineRunner {
         user.setActive(true);
         user.setCreatedAt(LocalDateTime.now());
         return userRepository.save(user);
+    }
+
+    private UserProgramLevel programLevel(AppUser user, Program program, int level, int experience, int maxHosting) {
+        UserProgramLevel progress = new UserProgramLevel();
+        progress.setUser(user);
+        progress.setProgram(program);
+        progress.setLevelNumber(level);
+        progress.setExperiencePoints(experience);
+        progress.setMaxHostingLevel(maxHosting);
+        return programLevelRepository.save(progress);
     }
 
     private BillingPlan billingPlan(String name, Double price, Integer aiLimit, Integer importLimit, Integer maxParticipants, Boolean recording) {

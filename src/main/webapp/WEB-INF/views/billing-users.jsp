@@ -16,7 +16,7 @@
             <form method="post" action="/billing/users/topup" class="d-flex gap-2 align-items-end">
                 <div style="flex: 1;">
                     <label class="form-label" style="font-size: 12px;">User</label>
-                    <select name="userId" class="form-select form-select-sm" required>
+                    <select name="userId" class="form-select form-select-sm" data-live-search required>
                         <option value="">— Select User —</option>
                         <c:forEach var="u" items="${users}">
                             <option value="${u.id}">${u.displayName} (${u.creditBalance} credits)</option>

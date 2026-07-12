@@ -78,7 +78,7 @@
                             </td>
                             <td>
                                 <c:if test="${p.status != 'PUBLISHED'}">
-                                    <a href="/podcasts/publish/${p.id}" class="btn-action edit" title="Publish" onclick="return confirm('Publish this episode?')"><i class="bi bi-check-circle"></i></a>
+                                    <a href="/podcasts/publish/${p.id}" class="btn-action edit" title="Publish"><i class="bi bi-check-circle"></i></a>
                                 </c:if>
                                 <a href="/podcasts/edit/${p.id}" class="btn-action edit" title="Edit"><i class="bi bi-pencil"></i></a>
                                 <button class="btn-action delete" onclick="confirmDelete('/podcasts/delete/${p.id}')" title="Delete"><i class="bi bi-trash"></i></button>

@@ -25,7 +25,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Creator</label>
-                        <select name="creatorId" class="form-select">
+                        <select name="creatorId" class="form-select" data-live-search>
                             <option value="">— Select —</option>
                             <c:forEach var="u" items="${users}">
                                 <option value="${u.id}" <c:if test="${content.creator != null && content.creator.id == u.id}">selected</c:if>>${u.displayName}</option>
@@ -41,7 +41,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Course</label>
-                        <select name="courseId" class="form-select">
+                        <select name="courseId" class="form-select" data-live-search>
                             <option value="">— Optional —</option>
                             <c:forEach var="c" items="${courses}">
                                 <option value="${c.id}" <c:if test="${content.course != null && content.course.id == c.id}">selected</c:if>>${c.code} — ${c.title}</option>
@@ -50,7 +50,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Chapter</label>
-                        <select name="chapterId" class="form-select">
+                        <select name="chapterId" class="form-select" data-live-search>
                             <option value="">— Optional —</option>
                             <c:forEach var="ch" items="${chapters}">
                                 <option value="${ch.id}" <c:if test="${content.chapter != null && content.chapter.id == ch.id}">selected</c:if>>${ch.title}</option>

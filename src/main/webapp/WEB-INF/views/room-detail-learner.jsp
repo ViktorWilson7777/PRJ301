@@ -832,6 +832,24 @@
                                 }
                             }
                             // Bị Host ép tắt Mic
+                            else if (msg.type === 'MIC_PERMISSION' && currentUser === msg.receiverName) {
+                                micAllowed = msg.content === 'ALLOWED';
+                                if (btnToggleMic) {
+                                    btnToggleMic.disabled = !micAllowed;
+                                    btnToggleMic.style.opacity = micAllowed ? '1' : '0.45';
+                                    btnToggleMic.title = micAllowed ? 'Turn microphone on or off' : 'Wait for the host to enable your microphone';
+                                }
+                                if (!micAllowed) {
+                                    isMuted = true;
+                                    if (rtc.localAudioTrack) rtc.localAudioTrack.setEnabled(false);
+                                    if (micIcon) micIcon.className = 'bi bi-mic-mute-fill';
+                                }
+                                Swal.fire({
+                                    icon:micAllowed ? 'success' : 'info',
+                                    title:micAllowed ? 'The host enabled your microphone' : 'Microphone access was revoked',
+                                    toast:true,position:'top-end',showConfirmButton:false,timer:3000
+                                });
+                            }
                             else if (msg.type === 'FORCE_MUTE' && currentUser === msg.receiverName) {
                                 if (!isMuted) {
                                     isMuted = true;
@@ -1066,40 +1084,27 @@
                     var micIcon = document.getElementById('micIcon');
 
                     var participantId = '${currentParticipant != null ? currentParticipant.id : ""}';
+                    var micAllowed = ${currentParticipant != null && currentParticipant.micAllowed ? 'true' : 'false'};
+                    if (btnToggleMic) {
+                        btnToggleMic.disabled = !micAllowed;
+                        btnToggleMic.title = micAllowed ? 'Turn microphone on or off' : 'Wait for the host to enable your microphone';
+                        if (!micAllowed) btnToggleMic.style.opacity = '0.45';
+                    }
 
-                    btnToggleMic.onclick = async function () {
-                        if (!rtc.localAudioTrack) return;
+                    if (btnToggleMic) btnToggleMic.onclick = async function () {
+                        if (!rtc.localAudioTrack || !participantId || !micAllowed) return;
                         try {
-                            if (isMuted) {
-                                await rtc.localAudioTrack.setEnabled(true);
-                                isMuted = false;
-                                micIcon.className = 'bi bi-mic-fill';
-                                btnToggleMic.style.background = '';
-                                btnToggleMic.style.color = '';
-                            } else {
-                                await rtc.localAudioTrack.setEnabled(false);
-                                isMuted = true;
-                                micIcon.className = 'bi bi-mic-mute-fill';
-                                btnToggleMic.style.background = 'rgba(239, 68, 68, 0.2)';
-                                btnToggleMic.style.color = '#EF4444';
-                            }
-                            
-                            var sendStomp = function() {
-                                stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: isMuted ? 'OFF' : 'ON' }));
-                            };
-                            
-                            if (participantId) {
-                                fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' })
-                                    .then(sendStomp)
-                                    .catch(err => {
-                                        console.error("Error updating DB:", err);
-                                        sendStomp(); // Still send STOMP even if DB update fails
-                                    });
-                            } else {
-                                sendStomp();
-                            }
+                            const response = await fetch('/api/rooms/' + roomId + '/toggle-mic/' + participantId, { method: 'POST', credentials: 'same-origin' });
+                            const data = await response.json();
+                            if (!response.ok) throw new Error(data.error || 'Microphone access was denied.');
+                            isMuted = !data.micOn;
+                            await rtc.localAudioTrack.setEnabled(Boolean(data.micOn));
+                            micIcon.className = data.micOn ? 'bi bi-mic-fill' : 'bi bi-mic-mute-fill';
+                            btnToggleMic.style.background = data.micOn ? '' : 'rgba(239, 68, 68, 0.2)';
+                            btnToggleMic.style.color = data.micOn ? '' : '#EF4444';
+                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'MIC_TOGGLE', senderName: currentUser, content: data.micOn ? 'ON' : 'OFF' }));
                         } catch (err) {
-                            console.error("Failed to toggle mic:", err);
+                            Swal.fire({icon:'warning',title:'Microphone unavailable',text:err.message,toast:true,position:'top-end',showConfirmButton:false,timer:3000});
                         }
                     };
                     var isAudioConnected = false;

@@ -41,7 +41,7 @@
                         <option value="LEARNER" <c:if test="${user.role == 'LEARNER'}">selected</c:if>>Learner</option>
                         <option value="MODERATOR" <c:if test="${user.role == 'MODERATOR'}">selected</c:if>>Moderator</option>
                         <option value="PRO_MENTOR" <c:if test="${user.role == 'PRO_MENTOR'}">selected</c:if>>Pro Mentor</option>
-                        <option value="SUPER_CREATOR" <c:if test="${user.role == 'SUPER_CREATOR'}">selected</c:if>>Super Creator</option>
+                        <option value="SUPER_CREATOR" <c:if test="${user.role == 'SUPER_CREATOR'}">selected</c:if>>Content Creator</option>
                     </select>
                 </div>
 
@@ -75,6 +75,29 @@
                 </div>
             </form>
         </div>
+        <c:if test="${user.id != null}">
+            <div class="stat-card mt-4">
+                <h5 style="font-weight:700">Program levels and hosting access</h5>
+                <p class="text-muted" style="font-size:13px">Every user starts at Level 1. Set a hosting level only for staff or approved Pro Mentors.</p>
+                <c:if test="${param.success == 'level_saved'}"><div class="alert alert-success py-2">Program level saved.</div></c:if>
+                <div class="mb-3" style="max-height:220px;overflow-y:auto">
+                    <c:forEach var="item" items="${programLevels}">
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <span><c:out value="${item.program.title}"/></span>
+                            <span>Level ${item.levelNumber} · ${item.experiencePoints} XP · Host through ${item.maxHostingLevel}</span>
+                        </div>
+                    </c:forEach>
+                </div>
+                <form method="post" action="${pageContext.request.contextPath}/users/${user.id}/program-level">
+                    <div class="row g-3">
+                        <div class="col-md-5"><label class="form-label">Program</label><select name="programId" class="form-select" data-live-search required><option value="">Select a program</option><c:forEach var="program" items="${programs}"><option value="${program.id}"><c:out value="${program.title}"/></option></c:forEach></select></div>
+                        <div class="col-md-3"><label class="form-label">Learner level</label><input type="number" name="levelNumber" class="form-control" value="1" min="1" required></div>
+                        <div class="col-md-4"><label class="form-label">Max hosting level</label><input type="number" name="maxHostingLevel" class="form-control" value="0" min="0" required></div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-lucy mt-3"><i class="bi bi-save me-1"></i>Save program level</button>
+                </form>
+            </div>
+        </c:if>
     </div>
 </div>
 

@@ -23,6 +23,9 @@
                         practicing to level up!
                     </div>
                 </c:if>
+                <c:if test="${not empty success}">
+                    <div class="alert alert-success" style="border-radius:8px;font-size:14px;padding:12px"><i class="bi bi-check-circle me-2"></i>${success}</div>
+                </c:if>
 
                 <!-- Description -->
                 <c:if test="${not empty course.description}">
@@ -36,7 +39,7 @@
                 <!-- Live Audio Rooms (Course Runs) -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4 style="font-weight: 700; color: #1E293B; margin-bottom: 0;">Active Live Rooms</h4>
-                    <c:if test="${sessionScope.currentUser.role == 'ADMIN' || sessionScope.currentUser.role == 'PRO_MENTOR' || sessionScope.currentUser.role == 'SUPER_CREATOR'}">
+                    <c:if test="${canHostCourse}">
                         <a href="/rooms/create?courseId=${course.id}" class="btn btn-lucy btn-sm"><i class="bi bi-plus-lg me-1"></i> Host a Room</a>
                     </c:if>
                 </div>
@@ -92,8 +95,7 @@
 
                                         <c:set var="reqLevel" value="${room.levelNumber != null ? room.levelNumber : 1}" />
                                         <c:choose>
-                                            <c:when
-                                                test="${userLevel >= reqLevel || sessionScope.currentUser.role == 'ADMIN' || sessionScope.currentUser.role == 'PRO_MENTOR' || sessionScope.currentUser.role == 'SUPER_CREATOR'}">
+                                            <c:when test="${userLevel >= reqLevel || sessionScope.currentUser.role == 'ADMIN'}">
                                                 <a href="/rooms/${room.id}" class="btn btn-lucy w-100 btn-sm"
                                                     style="border-radius: 8px;">
                                                     <i class="bi bi-mic-fill me-1"></i> Join Room
@@ -119,7 +121,7 @@
                     </c:otherwise>
                 </c:choose>
 
-                <c:if test="${sessionScope.currentUser.role == 'ADMIN'}">
+                <c:if test="${sessionScope.currentUser != null}">
                     <!-- Levels & Questions -->
                     <h4 style="font-weight: 700; color: #1E293B; margin-bottom: 20px;">Levels & Questions Structure (Admin Only)</h4>
 
@@ -221,9 +223,16 @@
                                                                             </c:if>
                                                                         </div>
                                                                     </div>
-                                                                    <a href="/lessons/${lesson.id}"
-                                                                        class="btn btn-sm btn-light"
-                                                                        style="border-radius: 6px; font-weight: 600; color: #4F46E5;">Study</a>
+                                                                    <c:choose>
+                                                                        <c:when test="${completedLessonIds.contains(lesson.id)}">
+                                                                            <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Completed</span>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <form method="post" action="${pageContext.request.contextPath}/courses/${course.id}/lessons/${lesson.id}/complete">
+                                                                                <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:6px;font-weight:600"><i class="bi bi-check2-circle me-1"></i>Mark complete</button>
+                                                                            </form>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </div>
                                                             </c:forEach>
                                                         </c:otherwise>

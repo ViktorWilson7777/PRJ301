@@ -6,6 +6,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
+import com.lucy.lms.service.ProgramProgressService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +33,7 @@ public class RoomWebController {
     private final PodcastEpisodeRepository podcastEpisodeRepository;
     private final JoinRequestRepository joinRequestRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final ProgramProgressService progressService;
 
     public RoomWebController(RoomRepository roomRepository,
                              ProgramRepository programRepository,
@@ -45,7 +47,8 @@ public class RoomWebController {
                              GiftTransactionRepository giftTransactionRepository,
                              PodcastEpisodeRepository podcastEpisodeRepository,
                              JoinRequestRepository joinRequestRepository,
-                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate) {
+                             org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate,
+                             ProgramProgressService progressService) {
         this.roomRepository = roomRepository;
         this.programRepository = programRepository;
         this.userRepository = userRepository;
@@ -59,13 +62,14 @@ public class RoomWebController {
         this.podcastEpisodeRepository = podcastEpisodeRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.messagingTemplate = messagingTemplate;
+        this.progressService = progressService;
     }
 
     @GetMapping("/rooms")
     public String rooms(@RequestParam(required = false) Integer level,
                         Model model, jakarta.servlet.http.HttpSession session) {
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        boolean isAdmin = currentUser != null && ("ADMIN".equals(currentUser.getRole()) || "SUPER_CREATOR".equals(currentUser.getRole()));
+        boolean isAdmin = currentUser != null && "ADMIN".equals(currentUser.getRole());
 
         if (isAdmin) {
             model.addAttribute("rooms", roomRepository.findAll());
@@ -80,12 +84,19 @@ public class RoomWebController {
             }
 
             // Calculate user level for display
-            int userLevel = 1;
-            if (currentUser != null) {
-                int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
-                userLevel = 1 + score / 100;
-            }
+            int userLevel = progressService.levelsForUser(currentUser).stream()
+                    .map(UserProgramLevel::getLevelNumber).filter(java.util.Objects::nonNull)
+                    .max(Integer::compareTo).orElse(1);
             model.addAttribute("userLevel", userLevel);
+            java.util.Map<Long, Boolean> roomAccess = new java.util.HashMap<>();
+            for (Room room : (java.util.List<Room>) model.getAttribute("rooms")) {
+                int levelForProgram = room.getCourse() != null
+                        ? progressService.getLevel(currentUser, room.getCourse().getProgram()) : 1;
+                roomAccess.put(room.getId(), currentUser != null
+                        && ("ADMIN".equals(currentUser.getRole())
+                        || levelForProgram >= (room.getLevelNumber() == null ? 1 : room.getLevelNumber())));
+            }
+            model.addAttribute("roomAccess", roomAccess);
         }
         return "rooms";
     }
@@ -99,12 +110,16 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms/create")
-    public String createRoomPage(Model model) {
+    public String createRoomPage(Model model, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
         model.addAttribute("room", new Room());
         model.addAttribute("users", userRepository.findAll());
-        model.addAttribute("courses", courseRepository.findAll());
+        model.addAttribute("courses", courseRepository.findAll().stream()
+                .filter(course -> progressService.canHostCourse(currentUser, course)).toList());
         model.addAttribute("programs", programRepository.findAll());
-        model.addAttribute("chapters", chapterRepository.findAll());
+        model.addAttribute("chapters", chapterRepository.findAll().stream()
+                .filter(chapter -> progressService.canHostCourse(currentUser, chapter.getCourse())).toList());
         return "room-form";
     }
 
@@ -156,6 +171,11 @@ public class RoomWebController {
         } else {
             room.setChapter(null);
             if (courseId != null) room.setCourse(courseRepository.findById(courseId).orElse(null));
+        }
+
+        if (currentUser == null || !progressService.canHostRoom(
+                currentUser, room.getCourse(), room.getLevelNumber())) {
+            return "redirect:/rooms?error=host_level_not_allowed";
         }
 
         if ("LIVE".equals(status) && room.getStartedAt() == null) {
@@ -230,10 +250,9 @@ public class RoomWebController {
             return "room-detail-host";
         }
 
-        // Level check for LEARNER role (before checking participant status)
-        if ("LEARNER".equals(currentUser.getRole()) && room.getLevelNumber() != null) {
-            int score = currentUser.getReputationScore() != null ? currentUser.getReputationScore() : 0;
-            int userLevel = 1 + score / 100;
+        // Level is tracked separately for each language program.
+        if (!isAdmin && !isHost && room.getLevelNumber() != null && room.getCourse() != null) {
+            int userLevel = progressService.getLevel(currentUser, room.getCourse().getProgram());
             boolean isParticipantAlready = participantRepository.existsByRoomIdAndUserId(id, currentUser.getId());
             if (userLevel < room.getLevelNumber() && !isParticipantAlready) {
                 model.addAttribute("room", room);
@@ -335,6 +354,9 @@ public class RoomWebController {
         if (currentUser != null) {
             RoomParticipant participant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
             if (participant != null) {
+                if (Boolean.TRUE.equals(participant.getMicOn())) {
+                    progressService.stopSpeakingAndAward(participant);
+                }
                 participantRepository.delete(participant);
                 
                 // Send STOMP LEAVE message to update other participants' UI
@@ -371,10 +393,21 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms/{roomId}/toggle-mic/{participantId}")
-    public String toggleMic(@PathVariable Long roomId, @PathVariable Long participantId) {
+    public String toggleMic(@PathVariable Long roomId, @PathVariable Long participantId,
+                            jakarta.servlet.http.HttpSession session) {
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
-        if (p != null) {
-            p.setMicOn(!Boolean.TRUE.equals(p.getMicOn()));
+        Room room = roomRepository.findById(roomId).orElse(null);
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        boolean canManage = room != null && currentUser != null
+                && ("ADMIN".equals(currentUser.getRole())
+                || (room.getHostUser() != null && room.getHostUser().getId().equals(currentUser.getId())));
+        if (p != null && canManage && p.getRoom().getId().equals(roomId)) {
+            boolean allowed = !Boolean.TRUE.equals(p.getMicAllowed());
+            p.setMicAllowed(allowed);
+            if (!allowed && Boolean.TRUE.equals(p.getMicOn())) {
+                progressService.stopSpeakingAndAward(p);
+                p.setMicOn(false);
+            }
             participantRepository.save(p);
         }
         return "redirect:/rooms/" + roomId;
@@ -394,15 +427,7 @@ public class RoomWebController {
     public String removeParticipant(@PathVariable Long roomId, @PathVariable Long participantId) {
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
         if (p != null) {
-            if (p.getJoinedAt() != null) {
-                long durationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
-                int points = (int) (durationSec / 60);
-                if (points > 0 && p.getUser() != null) {
-                    AppUser user = p.getUser();
-                    user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
-                    userRepository.save(user);
-                }
-            }
+            if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
             participantRepository.deleteById(participantId);
         }
         return "redirect:/rooms/" + roomId;
@@ -533,15 +558,7 @@ public class RoomWebController {
             
             // Clean up related entities
             participantRepository.findByRoomId(id).forEach(p -> {
-                if (p.getJoinedAt() != null) {
-                    long pDurationSec = java.time.Duration.between(p.getJoinedAt(), LocalDateTime.now()).getSeconds();
-                    int points = (int) (pDurationSec / 60);
-                    if (points > 0 && p.getUser() != null) {
-                        AppUser user = p.getUser();
-                        user.setReputationScore((user.getReputationScore() != null ? user.getReputationScore() : 0) + points);
-                        userRepository.save(user);
-                    }
-                }
+                if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
                 participantRepository.deleteById(p.getId());
             });
             pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
