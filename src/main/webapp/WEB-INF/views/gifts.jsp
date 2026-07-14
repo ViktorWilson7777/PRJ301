@@ -4,6 +4,10 @@
 
 <layout:main pageTitle="Gifts">
 
+<c:if test="${param.error == 'invalid_image'}"><div class="alert alert-danger">The sticker must be a valid PNG, JPG or GIF under 3 MB and 4096 x 4096 px.</div></c:if>
+<c:if test="${param.error == 'image_required'}"><div class="alert alert-danger">Please upload a sticker image for this gift.</div></c:if>
+<c:if test="${param.error == 'upload_failed'}"><div class="alert alert-danger">The sticker could not be saved. Please try again.</div></c:if>
+
 <div class="mock-banner">
     <i class="bi bi-info-circle"></i>
     <span><strong>MOCK BILLING:</strong> Virtual gifts — no real purchases.</span>
@@ -25,13 +29,13 @@
         <c:otherwise>
             <table class="table mb-0">
                 <thead>
-                    <tr><th>ID</th><th>Icon</th><th>Name</th><th>Credit Cost</th><th>Active</th><th style="width:100px;">Actions</th></tr>
+                    <tr><th>ID</th><th>Sticker</th><th>Name</th><th>Credit Cost</th><th>Active</th><th style="width:100px;">Actions</th></tr>
                 </thead>
                 <tbody>
                     <c:forEach var="g" items="${gifts}">
                         <tr>
                             <td><strong>#${g.id}</strong></td>
-                            <td style="font-size: 24px;">${g.icon}</td>
+                            <td><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" style="width:64px;height:64px;object-fit:contain;border-radius:14px;background:#f8fafc;padding:5px" /></c:when><c:otherwise><i class="bi bi-gift-fill text-muted" style="font-size:32px"></i></c:otherwise></c:choose></td>
                             <td><strong>${g.name}</strong></td>
                             <td>${g.creditCost} credits</td>
                             <td>
@@ -60,7 +64,7 @@
             <tbody>
                 <c:forEach var="txn" items="${giftTransactions}">
                     <tr>
-                        <td>${txn.gift.icon} ${txn.gift.name}</td>
+                        <td><span class="d-inline-flex align-items-center gap-2"><c:choose><c:when test="${not empty txn.gift.imageUrl}"><img src="${txn.gift.imageUrl}" alt="${txn.gift.name}" style="width:38px;height:38px;object-fit:contain" /></c:when><c:otherwise><i class="bi bi-gift-fill text-muted"></i></c:otherwise></c:choose><strong>${txn.gift.name}</strong></span></td>
                         <td><c:if test="${txn.sender != null}">${txn.sender.displayName}</c:if></td>
                         <td><c:if test="${txn.receiver != null}">${txn.receiver.displayName}</c:if></td>
                         <td><c:if test="${txn.room != null}">${txn.room.title}</c:if></td>

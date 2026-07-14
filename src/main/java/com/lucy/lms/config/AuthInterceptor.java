@@ -22,7 +22,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/send-otp")
                 || uri.startsWith("/forgot-password") || uri.startsWith("/reset-password")
                 || uri.startsWith("/css/") || uri.startsWith("/js/")
-                || uri.startsWith("/images/") || uri.startsWith("/api/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
+                || uri.startsWith("/images/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
                 || uri.equals("/rooms") || uri.matches("/rooms/\\d+")) {
             return true;
         }
@@ -38,6 +38,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // Admin-only route checks
         boolean isAdminRoute = uri.startsWith("/users")
+                || uri.startsWith("/pro-applications")
+                || uri.startsWith("/admin/api-settings")
+                || uri.equals("/api/users")
+                || uri.matches("/api/users/\\d+")
                 || uri.startsWith("/billing/plans")
                 || uri.startsWith("/billing/transactions")
                 || uri.startsWith("/courses/create")
@@ -55,6 +59,12 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         if (isAdminRoute && !"ADMIN".equals(role)) {
             response.sendRedirect("/dashboard?error=access_denied");
+            return false;
+        }
+
+        if (uri.startsWith("/api/ai/")
+                && !("ADMIN".equals(role) || "MODERATOR".equals(role) || "PRO_MENTOR".equals(role))) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return false;
         }
 

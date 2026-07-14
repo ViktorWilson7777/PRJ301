@@ -1,5 +1,6 @@
 package com.lucy.lms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,9 +42,11 @@ public class AppUser {
     private String registrationStatus; // APPROVED, PENDING, REJECTED
 
     @Column(columnDefinition = "NVARCHAR(1000)")
+    @JsonIgnore
     private String evidenceUrl;
 
     @Column(columnDefinition = "NVARCHAR(MAX)")
+    @JsonIgnore
     private String achievements;
 
     private Long storageLimitBytes = 104857600L;
@@ -63,6 +66,7 @@ public class AppUser {
     private Boolean active = true;
 
     @Column(columnDefinition = "NVARCHAR(255)")
+    @JsonIgnore
     private String password;
 
     @PrePersist

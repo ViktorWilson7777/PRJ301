@@ -5,9 +5,11 @@
 <layout:main pageTitle="My Profile">
 
 <c:set var="activeTab" value="profile" />
-<c:if test="${param.success == 'password_changed' || param.error == 'wrong_password'}">
+<c:if test="${param.success == 'password_changed' || param.error == 'wrong_password' || param.error == 'weak_password'}">
     <c:set var="activeTab" value="security" />
 </c:if>
+<c:if test="${param.tab == 'security'}"><c:set var="activeTab" value="security" /></c:if>
+<c:if test="${param.tab == 'account'}"><c:set var="activeTab" value="account" /></c:if>
 <c:if test="${param.success == 'role_upgraded' || param.error == 'insufficient_credits' || param.error == 'already_role'}">
     <c:set var="activeTab" value="account" />
 </c:if>
@@ -174,6 +176,7 @@ document.addEventListener("DOMContentLoaded", function() {
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i> Incorrect current password!
                             </div>
                         </c:if>
+                        <c:if test="${param.error == 'weak_password'}"><div class="alert alert-danger py-2">New password must contain at least 8 characters.</div></c:if>
 
                         <form method="post" action="${pageContext.request.contextPath}/profile/change-password" class="lucy-form" style="border: none; padding: 0;">
                             <div class="mb-3">
@@ -182,14 +185,54 @@ document.addEventListener("DOMContentLoaded", function() {
                             </div>
                             <div class="mb-4">
                                 <label class="form-label">New Password</label>
-                                <input type="password" name="newPassword" class="form-control" required />
+                                <input type="password" name="newPassword" class="form-control" minlength="8" required />
                             </div>
                             <button type="submit" class="btn btn-outline-dark w-100"><i class="bi bi-key me-1"></i> Update Password</button>
                         </form>
                     </div>
                 </div>
+                <div class="col-lg-6">
+                    <div class="stat-card">
+                        <h5 style="font-weight:600;margin-bottom:12px"><i class="bi bi-envelope-key me-1" style="color:var(--lucy-primary)"></i> Forgot password / Reset with OTP</h5>
+                        <p class="text-muted" style="font-size:13px">We will send a 6-digit OTP to your registered email: <strong><c:out value="${user.email}" /></strong></p>
+                        <c:if test="${not empty resetError}"><div class="alert alert-danger py-2"><c:out value="${resetError}" /></div></c:if>
+                        <div id="profileOtpFeedback" class="alert d-none py-2" role="alert"></div>
+                        <button id="sendProfileOtp" type="button" class="btn btn-outline-primary w-100 mb-3"><i class="bi bi-send me-1"></i> Send OTP to email</button>
+                        <form method="post" action="${pageContext.request.contextPath}/profile/reset-password" class="lucy-form" style="border:none;padding:0">
+                            <div class="mb-3"><label class="form-label">OTP code</label><input type="text" name="otp" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required /></div>
+                            <div class="mb-3"><label class="form-label">New password</label><input type="password" name="newPassword" class="form-control" minlength="8" required /></div>
+                            <div class="mb-3"><label class="form-label">Confirm new password</label><input type="password" name="confirmPassword" class="form-control" minlength="8" required /></div>
+                            <button type="submit" class="btn btn-lucy w-100"><i class="bi bi-arrow-repeat me-1"></i> Reset password</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const button = document.getElementById('sendProfileOtp');
+            const feedback = document.getElementById('profileOtpFeedback');
+            if (!button) return;
+            button.addEventListener('click', async function () {
+                button.disabled = true;
+                feedback.className = 'alert alert-info py-2';
+                feedback.textContent = 'Sending OTP...';
+                try {
+                    const response = await fetch('${pageContext.request.contextPath}/profile/forgot-password/send-otp', { method: 'POST' });
+                    const result = await response.json();
+                    feedback.className = 'alert py-2 ' + (result.success ? 'alert-success' : 'alert-danger');
+                    feedback.textContent = result.message;
+                    if (!result.success) button.disabled = false;
+                    if (result.success) setTimeout(function () { button.disabled = false; }, 60000);
+                } catch (error) {
+                    feedback.className = 'alert alert-danger py-2';
+                    feedback.textContent = 'Could not send OTP. Please try again.';
+                    button.disabled = false;
+                }
+            });
+        });
+        </script>
 
         <!-- ==================== TAB 3: ACCOUNT & UPGRADE ==================== -->
         <div class="tab-pane fade ${activeTab == 'account' ? 'show active' : ''}" id="account" role="tabpanel" aria-labelledby="account-tab">
@@ -264,6 +307,9 @@ document.addEventListener("DOMContentLoaded", function() {
                                 <i class="bi bi-arrow-up-circle me-1" style="color: var(--lucy-success);"></i> Upgrade Account Level
                             </h5>
 
+                            <c:if test="${not empty success}"><div class="alert alert-success"><c:out value="${success}" /></div></c:if>
+                            <c:if test="${not empty error}"><div class="alert alert-danger"><c:out value="${error}" /></div></c:if>
+
                             <c:if test="${param.success == 'role_upgraded'}">
                                 <div class="alert alert-success" style="border-radius: 10px; font-size: 13.5px; padding: 8px 12px;">
                                     <i class="bi bi-check-circle-fill me-2"></i> Congratulations! Your account has been upgraded.
@@ -291,7 +337,20 @@ document.addEventListener("DOMContentLoaded", function() {
                                             <button class="btn btn-secondary btn-sm w-100" disabled style="border-radius: 8px;">Active / Unlocked</button>
                                         </c:when>
                                         <c:otherwise>
-                                            <button class="btn btn-outline-secondary btn-sm w-100" disabled style="border-radius: 8px;"><i class="bi bi-mortarboard me-1"></i>Complete a course to unlock</button>
+                                            <c:choose>
+                                                <c:when test="${user.registrationStatus == 'PENDING'}">
+                                                    <div class="alert alert-warning py-2 mb-0">Application pending administrator review.</div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <form method="post" action="${pageContext.request.contextPath}/profile/apply-pro">
+                                                        <label class="form-label">Google Drive certificate link</label>
+                                                        <input type="url" name="evidenceUrl" class="form-control mb-2" placeholder="https://drive.google.com/..." required />
+                                                        <label class="form-label">Certificate / language experience description</label>
+                                                        <textarea name="achievements" class="form-control mb-2" rows="3" required></textarea>
+                                                        <button class="btn btn-outline-primary btn-sm w-100" type="submit"><i class="bi bi-send me-1"></i>Send Pro application</button>
+                                                    </form>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </c:otherwise>
                                     </c:choose>
                                 </div>

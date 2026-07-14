@@ -7,7 +7,7 @@
 <div class="row justify-content-center">
     <div class="col-lg-6">
         <div class="lucy-form">
-            <form method="post" action="/gifts/save">
+            <form method="post" action="/gifts/save" enctype="multipart/form-data">
                 <c:if test="${gift.id != null}">
                     <input type="hidden" name="id" value="${gift.id}" />
                 </c:if>
@@ -17,9 +17,13 @@
                     <input type="text" name="name" class="form-control" value="${gift.name}" required placeholder="e.g. Star, Coffee, Firework" />
                 </div>
 
+                <input type="hidden" name="icon" value="${gift.icon}" />
+
                 <div class="mb-3">
-                    <label class="form-label">Icon (emoji)</label>
-                    <input type="text" name="icon" class="form-control" value="${gift.icon}" placeholder="e.g. ⭐ ☕ 🎆 🌹 💎" />
+                    <label class="form-label">Sticker image <c:if test="${gift.id == null}"><span class="text-danger">*</span></c:if></label>
+                    <input type="file" name="imageFile" class="form-control" accept="image/png,image/jpeg,image/gif" <c:if test="${gift.id == null}">required</c:if> />
+                    <div class="form-text">Upload a real PNG, JPG or GIF sticker; maximum 3 MB and 4096 x 4096 px.</div>
+                    <c:if test="${not empty gift.imageUrl}"><div class="mt-3"><span class="text-muted d-block mb-1" style="font-size:12px">Current sticker</span><img src="${gift.imageUrl}" alt="${gift.name}" style="width:96px;height:96px;object-fit:contain;border-radius:16px;background:#f8fafc;padding:8px" /></div></c:if>
                 </div>
 
                 <div class="mb-3">

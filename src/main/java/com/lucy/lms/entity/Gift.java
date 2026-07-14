@@ -18,7 +18,10 @@ public class Gift {
     private String name;
 
     @Column(columnDefinition = "NVARCHAR(50)")
-    private String icon; // emoji or icon name
+    private String icon; // legacy fallback label; stickers use imageUrl
+
+    @Column(length = 500)
+    private String imageUrl;
 
     private Integer creditCost = 10;
 

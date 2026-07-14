@@ -1,24 +1,24 @@
 package com.lucy.lms.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
     private final JavaMailSender mailSender;
-
-    @Value("${spring.mail.username:}")
-    private String senderAddress;
+    private final RuntimeMailSettingsService mailSettings;
 
     @Value("${lucy.admin.email:}")
     private String adminEmail;
 
-    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider,
+                        RuntimeMailSettingsService mailSettings) {
         this.mailSender = mailSenderProvider.getIfAvailable();
+        this.mailSettings = mailSettings;
     }
 
     public boolean sendOtpEmail(String to, String otp) {
@@ -26,7 +26,8 @@ public class EmailService {
     }
 
     public boolean sendOtpEmail(String to, String otp, String purpose) {
-        if (mailSender == null || senderAddress == null || senderAddress.isBlank()) return false;
+        String senderAddress = mailSettings.senderAddress();
+        if (mailSender == null || !mailSettings.isConfigured()) return false;
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(senderAddress);
@@ -45,14 +46,15 @@ public class EmailService {
     }
 
     public void notifyAdminAboutProApplication(Long userId, String applicantName) {
+        String senderAddress = mailSettings.senderAddress();
         if (mailSender == null || adminEmail == null || adminEmail.isBlank()
-                || senderAddress == null || senderAddress.isBlank()) return;
+                || !mailSettings.isConfigured()) return;
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(senderAddress);
             message.setTo(adminEmail);
             message.setSubject("LUCY LMS - New Pro Mentor application");
-            message.setText(applicantName + " submitted a Pro Mentor application.\n\nReview: http://localhost:8081/users?review=" + userId);
+            message.setText(applicantName + " submitted a Pro Mentor application.\n\nReview: http://localhost:8081/pro-applications?review=" + userId);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to notify admin: " + e.getMessage());
@@ -60,7 +62,8 @@ public class EmailService {
     }
 
     public void sendApplicationDecision(String recipient, boolean approved) {
-        if (mailSender == null || senderAddress == null || senderAddress.isBlank()
+        String senderAddress = mailSettings.senderAddress();
+        if (mailSender == null || !mailSettings.isConfigured()
                 || recipient == null || recipient.isBlank()) return;
         try {
             SimpleMailMessage message = new SimpleMailMessage();

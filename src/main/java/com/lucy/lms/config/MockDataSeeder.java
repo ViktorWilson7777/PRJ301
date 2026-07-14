@@ -112,6 +112,7 @@ public class MockDataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         if (userRepository.findByEmail("admin@lucy.mock").isPresent()) {
+            ensureDefaultGiftImages();
             printAccounts();
             return;
         }
@@ -238,9 +239,33 @@ public class MockDataSeeder implements CommandLineRunner {
         Gift gift = new Gift();
         gift.setName(name);
         gift.setIcon(icon);
+        gift.setImageUrl(defaultGiftImage(name));
         gift.setCreditCost(cost);
         gift.setActive(true);
         return giftRepository.save(gift);
+    }
+
+    private void ensureDefaultGiftImages() {
+        for (Gift gift : giftRepository.findAll()) {
+            if (gift.getImageUrl() == null || gift.getImageUrl().isBlank()
+                    || gift.getImageUrl().matches("/images/gifts/(star|coffee|diamond)\\.svg")) {
+                String imageUrl = defaultGiftImage(gift.getName());
+                if (imageUrl != null) {
+                    gift.setImageUrl(imageUrl);
+                    giftRepository.save(gift);
+                }
+            }
+        }
+    }
+
+    private String defaultGiftImage(String name) {
+        if (name == null) return null;
+        return switch (name.toLowerCase()) {
+            case "star" -> "/images/gifts/star-sticker.png";
+            case "coffee" -> "/images/gifts/coffee-sticker.png";
+            case "diamond" -> "/images/gifts/diamond-sticker.png";
+            default -> null;
+        };
     }
 
     private Program program(String code, String title, String description) {

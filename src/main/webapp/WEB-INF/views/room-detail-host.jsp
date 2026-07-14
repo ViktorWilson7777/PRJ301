@@ -441,6 +441,205 @@
 
                 </style>
 
+                <style>
+                    /* LUCY Live visual system: clearer hierarchy, contrast and spacing */
+                    .stream-area {
+                        isolation: isolate;
+                        background:
+                            radial-gradient(circle at 50% 42%, rgba(76, 61, 190, .24), transparent 34%),
+                            radial-gradient(circle at 12% 12%, rgba(34, 211, 238, .09), transparent 25%),
+                            linear-gradient(145deg, #080c18 0%, #0b1020 48%, #0d1225 100%) !important;
+                    }
+                    .stream-area::before {
+                        content: "";
+                        position: absolute;
+                        inset: 0;
+                        pointer-events: none;
+                        z-index: 0;
+                        opacity: .22;
+                        background-image:
+                            linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px);
+                        background-size: 44px 44px;
+                        mask-image: radial-gradient(circle at center, #000 10%, transparent 76%);
+                    }
+                    .stream-header-overlay { top: 18px; left: 20px; right: 20px; gap: 14px; }
+                    .host-badge {
+                        min-height: 48px;
+                        padding: 6px 14px 6px 6px;
+                        background: rgba(9, 14, 28, .82) !important;
+                        border: 1px solid rgba(148, 163, 184, .2) !important;
+                        box-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+                        backdrop-filter: blur(18px);
+                    }
+                    .host-avatar-mini { width: 36px; height: 36px; background: linear-gradient(145deg, #22d3ee, #7c5cff); }
+                    .host-name { font-size: 13px; color: #f8fafc; }
+                    .room-topic { color: #94a3b8; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                    .live-stats { justify-content: flex-end; flex-wrap: wrap; }
+                    .stat-pill {
+                        min-height: 32px;
+                        padding: 7px 11px;
+                        background: rgba(15, 23, 42, .84) !important;
+                        border: 1px solid rgba(148, 163, 184, .16);
+                        color: #dbeafe;
+                        box-shadow: 0 8px 22px rgba(0, 0, 0, .2);
+                    }
+                    .stat-pill.live { background: rgba(190, 24, 93, .88) !important; border-color: rgba(251,113,133,.4); }
+                    .stage-container { padding: 72px 24px 94px; }
+                    .host-node-wrapper { top: 48%; }
+                    #network-lines-svg { opacity: .62; }
+                    .host-avatar-big {
+                        width: 108px;
+                        height: 108px;
+                        font-size: 42px;
+                        background: linear-gradient(145deg, #155e75, #4f46e5);
+                        border: 4px solid rgba(224, 231, 255, .82);
+                        box-shadow: 0 0 0 10px rgba(124,92,255,.1), 0 24px 60px rgba(0,0,0,.35);
+                        animation: live-breathe 3s ease-in-out infinite;
+                    }
+                    @keyframes live-breathe {
+                        0%, 100% { box-shadow: 0 0 0 8px rgba(124,92,255,.08), 0 24px 60px rgba(0,0,0,.35); }
+                        50% { box-shadow: 0 0 0 16px rgba(124,92,255,.035), 0 24px 68px rgba(79,70,229,.28); }
+                    }
+                    .speaker-avatar {
+                        width: 78px;
+                        height: 78px;
+                        color: #f8fafc;
+                        background: linear-gradient(145deg, #1e293b, #202944);
+                        border: 2px solid rgba(165,180,252,.35);
+                        box-shadow: 0 14px 34px rgba(0,0,0,.3);
+                    }
+                    .mic-icon-stage { border: 3px solid #0b1020; box-shadow: 0 5px 14px rgba(0,0,0,.35); }
+                    .host-node-wrapper .text-center > div:first-child,
+                    .speaker-node-wrapper .text-center > div:first-child {
+                        padding: 4px 9px !important;
+                        color: #f8fafc !important;
+                        background: rgba(7,11,22,.82) !important;
+                        border: 1px solid rgba(148,163,184,.14);
+                        border-radius: 9px !important;
+                        box-shadow: 0 8px 18px rgba(0,0,0,.2);
+                    }
+                    .listeners-box {
+                        right: 18px;
+                        bottom: 92px;
+                        width: 208px;
+                        max-width: calc(100% - 36px);
+                        padding: 12px;
+                        background: rgba(9, 14, 28, .82);
+                        border: 1px solid rgba(148,163,184,.18);
+                        border-radius: 16px;
+                        box-shadow: 0 18px 44px rgba(0,0,0,.28);
+                    }
+                    .listeners-box h6 { color: #cbd5e1; text-transform: uppercase; letter-spacing: .08em; font-size: 10px; }
+                    .listener-item { padding: 6px 7px; border-radius: 10px; background: rgba(148,163,184,.06); }
+                    .listener-avatar { background: linear-gradient(145deg, #4f46e5, #7c3aed); border: 0; }
+                    .listener-name { color: #dbe4f0; font-size: 12px; }
+                    .floating-action-bar {
+                        bottom: 18px;
+                        padding: 8px;
+                        gap: 8px;
+                        border-radius: 20px;
+                        background: rgba(7, 11, 22, .88);
+                        border: 1px solid rgba(148,163,184,.18);
+                        box-shadow: 0 20px 50px rgba(0,0,0,.42);
+                        backdrop-filter: blur(20px);
+                    }
+                    .fab-btn {
+                        width: 58px;
+                        height: 52px;
+                        border-radius: 14px;
+                        flex-direction: column;
+                        gap: 2px;
+                        color: #cbd5e1;
+                        font-size: 17px;
+                        background: rgba(148,163,184,.09);
+                        border: 1px solid transparent;
+                    }
+                    .fab-btn:hover { color: #fff; background: rgba(124,92,255,.2); border-color: rgba(165,180,252,.28); transform: translateY(-2px); }
+                    .fab-btn.primary { background: linear-gradient(145deg, #7c3aed, #db2777); color: #fff; }
+                    .fab-label { display: block; font-size: 9px; line-height: 1; font-weight: 700; letter-spacing: .02em; }
+                    #btnRaiseHand::after { content: "Raise"; display: block; font-size: 9px; line-height: 1; font-weight: 700; }
+                    .chat-area {
+                        background: #0d1424 !important;
+                        border-left: 1px solid rgba(148,163,184,.14) !important;
+                        box-shadow: -14px 0 34px rgba(0,0,0,.12);
+                    }
+                    .console-header { min-height: 58px; padding: 13px 16px; border-bottom: 1px solid rgba(148,163,184,.14); }
+                    .console-title { color: #f8fafc; font-size: 13px; font-weight: 700; }
+                    .console-subtitle { color: #718096; font-size: 10px; margin-top: 2px; }
+                    .chat-messages { padding: 14px; gap: 9px; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+                    .chat-messages::-webkit-scrollbar { display: block; width: 5px; }
+                    .chat-messages::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+                    .chat-msg {
+                        width: 100%;
+                        max-width: 100%;
+                        padding: 10px 11px;
+                        border-radius: 12px;
+                        color: #d7e0ec;
+                        background: rgba(30,41,59,.68);
+                        border: 1px solid rgba(148,163,184,.1);
+                    }
+                    .chat-msg.system-alert { padding: 10px 11px; color: #a5f3fc; background: rgba(8,145,178,.1); border-color: rgba(34,211,238,.16); font-style: normal; }
+                    .chat-input-area { padding: 12px; background: #0b1220; border-top-color: rgba(148,163,184,.14); }
+                    .chat-input { min-height: 40px; border-radius: 12px; background: #151f34; border-color: rgba(148,163,184,.17); color: #f8fafc; }
+                    .chat-input::placeholder { color: #64748b; }
+                    .chat-input:focus { border-color: #7c5cff; box-shadow: 0 0 0 3px rgba(124,92,255,.12); }
+                    .btn-send { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(145deg, #6d5dfc, #7c3aed); }
+                    .host-tools-panel { --bs-offcanvas-width: clamp(390px, 25vw, 420px); background: #0b1220; color: #dce5f1; border-left: 1px solid rgba(148,163,184,.16); }
+                    .host-tools-panel .offcanvas-header { position: sticky; top: 0; z-index: 2; min-height: 64px; padding: 15px 18px; background: #0d1526; border-bottom-color: rgba(148,163,184,.15); }
+                    .host-tools-panel .offcanvas-title { color: #f8fafc; font-size: 17px; }
+                    .host-tools-panel .offcanvas-body { padding: 14px; scrollbar-width: thin; scrollbar-color: #334155 transparent; }
+                    .tool-module {
+                        padding: 14px;
+                        margin-bottom: 12px;
+                        border-radius: 14px;
+                        background: #121b2e !important;
+                        border: 1px solid rgba(148,163,184,.14) !important;
+                        box-shadow: 0 10px 26px rgba(0,0,0,.1);
+                        font-size: 12px;
+                    }
+                    .tool-module h6 { margin-bottom: 11px; color: #a9b7ca; font-size: 10px; letter-spacing: .08em; }
+                    .tool-module .text-muted { color: #8292a8 !important; }
+                    .tool-module .btn { min-height: 34px; border-radius: 9px !important; font-weight: 600; }
+                    .tool-module .btn-xs { min-height: 30px; padding: 5px 8px !important; font-size: 11px !important; }
+                    .tool-module .fw-bold { color: #eef2ff; }
+                    .tool-module .badge { font-size: 9px; letter-spacing: .02em; }
+                    .tool-module .rounded { background: #0d1526 !important; border: 1px solid rgba(148,163,184,.1); }
+                    .form-dark { min-height: 38px; color: #eef2ff; background: #0a1120; border-color: rgba(148,163,184,.19); color-scheme: dark; }
+                    .form-dark:focus { background: #0a1120; color: #fff; border-color: #7c5cff; box-shadow: 0 0 0 3px rgba(124,92,255,.12); }
+                    .form-dark option { background: #111827; color: #f8fafc; }
+                    #giftModal .modal-content, #topupModal .modal-content { background: #0f172a !important; border-color: rgba(148,163,184,.18) !important; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+                    .gift-sticker-card { background: #151f34 !important; border-color: rgba(148,163,184,.16) !important; }
+                    @media (max-width: 991.98px) {
+                        .room-content > .row { height: auto !important; min-height: 100%; }
+                        .stream-area { height: 62dvh !important; min-height: 440px; }
+                        .chat-area { height: 38dvh !important; min-height: 300px; }
+                        .stream-header-overlay { top: 12px; left: 12px; right: 12px; }
+                        .stage-container { padding: 66px 12px 88px; }
+                        .listeners-box { bottom: 82px; right: 12px; }
+                    }
+                    @media (max-width: 575.98px) {
+                        .stream-header-overlay { gap: 8px; }
+                        .host-badge { width: calc(56% - 4px); max-width: calc(56% - 4px); min-width: 0; }
+                        .host-info { min-width: 0; }
+                        .host-badge .d-flex { min-width: 0; }
+                        .host-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                        .room-topic, .host-badge [style*="Followers"] { display: none; }
+                        .live-stats { width: calc(44% - 4px); max-width: calc(44% - 4px); gap: 5px; }
+                        .stat-pill { min-height: 28px; padding: 5px 8px; font-size: 10px; }
+                        .host-avatar-big { width: 88px; height: 88px; font-size: 34px; }
+                        .speaker-avatar { width: 64px; height: 64px; font-size: 23px; }
+                        .listeners-box { display: none; }
+                        .floating-action-bar { width: calc(100% - 24px); justify-content: center; }
+                        .fab-btn { flex: 1; max-width: 68px; }
+                        .host-tools-panel { --bs-offcanvas-width: 100vw; }
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        .host-avatar-big { animation: none; }
+                        .fab-btn, .speaker-node-wrapper { transition: none; }
+                    }
+                </style>
+
                 <div class="row g-0 w-100 h-100">
 
                     <!-- ========================================== -->
@@ -460,6 +659,7 @@
                                         <span class="host-name">${room.hostUser != null ? room.hostUser.displayName : 'Unknown Host'}</span>
                                         <span style="font-size: 11px; color: #A29BFE; white-space: nowrap;">(<span id="followerCount">0</span> Followers)</span>
                                     </div>
+                                    <span class="room-topic">${room.title}</span>
                                 </div>
                                 <c:if test="${room.hostUser != null && sessionScope.currentUser.id != room.hostUser.id}">
                                     <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
@@ -520,24 +720,27 @@
                         <!-- Floating Action Bar -->
                         <div class="floating-action-bar">
                             <!-- Toggle Mic Button -->
-                            <button id="btnToggleMic" class="fab-btn" title="Mute/Unmute Mic" style="display:none;">
+                            <button id="btnToggleMic" class="fab-btn" title="Mute/Unmute Mic" aria-label="Mute or unmute microphone" style="display:none;">
                                 <i id="micIcon" class="bi bi-mic-fill"></i>
+                                <span class="fab-label">Mic</span>
                             </button>
 
                             <!-- Send Gift triggers Modal -->
-                            <button class="fab-btn primary" title="Send Gift" data-bs-toggle="modal"
+                            <button class="fab-btn primary" title="Send Gift" aria-label="Send a gift" data-bs-toggle="modal"
                                 data-bs-target="#giftModal">
                                 <i class="bi bi-gift-fill"></i>
+                                <span class="fab-label">Gift</span>
                             </button>
 
-                            <button id="btnRaiseHand" class="fab-btn" title="Request to Speak">
+                            <button id="btnRaiseHand" class="fab-btn" title="Request to Speak" aria-label="Raise hand to request speaking">
                                 ✋
                             </button>
 
                             <!-- Host Tools -->
-                            <button class="fab-btn" title="Host Tools" data-bs-toggle="offcanvas"
+                            <button class="fab-btn" title="Host Tools" aria-label="Open host tools" data-bs-toggle="offcanvas"
                                 data-bs-target="#hostToolsOffcanvas">
                                 <i class="bi bi-sliders"></i>
+                                <span class="fab-label">Tools</span>
                             </button>
                         </div>
 
@@ -548,9 +751,9 @@
                     <!-- ========================================== -->
                     <div class="col-xl-3 col-lg-4 chat-area">
 
-                        <div class="p-3 border-bottom" style="border-color: rgba(255,255,255,0.08)!important;">
-                            <h6 class="m-0" style="color: #fff; font-weight: 600;"><i class="bi bi-chat-dots-fill me-1"
-                                     style="color: #6C5CE7;"></i> Host Console</h6>
+                        <div class="console-header">
+                            <div class="console-title"><i class="bi bi-chat-dots-fill me-1" style="color:#9f8cff"></i> Host Console</div>
+                            <div class="console-subtitle">Live room activity and gifts</div>
                         </div>
 
                         <!-- Chat Stream -->
@@ -559,9 +762,9 @@
                                 respectful.</div>
 
                             <c:forEach var="txn" items="${giftTransactions}">
-                                <div class="chat-msg gift-alert">
-                                    <span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}
-                                        ${txn.gift.icon}</strong> to ${txn.receiver.displayName}
+                                <div class="chat-msg gift-alert" style="display:flex;align-items:center;gap:8px">
+                                    <c:choose><c:when test="${not empty txn.gift.imageUrl}"><img src="${txn.gift.imageUrl}" alt="${txn.gift.name}" style="width:38px;height:38px;object-fit:contain;flex:none" /></c:when><c:otherwise><i class="bi bi-gift-fill"></i></c:otherwise></c:choose>
+                                    <span><span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}</strong> to ${txn.receiver.displayName}</span>
                                 </div>
                             </c:forEach>
 
@@ -570,7 +773,7 @@
                         <!-- Chat Input -->
                         <div class="chat-input-area">
                             <input type="text" id="chatInput" class="chat-input" placeholder="Say something nice...">
-                            <button id="btnSendChat" class="btn-send"><i class="bi bi-send-fill"></i></button>
+                            <button id="btnSendChat" class="btn-send" aria-label="Send chat message"><i class="bi bi-send-fill"></i></button>
                         </div>
 
                     </div>
@@ -580,6 +783,9 @@
                 <!-- MODALS & OFFCANVAS (HOST TOOLS)            -->
                 <!-- ========================================== -->
 
+                <style>
+                    .gift-sticker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.gift-sticker-option{position:relative;cursor:pointer}.gift-sticker-option input{position:absolute;opacity:0;pointer-events:none}.gift-sticker-card{min-height:112px;padding:8px 4px;border:2px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;color:#fff}.gift-sticker-card img{width:58px;height:58px;object-fit:contain}.gift-sticker-option input:checked+.gift-sticker-card{border-color:#FD79A8;background:rgba(253,121,168,.16);box-shadow:0 0 0 2px rgba(253,121,168,.12)}.gift-sticker-name{font-size:11px;font-weight:700}.gift-sticker-cost{font-size:10px;color:#cbd5e1}
+                </style>
                 <!-- Gift Modal -->
                 <div class="modal fade" id="giftModal" tabindex="-1">
                     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -613,12 +819,9 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
-                                        <select name="giftId" id="giftSelect" class="form-select form-select-sm form-dark" required>
-                                            <c:forEach var="g" items="${gifts}">
-                                                <option value="${g.id}" data-cost="${g.creditCost}">${g.icon} ${g.name} (${g.creditCost} cr)
-                                                </option>
-                                            </c:forEach>
-                                        </select>
+                                        <div class="gift-sticker-grid">
+                                            <c:forEach var="g" items="${gifts}" varStatus="giftStatus"><label class="gift-sticker-option"><input type="radio" name="giftId" value="${g.id}" data-cost="${g.creditCost}" <c:if test="${giftStatus.first}">checked</c:if> required /><span class="gift-sticker-card"><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" /></c:when><c:otherwise><i class="bi bi-gift-fill" style="font-size:32px"></i></c:otherwise></c:choose><span class="gift-sticker-name">${g.name}</span><span class="gift-sticker-cost">${g.creditCost} cr</span></span></label></c:forEach>
+                                        </div>
                                     </div>
                                     <button type="submit" class="btn w-100"
                                         style="background: linear-gradient(135deg, #FD79A8, #E84393); color: white; border-radius: 12px; font-weight: 600;">
@@ -985,9 +1188,8 @@
                     if (formSendGift) {
                         formSendGift.addEventListener('submit', function(e) {
                             var currentBalance = parseFloat(document.getElementById('currentBalance').value);
-                            var giftSelect = document.getElementById('giftSelect');
-                            var selectedOption = giftSelect.options[giftSelect.selectedIndex];
-                            var cost = parseFloat(selectedOption.getAttribute('data-cost'));
+                            var selectedGift = document.querySelector('#formSendGift input[name="giftId"]:checked');
+                            var cost = selectedGift ? parseFloat(selectedGift.getAttribute('data-cost')) : 0;
                             
                             if (currentBalance < cost) {
                                 e.preventDefault();
@@ -1447,18 +1649,22 @@
                         
                         const rect = stage.getBoundingClientRect();
                         const centerX = rect.width / 2;
-                        const centerY = rect.height / 2;
+                        const centerY = rect.height * 0.48;
                         
                         // Clear SVG
                         svg.innerHTML = '';
                         
-                        // Calculate radius (distance from center to speakers)
-                        const radius = Math.min(rect.width, rect.height) * 0.35;
+                        // Keep nodes inside a safe ellipse so labels never collide with the controls.
+                        const speakerCount = speakers.length;
+                        const radiusX = Math.min(230, Math.max(120, (rect.width - 320) / 2));
+                        const radiusY = Math.min(150, Math.max(72, (rect.height - 300) / 2));
                         
                         speakers.forEach((speaker, index) => {
-                            const angle = ((index * 360 / speakers.length) - 90) * (Math.PI / 180);
-                            const x = centerX + radius * Math.cos(angle);
-                            const y = centerY + radius * Math.sin(angle);
+                            const angle = speakerCount === 2
+                                ? index * Math.PI
+                                : (-Math.PI / 2 + index * 2 * Math.PI / Math.max(speakerCount, 1));
+                            const x = centerX + radiusX * Math.cos(angle);
+                            const y = centerY + radiusY * Math.sin(angle);
                             
                             speaker.style.left = x + 'px';
                             speaker.style.top = y + 'px';

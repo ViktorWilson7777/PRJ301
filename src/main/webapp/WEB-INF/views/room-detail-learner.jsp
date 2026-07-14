@@ -492,6 +492,7 @@
                                         <span class="host-name">${room.hostUser != null ? room.hostUser.displayName : 'Unknown Host'}</span>
                                         <span style="font-size: 11px; color: #A29BFE; white-space: nowrap;">(<span id="followerCount">0</span> Followers)</span>
                                     </div>
+                                    <span class="room-topic">${room.title}</span>
                                 </div>
                                 <c:if test="${room.hostUser != null && sessionScope.currentUser != null && sessionScope.currentUser.id != room.hostUser.id}">
                                     <button id="btnFollow" class="btn btn-sm btn-outline-light ms-2"
@@ -564,7 +565,6 @@
                             </c:forEach>
                         </c:if>
 
-<<<<<<< HEAD
                         <!-- Current Lesson Info (always visible even without pin) -->
                         <c:if test="${empty pinnedMaterials && room.currentLesson != null}">
                             <div class="pinned-banner">
@@ -581,14 +581,10 @@
                             </div>
                         </c:if>
 
-                        <!-- The Stage (Avatars) -->
-                        <div class="stage-container">
-=======
                         <!-- The Stage (Network Graph) -->
                         <div class="stage-container" id="networkStage">
                             <svg id="network-lines-svg"></svg>
-                            
->>>>>>> d02f3ce (Fix WebSocket mute and join synchronization bugs)
+
                             <!-- Host -->
                             <div class="host-node-wrapper" id="hostNode">
                                 <div class="d-flex flex-column align-items-center gap-2">
@@ -617,28 +613,32 @@
                         </div>
 
                         <!-- Floating Action Bar -->
+                        <c:if test="${sessionScope.currentUser != null}">
                         <div class="floating-action-bar">
 
 
                             <!-- Toggle Mic Button -->
-                            <button id="btnToggleMic" class="fab-btn" title="Mute/Unmute Mic" style="display:none;">
+                            <button id="btnToggleMic" class="fab-btn" title="Mute/Unmute Mic" aria-label="Mute or unmute microphone" style="display:none;">
                                 <i id="micIcon" class="bi bi-mic-fill"></i>
+                                <span class="fab-label">Mic</span>
                             </button>
 
                             <!-- Send Gift triggers Modal -->
                             <c:if test="${sessionScope.currentUser != null}">
-                                <button class="fab-btn primary" title="Send Gift" data-bs-toggle="modal"
+                                <button class="fab-btn primary" title="Send Gift" aria-label="Send a gift" data-bs-toggle="modal"
                                     data-bs-target="#giftModal">
                                     <i class="bi bi-gift-fill"></i>
+                                    <span class="fab-label">Gift</span>
                                 </button>
                             </c:if>
 
                             <c:if test="${sessionScope.currentUser != null}">
-                                <button id="btnRaiseHand" class="fab-btn" title="Request to Speak">
+                                <button id="btnRaiseHand" class="fab-btn" title="Request to Speak" aria-label="Raise hand to request speaking">
                                     ✋
                                 </button>
                             </c:if>
                         </div>
+                        </c:if>
 
                     </div>
 
@@ -647,9 +647,9 @@
                     <!-- ========================================== -->
                     <div class="col-xl-3 col-lg-4 chat-area">
 
-                        <div class="p-3 border-bottom" style="border-color: rgba(255,255,255,0.08)!important;">
-                            <h6 class="m-0" style="color: #fff; font-weight: 600;"><i class="bi bi-chat-dots-fill me-1"
-                                    style="color: #6C5CE7;"></i> Live Chat</h6>
+                        <div class="console-header">
+                            <div class="console-title"><i class="bi bi-chat-dots-fill me-1" style="color:#9f8cff"></i> Live Chat</div>
+                            <div class="console-subtitle">Messages, room events and gifts</div>
                         </div>
 
                         <!-- Chat Stream -->
@@ -658,9 +658,9 @@
                                 respectful.</div>
 
                             <c:forEach var="txn" items="${giftTransactions}">
-                                <div class="chat-msg gift-alert">
-                                    <span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}
-                                        ${txn.gift.icon}</strong> to ${txn.receiver.displayName}
+                                <div class="chat-msg gift-alert" style="display:flex;align-items:center;gap:8px">
+                                    <c:choose><c:when test="${not empty txn.gift.imageUrl}"><img src="${txn.gift.imageUrl}" alt="${txn.gift.name}" style="width:38px;height:38px;object-fit:contain;flex:none" /></c:when><c:otherwise><i class="bi bi-gift-fill"></i></c:otherwise></c:choose>
+                                    <span><span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}</strong> to ${txn.receiver.displayName}</span>
                                 </div>
                             </c:forEach>
 
@@ -671,7 +671,7 @@
                             <c:choose>
                                 <c:when test="${sessionScope.currentUser != null}">
                                     <input type="text" id="chatInput" class="chat-input" placeholder="Say something nice...">
-                                    <button id="btnSendChat" class="btn-send"><i class="bi bi-send-fill"></i></button>
+                                    <button id="btnSendChat" class="btn-send" aria-label="Send chat message"><i class="bi bi-send-fill"></i></button>
                                 </c:when>
                                 <c:otherwise>
                                     <input type="text" id="chatInput" class="chat-input" placeholder="Log in to chat..." disabled style="opacity: 0.6;">
@@ -683,6 +683,9 @@
                     </div>
                 </div>
 
+                <style>
+                    .gift-sticker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.gift-sticker-option{position:relative;cursor:pointer}.gift-sticker-option input{position:absolute;opacity:0;pointer-events:none}.gift-sticker-card{min-height:112px;padding:8px 4px;border:2px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;color:#fff}.gift-sticker-card img{width:58px;height:58px;object-fit:contain}.gift-sticker-option input:checked+.gift-sticker-card{border-color:#FD79A8;background:rgba(253,121,168,.16);box-shadow:0 0 0 2px rgba(253,121,168,.12)}.gift-sticker-name{font-size:11px;font-weight:700}.gift-sticker-cost{font-size:10px;color:#cbd5e1}
+                </style>
                 <!-- Gift Modal -->
                 <div class="modal fade" id="giftModal" tabindex="-1">
                     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -719,12 +722,9 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
-                                        <select name="giftId" id="giftSelect" class="form-select form-select-sm form-dark" required>
-                                            <c:forEach var="g" items="${gifts}">
-                                                <option value="${g.id}" data-cost="${g.creditCost}">${g.icon} ${g.name} (${g.creditCost} cr)
-                                                </option>
-                                            </c:forEach>
-                                        </select>
+                                        <div class="gift-sticker-grid">
+                                            <c:forEach var="g" items="${gifts}" varStatus="giftStatus"><label class="gift-sticker-option"><input type="radio" name="giftId" value="${g.id}" data-cost="${g.creditCost}" <c:if test="${giftStatus.first}">checked</c:if> required /><span class="gift-sticker-card"><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" /></c:when><c:otherwise><i class="bi bi-gift-fill" style="font-size:32px"></i></c:otherwise></c:choose><span class="gift-sticker-name">${g.name}</span><span class="gift-sticker-cost">${g.creditCost} cr</span></span></label></c:forEach>
+                                        </div>
                                     </div>
                                     <button type="submit" class="btn w-100"
                                         style="background: linear-gradient(135deg, #FD79A8, #E84393); color: white; border-radius: 12px; font-weight: 600;">
@@ -946,9 +946,8 @@
                     if (formSendGift) {
                         formSendGift.addEventListener('submit', function(e) {
                             var currentBalance = parseFloat(document.getElementById('currentBalance').value);
-                            var giftSelect = document.getElementById('giftSelect');
-                            var selectedOption = giftSelect.options[giftSelect.selectedIndex];
-                            var cost = parseFloat(selectedOption.getAttribute('data-cost'));
+                            var selectedGift = document.querySelector('#formSendGift input[name="giftId"]:checked');
+                            var cost = selectedGift ? parseFloat(selectedGift.getAttribute('data-cost')) : 0;
                             
                             if (currentBalance < cost) {
                                 e.preventDefault();
@@ -1238,16 +1237,20 @@
                         
                         const rect = stage.getBoundingClientRect();
                         const centerX = rect.width / 2;
-                        const centerY = rect.height / 2;
+                        const centerY = rect.height * 0.48;
                         
                         svg.innerHTML = '';
                         
-                        const radius = Math.min(rect.width, rect.height) * 0.35;
+                        const speakerCount = speakers.length;
+                        const radiusX = Math.min(230, Math.max(120, (rect.width - 320) / 2));
+                        const radiusY = Math.min(145, Math.max(70, (rect.height - 320) / 2));
                         
                         speakers.forEach((speaker, index) => {
-                            const angle = ((index * 360 / speakers.length) - 90) * (Math.PI / 180);
-                            const x = centerX + radius * Math.cos(angle);
-                            const y = centerY + radius * Math.sin(angle);
+                            const angle = speakerCount === 2
+                                ? index * Math.PI
+                                : (-Math.PI / 2 + index * 2 * Math.PI / Math.max(speakerCount, 1));
+                            const x = centerX + radiusX * Math.cos(angle);
+                            const y = centerY + radiusY * Math.sin(angle);
                             
                             speaker.style.left = x + 'px';
                             speaker.style.top = y + 'px';

@@ -133,7 +133,9 @@
             
             <c:if test="${sessionScope.currentUser.role == 'ADMIN'}">
                 <div class="nav-group-label">Admin</div>
+                <a class="lucy-nav-link" href="/pro-applications"><i class="bi bi-person-check"></i> Pro Applications</a>
                 <a class="lucy-nav-link" href="/users"><i class="bi bi-people"></i> User Management</a>
+                <a class="lucy-nav-link" href="/admin/api-settings"><i class="bi bi-key"></i> API Settings</a>
                 <a class="lucy-nav-link" href="/billing/stats"><i class="bi bi-cash-coin"></i> Financial Overview</a>
                 <a class="lucy-nav-link" href="/import-files"><i class="bi bi-cloud-upload"></i> Import Files</a>
                 <a class="lucy-nav-link" href="/gifts"><i class="bi bi-gift"></i> Gifts</a>

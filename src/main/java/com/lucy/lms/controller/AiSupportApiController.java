@@ -8,6 +8,7 @@ import com.lucy.lms.entity.Lesson;
 import com.lucy.lms.repository.AiGeneratedQuestionRepository;
 import com.lucy.lms.repository.AiPromptTemplateRepository;
 import com.lucy.lms.repository.LessonRepository;
+import com.lucy.lms.service.OpenRouterSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -23,23 +24,20 @@ public class AiSupportApiController {
     private final LessonRepository lessonRepository;
     private final AiPromptTemplateRepository templateRepository;
     private final AiGeneratedQuestionRepository generatedQuestionRepository;
+    private final OpenRouterSettingsService openRouterSettings;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AiSupportApiController(
             LessonRepository lessonRepository,
             AiPromptTemplateRepository templateRepository,
-            AiGeneratedQuestionRepository generatedQuestionRepository
+            AiGeneratedQuestionRepository generatedQuestionRepository,
+            OpenRouterSettingsService openRouterSettings
     ) {
         this.lessonRepository = lessonRepository;
         this.templateRepository = templateRepository;
         this.generatedQuestionRepository = generatedQuestionRepository;
+        this.openRouterSettings = openRouterSettings;
     }
-
-    @org.springframework.beans.factory.annotation.Value("${openrouter.api.key:${gemini.api.key:}}")
-    private String openRouterApiKey;
-
-    @org.springframework.beans.factory.annotation.Value("${openrouter.model:openrouter/auto}")
-    private String openRouterModel;
 
     @PostMapping("/api/ai/suggest-topics")
     @Operation(summary = "Suggest discussion topics for the current lesson")
@@ -101,7 +99,7 @@ public class AiSupportApiController {
         response.put("lessonDescription", lesson.getDescription());
         response.put("promptType", promptType);
         response.put("promptInstruction", promptInstruction);
-        response.put("isMock", openRouterApiKey == null || openRouterApiKey.trim().isEmpty());
+        response.put("isMock", !openRouterSettings.isConfigured());
         response.put("questions", savedQuestions);
 
         return response;
@@ -146,7 +144,7 @@ public class AiSupportApiController {
         response.put("lessonTitle", lesson.getTitle());
         response.put("lessonDescription", lesson.getDescription());
         response.put("promptType", "quiz");
-        response.put("isMock", openRouterApiKey == null || openRouterApiKey.trim().isEmpty());
+        response.put("isMock", !openRouterSettings.isConfigured());
         response.put("questions", savedQuestions);
 
         return response;
@@ -164,7 +162,8 @@ public class AiSupportApiController {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private List<String> generateQuestions(Lesson lesson, String promptType, String promptInstruction) throws Exception {
-        if (openRouterApiKey == null || openRouterApiKey.trim().isEmpty()) {
+        OpenRouterSettingsService.Settings settings = openRouterSettings.current();
+        if (settings.apiKey().isBlank()) {
             return generateMockQuestions(lesson, promptType);
         }
 
@@ -198,11 +197,11 @@ public class AiSupportApiController {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("messages", Arrays.asList(messageObj));
             requestBody.put("temperature", 1.2);
-            requestBody.put("model", openRouterModel);
+            requestBody.put("model", settings.model());
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + openRouterApiKey);
+            headers.set("Authorization", "Bearer " + settings.apiKey());
             headers.set("HTTP-Referer", "http://localhost:8081"); // Required by OpenRouter
             headers.set("X-Title", "LUCY LMS"); // Required by OpenRouter
 
@@ -242,7 +241,8 @@ public class AiSupportApiController {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private List<AiGeneratedQuestion> generateQuizItems(Lesson lesson, int count) throws Exception {
-        if (openRouterApiKey == null || openRouterApiKey.trim().isEmpty()) {
+        OpenRouterSettingsService.Settings settings = openRouterSettings.current();
+        if (settings.apiKey().isBlank()) {
             return generateMockQuizItems(lesson, count);
         }
 
@@ -270,11 +270,11 @@ public class AiSupportApiController {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("messages", Arrays.asList(messageObj));
             requestBody.put("temperature", 0.8);
-            requestBody.put("model", openRouterModel);
+            requestBody.put("model", settings.model());
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + openRouterApiKey);
+            headers.set("Authorization", "Bearer " + settings.apiKey());
             headers.set("HTTP-Referer", "http://localhost:8081");
             headers.set("X-Title", "LUCY LMS");
 

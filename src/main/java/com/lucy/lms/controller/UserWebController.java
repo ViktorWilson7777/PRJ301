@@ -45,9 +45,32 @@ public class UserWebController {
     @GetMapping("/users")
     public String users(Model model) {
         model.addAttribute("users", userRepository.findAll());
-        model.addAttribute("pendingApplications",
-                userRepository.findByRegistrationStatusOrderByCreatedAtDesc("PENDING"));
+        model.addAttribute("pendingApplications", pendingProApplications());
         return "users";
+    }
+
+    @GetMapping("/pro-applications")
+    public String proApplications(Model model) {
+        model.addAttribute("pendingApplications", pendingProApplications());
+        model.addAttribute("reviewedApplications", userRepository.findAll().stream()
+                .filter(user -> user.getEvidenceUrl() != null && !user.getEvidenceUrl().isBlank())
+                .filter(user -> !"PENDING".equals(user.getRegistrationStatus()))
+                .sorted((left, right) -> {
+                    if (left.getCreatedAt() == null) return 1;
+                    if (right.getCreatedAt() == null) return -1;
+                    return right.getCreatedAt().compareTo(left.getCreatedAt());
+                }).toList());
+        return "pro-applications";
+    }
+
+    @PostMapping("/pro-applications/{id}/decision")
+    public String reviewProApplicationPage(@PathVariable Long id,
+                                           @RequestParam String decision) {
+        if (!reviewApplication(id, decision)) {
+            return "redirect:/pro-applications?error=invalid_application";
+        }
+        return "redirect:/pro-applications?success=application_"
+                + ("APPROVE".equalsIgnoreCase(decision) ? "approved" : "rejected");
     }
 
     @GetMapping("/users/export")
@@ -164,11 +187,21 @@ public class UserWebController {
     @PostMapping("/users/{id}/application")
     public String reviewProApplication(@PathVariable Long id,
                                        @RequestParam String decision) {
+        if (!reviewApplication(id, decision)) {
+            return "redirect:/users?error=invalid_application";
+        }
+        return "redirect:/users?success=application_"
+                + ("APPROVE".equalsIgnoreCase(decision) ? "approved" : "rejected");
+    }
+
+    private boolean reviewApplication(Long id, String decision) {
+        if (!("APPROVE".equalsIgnoreCase(decision) || "REJECT".equalsIgnoreCase(decision))) return false;
         AppUser user = userRepository.findById(id).orElse(null);
-        if (user == null) return "redirect:/users";
+        if (user == null || !"PENDING".equals(user.getRegistrationStatus())
+                || user.getEvidenceUrl() == null || user.getEvidenceUrl().isBlank()) return false;
         boolean approved = "APPROVE".equalsIgnoreCase(decision);
         user.setRegistrationStatus(approved ? "APPROVED" : "REJECTED");
-        user.setActive(approved);
+        user.setActive(approved || Boolean.TRUE.equals(user.getActive()));
         if (approved) {
             user.setRole("PRO_MENTOR");
             user.setAccountType("PRO_MENTOR");
@@ -176,7 +209,7 @@ public class UserWebController {
         }
         userRepository.save(user);
         emailService.sendApplicationDecision(user.getEmail(), approved);
-        return "redirect:/users?success=application_" + (approved ? "approved" : "rejected");
+        return true;
     }
 
     @PostMapping("/users/{id}/program-level")
@@ -201,5 +234,11 @@ public class UserWebController {
 
     private String text(String value) {
         return value == null ? "" : value;
+    }
+
+    private List<AppUser> pendingProApplications() {
+        return userRepository.findByRegistrationStatusOrderByCreatedAtDesc("PENDING").stream()
+                .filter(user -> user.getEvidenceUrl() != null && !user.getEvidenceUrl().isBlank())
+                .toList();
     }
 }

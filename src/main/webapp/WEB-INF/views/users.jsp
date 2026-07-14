@@ -26,7 +26,7 @@
                             <strong><c:out value="${application.fullName}"/></strong>
                             <div class="text-muted" style="font-size:12px"><c:out value="${application.email}"/></div>
                         </div>
-                        <a href="${application.evidenceUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Open evidence</a>
+                        <a href="<c:out value='${application.evidenceUrl}' />" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Open evidence</a>
                     </div>
                     <div class="mt-2" style="font-size:13px;white-space:pre-wrap"><c:out value="${application.achievements}"/></div>
                     <div class="d-flex gap-2 mt-3">

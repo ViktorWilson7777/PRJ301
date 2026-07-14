@@ -460,9 +460,9 @@
                                 respectful.</div>
 
                             <c:forEach var="txn" items="${giftTransactions}">
-                                <div class="chat-msg gift-alert">
-                                    <span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}
-                                        ${txn.gift.icon}</strong> to ${txn.receiver.displayName}
+                                <div class="chat-msg gift-alert" style="display:flex;align-items:center;gap:8px">
+                                    <c:choose><c:when test="${not empty txn.gift.imageUrl}"><img src="${txn.gift.imageUrl}" alt="${txn.gift.name}" style="width:38px;height:38px;object-fit:contain;flex:none" /></c:when><c:otherwise><i class="bi bi-gift-fill"></i></c:otherwise></c:choose>
+                                    <span><span class="user">${txn.sender.displayName}</span> sent <strong>${txn.gift.name}</strong> to ${txn.receiver.displayName}</span>
                                 </div>
                             </c:forEach>
 
@@ -481,6 +481,9 @@
                 <!-- MODALS & OFFCANVAS (HOST TOOLS)            -->
                 <!-- ========================================== -->
 
+                <style>
+                    .gift-sticker-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.gift-sticker-option{position:relative;cursor:pointer}.gift-sticker-option input{position:absolute;opacity:0;pointer-events:none}.gift-sticker-card{min-height:112px;padding:8px 4px;border:2px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;color:#fff}.gift-sticker-card img{width:58px;height:58px;object-fit:contain}.gift-sticker-option input:checked+.gift-sticker-card{border-color:#FD79A8;background:rgba(253,121,168,.16);box-shadow:0 0 0 2px rgba(253,121,168,.12)}.gift-sticker-name{font-size:11px;font-weight:700}.gift-sticker-cost{font-size:10px;color:#cbd5e1}
+                </style>
                 <!-- Gift Modal -->
                 <div class="modal fade" id="giftModal" tabindex="-1">
                     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -511,12 +514,9 @@
                                     <div class="mb-3">
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
-                                        <select name="giftId" class="form-select form-select-sm form-dark" required>
-                                            <c:forEach var="g" items="${gifts}">
-                                                <option value="${g.id}">${g.icon} ${g.name} (${g.creditCost} cr)
-                                                </option>
-                                            </c:forEach>
-                                        </select>
+                                        <div class="gift-sticker-grid">
+                                            <c:forEach var="g" items="${gifts}" varStatus="giftStatus"><label class="gift-sticker-option"><input type="radio" name="giftId" value="${g.id}" data-cost="${g.creditCost}" <c:if test="${giftStatus.first}">checked</c:if> required /><span class="gift-sticker-card"><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" /></c:when><c:otherwise><i class="bi bi-gift-fill" style="font-size:32px"></i></c:otherwise></c:choose><span class="gift-sticker-name">${g.name}</span><span class="gift-sticker-cost">${g.creditCost} cr</span></span></label></c:forEach>
+                                        </div>
                                     </div>
                                     <button type="submit" class="btn w-100"
                                         style="background: linear-gradient(135deg, #FD79A8, #E84393); color: white; border-radius: 12px; font-weight: 600;">

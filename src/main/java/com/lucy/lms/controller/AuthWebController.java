@@ -26,6 +26,7 @@ public class AuthWebController {
 
     private static final long OTP_EXPIRY_MS = 5 * 60 * 1000L;
     private static final long OTP_RESEND_MS = 60 * 1000L;
+    private static final int MAX_OTP_ATTEMPTS = 5;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AppUserRepository userRepository;
@@ -70,7 +71,7 @@ public class AuthWebController {
             }
             
             if (passwordMatch) {
-                if (!Boolean.TRUE.equals(user.getActive()) || "PENDING".equals(user.getRegistrationStatus())) {
+                if (!Boolean.TRUE.equals(user.getActive())) {
                     redirectAttributes.addFlashAttribute("error", "Your account is waiting for approval or is inactive.");
                     return "redirect:/login";
                 }
@@ -169,8 +170,8 @@ public class AuthWebController {
             return "redirect:/register";
         }
         if ("PRO_MENTOR".equals(accountType)
-                && ((evidenceUrl == null || evidenceUrl.isBlank()) || (achievements == null || achievements.isBlank()))) {
-            redirectAttributes.addFlashAttribute("error", "Pro Mentor applications require an evidence link and achievements.");
+                && (!isAllowedEvidenceUrl(evidenceUrl) || achievements == null || achievements.isBlank())) {
+            redirectAttributes.addFlashAttribute("error", "Pro Mentor applications require a valid Google Drive certificate link and description.");
             return "redirect:/register";
         }
         
@@ -187,8 +188,8 @@ public class AuthWebController {
         user.setPassword(BCrypt.hashpw(password, BCrypt.gensalt(12)));
         boolean isProApplication = "PRO_MENTOR".equals(accountType);
         boolean isCreator = "CONTENT_CREATOR".equals(accountType);
-        user.setAccountType(isProApplication ? "PRO_MENTOR" : (isCreator ? "CONTENT_CREATOR" : "LEARNER"));
-        user.setRole(isProApplication ? "PRO_MENTOR" : (isCreator ? "SUPER_CREATOR" : "LEARNER"));
+        user.setAccountType(isCreator ? "CONTENT_CREATOR" : "LEARNER");
+        user.setRole(isCreator ? "SUPER_CREATOR" : "LEARNER");
         user.setRegistrationStatus(isProApplication ? "PENDING" : "APPROVED");
         user.setEvidenceUrl(isProApplication ? evidenceUrl.trim() : null);
         user.setAchievements(isProApplication ? achievements.trim() : null);
@@ -223,8 +224,8 @@ public class AuthWebController {
         Map<String, Object> response = new HashMap<>();
         String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
         if (userRepository.findByEmailIgnoreCase(normalizedEmail).isEmpty()) {
-            response.put("success", false);
-            response.put("message", "No account was found for this email.");
+            response.put("success", true);
+            response.put("message", "If this email is registered, a reset code will be sent.");
             return response;
         }
         Long lastSent = (Long) session.getAttribute("reset_otp_sent_" + normalizedEmail);
@@ -243,6 +244,7 @@ public class AuthWebController {
         session.setAttribute("reset_otp_" + normalizedEmail, otp);
         session.setAttribute("reset_otp_time_" + normalizedEmail, System.currentTimeMillis());
         session.setAttribute("reset_otp_sent_" + normalizedEmail, System.currentTimeMillis());
+        session.setAttribute("reset_otp_attempts_" + normalizedEmail, 0);
         response.put("success", true);
         response.put("message", "A reset code was sent to your email.");
         return response;
@@ -260,6 +262,13 @@ public class AuthWebController {
         Long sentAt = (Long) session.getAttribute("reset_otp_time_" + normalizedEmail);
         if (savedOtp == null || sentAt == null || !savedOtp.equals(otp)
                 || System.currentTimeMillis() - sentAt > OTP_EXPIRY_MS) {
+            int attempts = ((Integer) java.util.Optional.ofNullable(
+                    (Integer) session.getAttribute("reset_otp_attempts_" + normalizedEmail)).orElse(0)) + 1;
+            session.setAttribute("reset_otp_attempts_" + normalizedEmail, attempts);
+            if (attempts >= MAX_OTP_ATTEMPTS) {
+                session.removeAttribute("reset_otp_" + normalizedEmail);
+                session.removeAttribute("reset_otp_time_" + normalizedEmail);
+            }
             redirectAttributes.addFlashAttribute("error", "The reset code is invalid or expired.");
             return "redirect:/forgot-password";
         }
@@ -277,6 +286,7 @@ public class AuthWebController {
         session.removeAttribute("reset_otp_" + normalizedEmail);
         session.removeAttribute("reset_otp_time_" + normalizedEmail);
         session.removeAttribute("reset_otp_sent_" + normalizedEmail);
+        session.removeAttribute("reset_otp_attempts_" + normalizedEmail);
         redirectAttributes.addFlashAttribute("success", "Password changed successfully. Please sign in again.");
         return "redirect:/login";
     }
@@ -369,6 +379,127 @@ public class AuthWebController {
         return "redirect:/profile?success=role_upgraded";
     }
 
+    @PostMapping("/profile/apply-pro")
+    public String applyForPro(@RequestParam String evidenceUrl,
+                              @RequestParam String achievements,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+        if (user == null) return "redirect:/login";
+        if ("PRO_MENTOR".equals(user.getRole())) return "redirect:/profile?error=already_role";
+        if ("PENDING".equals(user.getRegistrationStatus())) {
+            redirectAttributes.addFlashAttribute("error", "You already have a Pro Mentor application waiting for review.");
+            return "redirect:/profile?tab=account";
+        }
+        if (!isAllowedEvidenceUrl(evidenceUrl)
+                || achievements == null || achievements.isBlank()) {
+            redirectAttributes.addFlashAttribute("error", "Please provide a public Google Drive link and a description of your language certificates.");
+            return "redirect:/profile?tab=account";
+        }
+        user.setEvidenceUrl(evidenceUrl.trim());
+        user.setAchievements(achievements.trim());
+        user.setRegistrationStatus("PENDING");
+        userRepository.save(user);
+        session.setAttribute("currentUser", user);
+        emailService.notifyAdminAboutProApplication(user.getId(), user.getFullName());
+        redirectAttributes.addFlashAttribute("success", "Your Pro Mentor application was sent to the administrator.");
+        return "redirect:/profile?tab=account";
+    }
+
+    @PostMapping("/profile/forgot-password/send-otp")
+    @ResponseBody
+    public Map<String, Object> sendProfileResetOtp(HttpSession session) {
+        Map<String, Object> response = new HashMap<>();
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) {
+            response.put("success", false);
+            response.put("message", "Your session has expired. Please sign in again.");
+            return response;
+        }
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+        if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+            response.put("success", false);
+            response.put("message", "This account does not have a registered email.");
+            return response;
+        }
+        Long lastSent = (Long) session.getAttribute("profile_reset_otp_sent");
+        if (lastSent != null && System.currentTimeMillis() - lastSent < OTP_RESEND_MS) {
+            response.put("success", false);
+            response.put("retryAfter", (OTP_RESEND_MS - (System.currentTimeMillis() - lastSent) + 999) / 1000);
+            response.put("message", "Please wait before requesting another code.");
+            return response;
+        }
+        String otp = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+        if (!emailService.sendOtpEmail(user.getEmail(), otp, "password reset")) {
+            response.put("success", false);
+            response.put("message", "Could not send the OTP. Ask an administrator to configure Gmail SMTP.");
+            return response;
+        }
+        session.setAttribute("profile_reset_otp", otp);
+        session.setAttribute("profile_reset_otp_time", System.currentTimeMillis());
+        session.setAttribute("profile_reset_otp_sent", System.currentTimeMillis());
+        session.setAttribute("profile_reset_otp_attempts", 0);
+        response.put("success", true);
+        response.put("message", "OTP sent to " + maskEmail(user.getEmail()));
+        return response;
+    }
+
+    @PostMapping("/profile/reset-password")
+    public String resetProfilePassword(@RequestParam String otp,
+                                       @RequestParam String newPassword,
+                                       @RequestParam String confirmPassword,
+                                       HttpSession session,
+                                       RedirectAttributes redirectAttributes) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null) return "redirect:/login";
+        String savedOtp = (String) session.getAttribute("profile_reset_otp");
+        Long sentAt = (Long) session.getAttribute("profile_reset_otp_time");
+        if (savedOtp == null || sentAt == null || !savedOtp.equals(otp)
+                || System.currentTimeMillis() - sentAt > OTP_EXPIRY_MS) {
+            int attempts = ((Integer) java.util.Optional.ofNullable(
+                    (Integer) session.getAttribute("profile_reset_otp_attempts")).orElse(0)) + 1;
+            session.setAttribute("profile_reset_otp_attempts", attempts);
+            if (attempts >= MAX_OTP_ATTEMPTS) {
+                session.removeAttribute("profile_reset_otp");
+                session.removeAttribute("profile_reset_otp_time");
+            }
+            redirectAttributes.addFlashAttribute("resetError", "The OTP is invalid or expired.");
+            return "redirect:/profile?tab=security";
+        }
+        if (newPassword == null || newPassword.length() < 8 || !newPassword.equals(confirmPassword)) {
+            redirectAttributes.addFlashAttribute("resetError", "Passwords must match and contain at least 8 characters.");
+            return "redirect:/profile?tab=security";
+        }
+        AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
+        if (user == null) return "redirect:/login";
+        user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt(12)));
+        userRepository.save(user);
+        session.invalidate();
+        redirectAttributes.addFlashAttribute("success", "Password reset successfully. Please sign in with your new password.");
+        return "redirect:/login";
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 1) return email;
+        return email.substring(0, 1) + "***" + email.substring(at);
+    }
+
+    private boolean isAllowedEvidenceUrl(String value) {
+        if (value == null || value.isBlank()) return false;
+        try {
+            java.net.URI uri = new java.net.URI(value.trim());
+            String host = uri.getHost();
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && ("drive.google.com".equalsIgnoreCase(host) || "docs.google.com".equalsIgnoreCase(host))
+                    && uri.getRawUserInfo() == null;
+        } catch (java.net.URISyntaxException exception) {
+            return false;
+        }
+    }
+
     @PostMapping("/profile/change-password")
     public String changePassword(
             @RequestParam String currentPassword,
@@ -393,6 +524,9 @@ public class AuthWebController {
 
             if (!passwordMatch) {
                 return "redirect:/profile?error=wrong_password";
+            }
+            if (newPassword == null || newPassword.length() < 8) {
+                return "redirect:/profile?error=weak_password";
             }
             user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt(12)));
             userRepository.save(user);
