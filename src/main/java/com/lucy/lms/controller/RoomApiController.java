@@ -9,6 +9,7 @@ import com.lucy.lms.repository.RoomParticipantRepository;
 import com.lucy.lms.repository.RoomRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,36 @@ public class RoomApiController {
         this.progressService = progressService;
     }
 
+    private AppUser currentUser(HttpSession session) {
+        return session == null ? null : (AppUser) session.getAttribute("currentUser");
+    }
+
+    private boolean isAdmin(AppUser user) {
+        return user != null && "ADMIN".equals(user.getRole());
+    }
+
+    private boolean isHost(Room room, AppUser user) {
+        return room != null && user != null && room.getHostUser() != null
+                && room.getHostUser().getId() != null
+                && room.getHostUser().getId().equals(user.getId());
+    }
+
+    private boolean canManageRoom(Room room, AppUser user) {
+        return isAdmin(user) || isHost(room, user);
+    }
+
+    private boolean canRecordRoom(Room room, AppUser user) {
+        return canManageRoom(room, user) || (user != null && "SUPER_CREATOR".equals(user.getRole()));
+    }
+
+    private ResponseEntity<Map<String, Object>> unauthorized() {
+        return ResponseEntity.status(401).body(Map.of("error", "login_required"));
+    }
+
+    private ResponseEntity<Map<String, Object>> forbidden(String error) {
+        return ResponseEntity.status(403).body(Map.of("error", error));
+    }
+
     @GetMapping("/api/rooms")
     @Operation(summary = "List all rooms, optionally filter by status")
     public List<Room> getRooms(@RequestParam(required = false) String status) {
@@ -117,7 +148,14 @@ public class RoomApiController {
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Long chapterId,
             @RequestParam(required = false) Integer maxParticipants,
-            @RequestParam(required = false) String description) {
+            @RequestParam(required = false) String description,
+            HttpSession session) {
+
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
+        if (!("PRO_MENTOR".equals(currentUser.getRole()) || isAdmin(currentUser))) {
+            return forbidden("access_denied");
+        }
 
         Room room = new Room();
         room.setTitle(title);
@@ -128,9 +166,25 @@ public class RoomApiController {
         room.setMaxParticipants(maxParticipants != null ? maxParticipants : 20);
         room.setDescription(description);
 
-        if (hostUserId != null) room.setHostUser(userRepository.findById(hostUserId).orElse(null));
-        if (courseId != null) room.setCourse(courseRepository.findById(courseId).orElse(null));
-        if (chapterId != null) room.setChapter(chapterRepository.findById(chapterId).orElse(null));
+        if (isAdmin(currentUser) && hostUserId != null) {
+            room.setHostUser(userRepository.findById(hostUserId).orElse(currentUser));
+        } else {
+            room.setHostUser(currentUser);
+        }
+        if (chapterId != null) {
+            com.lucy.lms.entity.Chapter chapter = chapterRepository.findById(chapterId).orElse(null);
+            room.setChapter(chapter);
+            if (chapter != null) {
+                room.setCourse(chapter.getCourse());
+                room.setLevelNumber(chapter.getOrderIndex() != null ? chapter.getOrderIndex() : levelNumber);
+            }
+        } else if (courseId != null) {
+            room.setCourse(courseRepository.findById(courseId).orElse(null));
+        }
+
+        if (!progressService.canHostRoom(currentUser, room.getCourse(), room.getLevelNumber())) {
+            return forbidden("host_level_not_allowed");
+        }
 
         if ("LIVE".equals(status) && room.getStartedAt() == null) {
             room.setStartedAt(java.time.LocalDateTime.now());
@@ -180,10 +234,22 @@ public class RoomApiController {
     @Operation(summary = "Join a room as a participant (level check enforced for LEARNER)")
     public ResponseEntity<Map<String, Object>> joinRoom(@PathVariable Long id,
                                                         @RequestParam Long userId,
-                                                        @RequestParam String roleInRoom) {
+                                                        @RequestParam String roleInRoom,
+                                                        HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         Room room = roomRepository.findById(id).orElse(null);
         com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
         if (room == null || user == null) return ResponseEntity.notFound().build();
+        if (!canManageRoom(room, currentUser) && !currentUser.getId().equals(userId)) {
+            return forbidden("access_denied");
+        }
+        if (!canManageRoom(room, currentUser) && !"LISTENER".equalsIgnoreCase(roleInRoom)) {
+            return forbidden("speaker_request_requires_host_approval");
+        }
+        if (participantRepository.existsByRoomIdAndUserId(id, userId)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "already_joined"));
+        }
 
         // Level gating applies to every participating account and is program-specific.
         if (!"ADMIN".equals(user.getRole()) && room.getLevelNumber() != null && room.getCourse() != null) {
@@ -275,9 +341,16 @@ public class RoomApiController {
 
     @PostMapping("/api/rooms/{roomId}/toggle-hand/{participantId}")
     @Operation(summary = "Toggle raise hand for a participant")
-    public ResponseEntity<Map<String, Object>> toggleHand(@PathVariable Long roomId, @PathVariable Long participantId) {
+    public ResponseEntity<Map<String, Object>> toggleHand(@PathVariable Long roomId,
+                                                          @PathVariable Long participantId,
+                                                          HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
         if (p == null || !p.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        if (p.getUser() == null || !currentUser.getId().equals(p.getUser().getId())) {
+            return forbidden("access_denied");
+        }
 
         p.setHandRaised(!Boolean.TRUE.equals(p.getHandRaised()));
         participantRepository.save(p);
@@ -290,8 +363,14 @@ public class RoomApiController {
 
     @DeleteMapping("/api/rooms/{roomId}/participants/{participantId}")
     @Operation(summary = "Remove a participant from a room")
-    public ResponseEntity<Void> removeParticipant(@PathVariable Long roomId, @PathVariable Long participantId) {
+    public ResponseEntity<Void> removeParticipant(@PathVariable Long roomId,
+                                                  @PathVariable Long participantId,
+                                                  HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return ResponseEntity.status(401).build();
         RoomParticipant p = participantRepository.findById(participantId).orElse(null);
+        if (p == null || !p.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        if (!canManageRoom(p.getRoom(), currentUser)) return ResponseEntity.status(403).build();
         if (p != null && p.getRoom().getId().equals(roomId)) {
             if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
             participantRepository.deleteById(participantId);
@@ -303,10 +382,14 @@ public class RoomApiController {
     @Operation(summary = "Pin a lesson material to a room")
     public ResponseEntity<Map<String, Object>> pinMaterial(@PathVariable Long id,
                                                            @RequestParam Long lessonId,
-                                                           @RequestParam(required = false) String pinTitle) {
+                                                           @RequestParam(required = false) String pinTitle,
+                                                           HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         Room room = roomRepository.findById(id).orElse(null);
         com.lucy.lms.entity.Lesson lesson = lessonRepository.findById(lessonId).orElse(null);
         if (room == null || lesson == null) return ResponseEntity.notFound().build();
+        if (!canManageRoom(room, currentUser)) return forbidden("access_denied");
 
         com.lucy.lms.entity.PinnedMaterial pm = new com.lucy.lms.entity.PinnedMaterial();
         pm.setRoom(room);
@@ -324,8 +407,14 @@ public class RoomApiController {
 
     @DeleteMapping("/api/rooms/{roomId}/unpin/{pinId}")
     @Operation(summary = "Unpin a material from a room")
-    public ResponseEntity<Void> unpinMaterial(@PathVariable Long roomId, @PathVariable Long pinId) {
+    public ResponseEntity<Void> unpinMaterial(@PathVariable Long roomId,
+                                              @PathVariable Long pinId,
+                                              HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return ResponseEntity.status(401).build();
         com.lucy.lms.entity.PinnedMaterial pm = pinnedMaterialRepository.findById(pinId).orElse(null);
+        if (pm == null || !pm.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        if (!canManageRoom(pm.getRoom(), currentUser)) return ResponseEntity.status(403).build();
         if (pm != null && pm.getRoom().getId().equals(roomId)) {
             pinnedMaterialRepository.deleteById(pinId);
         }
@@ -337,7 +426,11 @@ public class RoomApiController {
     public ResponseEntity<Map<String, Object>> sendGift(@PathVariable Long id,
                                                         @RequestParam Long senderId,
                                                         @RequestParam Long receiverId,
-                                                        @RequestParam Long giftId) {
+                                                        @RequestParam Long giftId,
+                                                        HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
+        if (!currentUser.getId().equals(senderId)) return forbidden("access_denied");
         Room room = roomRepository.findById(id).orElse(null);
         com.lucy.lms.entity.AppUser sender = userRepository.findById(senderId).orElse(null);
         com.lucy.lms.entity.AppUser receiver = userRepository.findById(receiverId).orElse(null);
@@ -379,8 +472,12 @@ public class RoomApiController {
 
     @PostMapping("/api/rooms/{id}/next-stage")
     @Operation(summary = "Move room to the next lesson/stage")
-    public ResponseEntity<Map<String, Object>> nextStage(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> nextStage(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (!canManageRoom(room, currentUser)) return forbidden("access_denied");
         if (room != null && "LIVE".equals(room.getStatus()) && room.getChapter() != null) {
             List<com.lucy.lms.entity.Lesson> lessons = lessonRepository.findByChapterIdOrderByOrderIndexAsc(room.getChapter().getId());
             if (!lessons.isEmpty()) {
@@ -413,8 +510,12 @@ public class RoomApiController {
     @PostMapping("/api/rooms/{id}/end")
     @Operation(summary = "End a room and optionally publish podcast")
     @Transactional
-    public ResponseEntity<Map<String, Object>> endRoom(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> endRoom(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (!canManageRoom(room, currentUser)) return forbidden("access_denied");
         if (room != null) {
             if (Boolean.TRUE.equals(room.getIsRecording())) {
                 room.setIsRecording(false);
@@ -460,8 +561,12 @@ public class RoomApiController {
 
     @PostMapping("/api/rooms/{id}/toggle-recording")
     @Operation(summary = "Toggle recording state in a room")
-    public ResponseEntity<Map<String, Object>> toggleRecording(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> toggleRecording(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
         Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (!canRecordRoom(room, currentUser)) return forbidden("access_denied");
         if (room != null && "LIVE".equals(room.getStatus())) {
             if (Boolean.TRUE.equals(room.getIsRecording())) {
                 room.setIsRecording(false);
@@ -499,9 +604,13 @@ public class RoomApiController {
     public ResponseEntity<Map<String, Object>> requestJoin(
             @PathVariable Long id,
             @RequestParam Long userId,
-            @RequestParam(defaultValue = "LISTENER") String roleRequested) {
+            @RequestParam(defaultValue = "LISTENER") String roleRequested,
+            HttpSession session) {
 
         try {
+            AppUser currentUser = currentUser(session);
+            if (currentUser == null) return unauthorized();
+            if (!currentUser.getId().equals(userId)) return forbidden("access_denied");
             Room room = roomRepository.findById(id).orElse(null);
             com.lucy.lms.entity.AppUser user = userRepository.findById(userId).orElse(null);
 
@@ -568,7 +677,12 @@ public class RoomApiController {
 
     @GetMapping("/api/rooms/{id}/pending-requests")
     @Operation(summary = "Get all pending join requests for a room (host polling)")
-    public ResponseEntity<List<Map<String, Object>>> getPendingRequests(@PathVariable Long id) {
+    public ResponseEntity<List<Map<String, Object>>> getPendingRequests(@PathVariable Long id, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return ResponseEntity.status(401).build();
+        Room room = roomRepository.findById(id).orElse(null);
+        if (room == null) return ResponseEntity.notFound().build();
+        if (!canManageRoom(room, currentUser)) return ResponseEntity.status(403).build();
         List<JoinRequest> requests = joinRequestRepository.findByRoomIdAndStatus(id, "PENDING");
         List<Map<String, Object>> result = requests.stream().map(jr -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -585,10 +699,13 @@ public class RoomApiController {
     @PostMapping("/api/rooms/{roomId}/approve-join/{requestId}")
     @Operation(summary = "Host approves a join request — user is added as participant")
     public ResponseEntity<Map<String, Object>> approveJoin(
-            @PathVariable Long roomId, @PathVariable Long requestId) {
+            @PathVariable Long roomId, @PathVariable Long requestId, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
 
         JoinRequest jr = joinRequestRepository.findById(requestId).orElse(null);
         if (jr == null || !jr.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        if (!canManageRoom(jr.getRoom(), currentUser)) return forbidden("access_denied");
 
         jr.setStatus("APPROVED");
         jr.setRespondedAt(LocalDateTime.now());
@@ -614,10 +731,13 @@ public class RoomApiController {
     @PostMapping("/api/rooms/{roomId}/deny-join/{requestId}")
     @Operation(summary = "Host denies a join request")
     public ResponseEntity<Map<String, Object>> denyJoin(
-            @PathVariable Long roomId, @PathVariable Long requestId) {
+            @PathVariable Long roomId, @PathVariable Long requestId, HttpSession session) {
+        AppUser currentUser = currentUser(session);
+        if (currentUser == null) return unauthorized();
 
         JoinRequest jr = joinRequestRepository.findById(requestId).orElse(null);
         if (jr == null || !jr.getRoom().getId().equals(roomId)) return ResponseEntity.notFound().build();
+        if (!canManageRoom(jr.getRoom(), currentUser)) return forbidden("access_denied");
 
         jr.setStatus("DENIED");
         jr.setRespondedAt(LocalDateTime.now());

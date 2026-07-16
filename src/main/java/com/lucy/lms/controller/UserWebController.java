@@ -156,12 +156,7 @@ public class UserWebController {
         user.setDisplayName(displayName);
         user.setAvatarPersona(avatarPersona);
         user.setRole(role);
-        if ("SUPER_CREATOR".equals(role)) user.setAccountType("CONTENT_CREATOR");
-        else if ("PRO_MENTOR".equals(role)) {
-            user.setAccountType("PRO_MENTOR");
-            user.setProGrantedByAdmin(true);
-        }
-        else if (user.getAccountType() == null) user.setAccountType("LEARNER");
+        applyRoleDefaults(user, role);
         if (user.getRegistrationStatus() == null || "PENDING".equals(user.getRegistrationStatus())) {
             user.setRegistrationStatus("APPROVED");
         }
@@ -236,9 +231,23 @@ public class UserWebController {
         return value == null ? "" : value;
     }
 
+<<<<<<< Updated upstream
     private List<AppUser> pendingProApplications() {
         return userRepository.findByRegistrationStatusOrderByCreatedAtDesc("PENDING").stream()
                 .filter(user -> user.getEvidenceUrl() != null && !user.getEvidenceUrl().isBlank())
                 .toList();
+=======
+    private void applyRoleDefaults(AppUser user, String role) {
+        if ("SUPER_CREATOR".equals(role)) {
+            user.setAccountType("CONTENT_CREATOR");
+            user.setProGrantedByAdmin(false);
+        } else if ("PRO_MENTOR".equals(role)) {
+            user.setAccountType("PRO_MENTOR");
+            user.setProGrantedByAdmin(true);
+        } else {
+            user.setAccountType("LEARNER");
+            user.setProGrantedByAdmin(false);
+        }
+>>>>>>> Stashed changes
     }
 }

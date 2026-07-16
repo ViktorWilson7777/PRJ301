@@ -18,17 +18,26 @@ public class AuthInterceptor implements HandlerInterceptor {
     ) throws Exception {
         String uri = request.getRequestURI();
 
-        // Allow static resources, swagger, login, register, send-otp, public APIs, and room browsing/viewing
+        // Allow static resources, swagger, login, register, send-otp, public read APIs, and room browsing/viewing
         if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/send-otp")
                 || uri.startsWith("/forgot-password") || uri.startsWith("/reset-password")
                 || uri.startsWith("/css/") || uri.startsWith("/js/")
+<<<<<<< Updated upstream
                 || uri.startsWith("/images/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
+=======
+                || uri.startsWith("/images/") || isPublicApiRead(request, uri)
+                || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
+>>>>>>> Stashed changes
                 || uri.equals("/rooms") || uri.matches("/rooms/\\d+")) {
             return true;
         }
 
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("currentUser") == null) {
+            if (uri.startsWith("/api/")) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return false;
+            }
             response.sendRedirect("/login");
             return false;
         }
@@ -78,7 +87,17 @@ public class AuthInterceptor implements HandlerInterceptor {
                 || uri.matches("/rooms/\\d+/approve-join/\\d+")
                 || uri.matches("/rooms/\\d+/deny-join/\\d+")
                 || uri.matches("/rooms/\\d+/toggle-role/\\d+")
-                || uri.matches("/rooms/delete/\\d+");
+                || uri.matches("/rooms/delete/\\d+")
+                || uri.equals("/api/rooms")
+                || uri.matches("/api/rooms/\\d+/mic-permission/\\d+")
+                || uri.matches("/api/rooms/\\d+/participants/\\d+")
+                || uri.matches("/api/rooms/\\d+/pin-material")
+                || uri.matches("/api/rooms/\\d+/unpin/\\d+")
+                || uri.matches("/api/rooms/\\d+/next-stage")
+                || uri.matches("/api/rooms/\\d+/end")
+                || uri.matches("/api/rooms/\\d+/pending-requests")
+                || uri.matches("/api/rooms/\\d+/approve-join/\\d+")
+                || uri.matches("/api/rooms/\\d+/deny-join/\\d+");
 
         if (isMentorRoute && !("PRO_MENTOR".equals(role) || "ADMIN".equals(role))) {
             response.sendRedirect("/dashboard?error=access_denied");
@@ -86,7 +105,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         // SUPER_CREATOR+ routes: recording
-        boolean isCreatorRoute = uri.matches("/rooms/\\d+/toggle-recording");
+        boolean isCreatorRoute = uri.matches("/rooms/\\d+/toggle-recording")
+                || uri.matches("/api/rooms/\\d+/toggle-recording");
 
         if (isCreatorRoute && !("SUPER_CREATOR".equals(role) || "ADMIN".equals(role))) {
             response.sendRedirect("/dashboard?error=access_denied");
@@ -106,5 +126,21 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
         return true;
+    }
+
+    private boolean isPublicApiRead(HttpServletRequest request, String uri) {
+        if (!"GET".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        return uri.equals("/api/programs")
+                || uri.equals("/api/courses")
+                || uri.matches("/api/courses/\\d+/levels")
+                || uri.equals("/api/chapters")
+                || uri.equals("/api/lessons")
+                || uri.startsWith("/api/learning-content")
+                || uri.matches("/api/levels/\\d+/lessons")
+                || uri.equals("/api/rooms")
+                || uri.matches("/api/rooms/\\d+")
+                || uri.startsWith("/api/v2/");
     }
 }
