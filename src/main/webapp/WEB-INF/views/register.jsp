@@ -6,55 +6,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create account | LUCY LMS</title>
+    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/images/logo-favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary:#6558E8; --accent:#00A7A5; --ink:#172033; --muted:#667085; }
+        :root { --primary:#3b82f6; --accent:#2563eb; --muted:#94a3b8; }
         * { box-sizing: border-box; }
-        body { font-family:Inter,sans-serif; margin:0; min-height:100vh; background:#11101C; color:var(--ink); padding:32px 18px; }
-        .shell { width:min(1040px,100%); margin:auto; }
-        .brand { display:flex; align-items:center; justify-content:center; gap:10px; color:#fff; font-weight:700; font-size:22px; margin-bottom:24px; }
-        .brand-mark { width:42px; height:42px; border-radius:8px; background:#6558E8; display:grid; place-items:center; }
-        .register-panel { background:#fff; border-radius:8px; overflow:hidden; display:grid; grid-template-columns:360px minmax(0,1fr); box-shadow:0 18px 45px rgba(0,0,0,.28); }
-        .account-picker { padding:30px; background:#F7F8FB; border-right:1px solid #E5E7EB; }
-        .account-picker h1 { font-size:24px; font-weight:700; margin-bottom:6px; }
-        .account-picker > p { color:var(--muted); font-size:13px; margin-bottom:20px; }
-        .account-option { display:block; background:#fff; border:1.5px solid #DDE1EA; border-radius:8px; padding:16px; margin-bottom:12px; cursor:pointer; transition:.18s; }
-        .account-option:hover { border-color:#9A92F3; }
-        .account-option.selected { border-color:var(--primary); box-shadow:0 0 0 3px rgba(101,88,232,.1); }
-        .account-option input { position:absolute; opacity:0; }
-        .option-head { display:flex; align-items:center; gap:10px; font-weight:700; }
-        .option-head i { color:var(--primary); font-size:19px; }
-        .account-option p { margin:8px 0 0; color:var(--muted); font-size:12px; line-height:1.55; }
-        .price { color:#B54708; font-weight:700; font-size:12px; margin-left:auto; }
-        .form-side { padding:30px 34px; }
-        .form-label { font-size:13px; font-weight:600; color:#475467; }
-        .form-control, .form-select { border-radius:8px; border:1.5px solid #DDE1EA; padding:10px 12px; font-size:14px; }
-        .form-control:focus, .form-select:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(101,88,232,.1); }
-        .otp-button { border:0; background:var(--primary); color:#fff; min-width:118px; font-weight:700; border-radius:0 8px 8px 0; }
-        .otp-button:disabled { opacity:1; background:#E9E7FF; color:#5145CD; }
-        .btn-submit { background:var(--primary); color:#fff; border:0; border-radius:8px; padding:12px; font-weight:700; }
-        .btn-submit:hover { background:#5145CD; color:#fff; }
-        .role-fields { display:none; }
-        .role-fields.active { display:block; }
-        .notice { border:1px solid; border-radius:8px; padding:10px 12px; font-size:13px; display:flex; gap:8px; align-items:flex-start; }
-        .notice.error { color:#B42318; background:#FEF3F2; border-color:#FECDCA; }
-        .notice.info { color:#175CD3; background:#EFF8FF; border-color:#B2DDFF; }
-        #otpFeedback { min-height:18px; font-size:12px; margin-top:6px; }
-        .footer-link { font-size:13px; color:var(--muted); text-align:center; margin-top:16px; }
-        .footer-link a { color:var(--primary); font-weight:600; text-decoration:none; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+            padding: 32px 18px; 
+            color: #f8fafc;
+            /* Animated dark blue gradient */
+            background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e3a8a 100%);
+            background-size: 200% 200%;
+            animation: gradientBG 10s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .shell { width: min(1040px, 100%); margin: auto; }
+        .brand { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; font-weight: 700; font-size: 22px; margin-bottom: 28px; }
+        .brand-logo { width: 42px; height: 42px; object-fit: contain; }
+        
+        .register-panel { 
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px; 
+            overflow: hidden; 
+            display: grid; 
+            grid-template-columns: 380px minmax(0, 1fr); 
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); 
+        }
+        
+        .account-picker { padding: 34px; background: rgba(2, 6, 23, 0.3); border-right: 1px solid rgba(255, 255, 255, 0.05); }
+        .account-picker h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .account-picker > p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+        
+        .account-option { 
+            display: block; 
+            background: rgba(15, 23, 42, 0.4); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 12px; 
+            padding: 18px; 
+            margin-bottom: 14px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+        .account-option:hover { border-color: rgba(59, 130, 246, 0.5); background: rgba(30, 58, 138, 0.2); }
+        .account-option.selected { border-color: var(--primary); background: rgba(30, 58, 138, 0.3); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); }
+        .account-option input { position: absolute; opacity: 0; }
+        
+        .option-head { display: flex; align-items: center; gap: 12px; font-weight: 700; color: #fff; }
+        .option-head i { color: var(--primary); font-size: 20px; }
+        .account-option p { margin: 8px 0 0; color: #cbd5e1; font-size: 13px; line-height: 1.55; }
+        .price { color: #fbbf24; font-weight: 700; font-size: 12px; margin-left: auto; background: rgba(251, 191, 36, 0.1); padding: 4px 8px; border-radius: 6px;}
+        
+        .form-side { padding: 34px 40px; }
+        .form-label { font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px; }
+        
+        .form-control, .form-select { 
+            background: rgba(15, 23, 42, 0.6); 
+            border-radius: 8px; 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            padding: 12px 14px; 
+            font-size: 14px; 
+            color: #fff;
+            transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus { 
+            background: rgba(15, 23, 42, 0.8);
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); 
+            color: #fff;
+        }
+        
+        .otp-button { border: 0; background: var(--accent); color: #fff; min-width: 118px; font-weight: 700; border-radius: 0 8px 8px 0; transition: background 0.2s; }
+        .otp-button:hover { background: #1d4ed8; }
+        .otp-button:disabled { opacity: 1; background: rgba(30, 58, 138, 0.4); color: #94a3b8; }
+        
+        .btn-submit { background: var(--accent); color: #fff; border: 0; border-radius: 8px; padding: 14px; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); font-size: 15px;}
+        .btn-submit:hover { background: #1d4ed8; color: #fff; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4); }
+        
+        .role-fields { display: none; }
+        .role-fields.active { display: block; }
+        
+        .notice { border: 1px solid; border-radius: 8px; padding: 12px 14px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+        .notice.error { color: #fca5a5; background: rgba(127, 29, 29, 0.4); border-color: rgba(248, 113, 113, 0.3); }
+        .notice.info { color: #93c5fd; background: rgba(30, 58, 138, 0.4); border-color: rgba(59, 130, 246, 0.3); }
+        
+        #otpFeedback { min-height: 18px; font-size: 12px; margin-top: 6px; }
+        
+        .footer-link { font-size: 14px; color: var(--muted); text-align: center; margin-top: 24px; }
+        .footer-link a { color: #60a5fa; font-weight: 600; text-decoration: none; transition: color 0.2s; }
+        .footer-link a:hover { color: #93c5fd; }
+        
         @media(max-width:800px) {
-            body { padding:16px 10px; }
-            .register-panel { grid-template-columns:1fr; }
-            .account-picker { border-right:0; border-bottom:1px solid #E5E7EB; padding:22px; }
-            .form-side { padding:24px 20px; }
+            body { padding: 16px 10px; }
+            .register-panel { grid-template-columns: 1fr; }
+            .account-picker { border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 24px; }
+            .form-side { padding: 24px 20px; }
         }
     </style>
 </head>
 <body>
 <main class="shell">
-    <div class="brand"><span class="brand-mark"><i class="bi bi-translate"></i></span>LUCY LMS</div>
+    <div class="brand"><img src="${pageContext.request.contextPath}/images/logo-icon-light-transparent.png" alt="LUCY Logo" class="brand-logo">LUCY LMS</div>
     <div class="register-panel">
         <section class="account-picker">
             <h1>Choose your account</h1>

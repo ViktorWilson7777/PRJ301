@@ -10,6 +10,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${pageTitle} — LUCY</title>
+    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/images/logo-favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -65,7 +66,7 @@
         <c:if test="${isAdminMode}">
             .lucy-sidebar { position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100vh; background: linear-gradient(180deg, var(--lucy-dark) 0%, var(--lucy-dark2) 100%); z-index: 1000; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; scrollbar-color: var(--lucy-dark3) transparent; }
             .lucy-brand { padding: 24px 20px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-            .lucy-brand-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--lucy-primary), var(--lucy-accent)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; }
+            .lucy-brand-icon { width: 42px; height: 42px; object-fit: contain; }
             .lucy-brand-text { color: var(--lucy-text); font-size: 18px; font-weight: 700; letter-spacing: 1px; }
             .lucy-brand-sub { color: var(--lucy-text-muted); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; }
             .nav-group-label { color: var(--lucy-text-muted); font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 20px 20px 8px; }
@@ -83,7 +84,7 @@
             .lucy-main { margin-left: 0; min-height: 100vh; }
             .learner-navbar { background: #fff; padding: 12px 32px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
             .learner-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-            .learner-brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--lucy-primary), var(--lucy-accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; }
+            .learner-brand-icon { width: 36px; height: 36px; object-fit: contain; }
             .learner-brand-text { color: #1E293B; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
             
             .learner-nav-links { display: flex; gap: 24px; margin-left: 40px; }
@@ -112,7 +113,7 @@
         <!-- ── Admin Sidebar ── -->
         <nav class="lucy-sidebar">
             <div class="lucy-brand">
-                <div class="lucy-brand-icon"><i class="bi bi-translate"></i></div>
+                <img src="${pageContext.request.contextPath}/images/logo-icon-light-transparent.png" alt="LUCY" class="lucy-brand-icon">
                 <div><div class="lucy-brand-text">LUCY</div><div class="lucy-brand-sub">Admin Console</div></div>
             </div>
             
@@ -152,7 +153,7 @@
         <nav class="learner-navbar">
             <div class="d-flex align-items-center">
                 <a href="/dashboard" class="learner-brand">
-                    <div class="learner-brand-icon"><i class="bi bi-translate"></i></div>
+                    <img src="${pageContext.request.contextPath}/images/logo-icon.png" alt="LUCY" class="learner-brand-icon">
                     <div class="learner-brand-text">LUCY<span style="color:var(--lucy-primary);">.LMS</span></div>
                 </a>
                 <div class="learner-nav-links">
@@ -277,28 +278,41 @@
         function selectedLabel() { const option = select.options[select.selectedIndex]; return option && option.value ? option.text.trim() : ''; }
         input.value = selectedLabel();
         function render() {
+            if (select.disabled) return;
             const query = input.value.trim().toLowerCase();
             results.innerHTML = '';
-            options().filter(function(option) { return !query || option.text.toLowerCase().includes(query); }).forEach(function(option) {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'live-search-option';
-                button.textContent = option.text.trim();
-                button.addEventListener('mousedown', function(event) {
-                    event.preventDefault();
-                    select.value = option.value;
-                    input.value = option.text.trim();
-                    results.classList.remove('open');
-                    select.dispatchEvent(new Event('change', { bubbles:true }));
+            const filteredOptions = options().filter(function(option) { return !query || option.text.toLowerCase().includes(query); });
+            if (filteredOptions.length === 0) {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.className = 'live-search-option text-muted';
+                emptyMsg.style.pointerEvents = 'none';
+                emptyMsg.textContent = 'No options available';
+                results.appendChild(emptyMsg);
+            } else {
+                filteredOptions.forEach(function(option) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'live-search-option';
+                    button.textContent = option.text.trim();
+                    button.addEventListener('mousedown', function(event) {
+                        event.preventDefault();
+                        select.value = option.value;
+                        input.value = option.text.trim();
+                        results.classList.remove('open');
+                        select.dispatchEvent(new Event('change', { bubbles:true }));
+                    });
+                    results.appendChild(button);
                 });
-                results.appendChild(button);
-            });
-            results.classList.toggle('open', results.children.length > 0);
+            }
+            results.classList.add('open');
         }
+        results.addEventListener('mousedown', function(event) { if (event.target === results) event.preventDefault(); });
         input.addEventListener('focus', function() { input.select(); render(); });
-        input.addEventListener('input', render);
-        input.addEventListener('blur', function() { setTimeout(function() { results.classList.remove('open'); if (!select.value) input.value = ''; }, 120); });
-        select.addEventListener('change', function() { input.value = selectedLabel(); });
+        input.addEventListener('click', function() { render(); });
+        input.addEventListener('input', function() { input.setCustomValidity(''); render(); });
+        input.addEventListener('blur', function() { setTimeout(function() { results.classList.remove('open'); input.value = selectedLabel(); }, 150); });
+        select.addEventListener('change', function() { input.value = selectedLabel(); input.setCustomValidity(''); });
+        select.addEventListener('invalid', function(e) { e.preventDefault(); input.setCustomValidity(select.validationMessage); input.reportValidity(); });
     });
 </script>
 </body>

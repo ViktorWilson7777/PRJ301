@@ -149,7 +149,7 @@ public class ProgramProgressService {
         if ("ADMIN".equals(user.getRole())) return true;
         if (!"PRO_MENTOR".equals(user.getRole())) return false;
         if (courseCompletionRepository.existsByUserIdAndCourseId(user.getId(), course.getId())) return true;
-        if (!Boolean.TRUE.equals(user.getProGrantedByAdmin())) return false;
+        if (Boolean.TRUE.equals(user.getProGrantedByAdmin())) return true;
         return levelRepository.findByUserIdAndProgramId(user.getId(), course.getProgram().getId())
                 .map(level -> level.getMaxHostingLevel() != null && level.getMaxHostingLevel() > 0)
                 .orElse(false);
@@ -160,6 +160,7 @@ public class ProgramProgressService {
         if (user == null || course == null) return false;
         if ("ADMIN".equals(user.getRole())) return true;
         if (!canHostCourse(user, course)) return false;
+        if (Boolean.TRUE.equals(user.getProGrantedByAdmin())) return true;
         int requestedLevel = roomLevel == null ? 1 : Math.max(1, roomLevel);
         return levelRepository.findByUserIdAndProgramId(user.getId(), course.getProgram().getId())
                 .map(level -> level.getMaxHostingLevel() != null && level.getMaxHostingLevel() >= requestedLevel)

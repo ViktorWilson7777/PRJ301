@@ -1,0 +1,82 @@
+LEVEL 1 | 介绍
+SUBLEVEL 1 | warmup | 你叫什么名字？
+nǐ jiào shénme míngzi?
+👉 我叫……
+wǒ jiào ……
+SUBLEVEL 2 | discussion | 你是哪国人？
+nǐ shì nǎ guó rén?
+👉 我是越南人。
+wǒ shì yuènán rén
+👉 我是中国人。
+wǒ shì zhōngguó rén
+SUBLEVEL 3 | follow_up | 你做什么工作？
+nǐ zuò shénme gōngzuò?
+👉 我是学生。
+wǒ shì xuéshēng
+👉 我是老师。
+wǒ shì lǎoshī
+SUBLEVEL 4 | practice | 你在哪儿工作/学习？
+nǐ zài nǎr gōngzuò / xuéxí?
+👉 我在学校学习。
+wǒ zài xuéxiào xuéxí
+👉 我在学校工作。
+wǒ zài xuéxiào gōngzuò
+LEVEL 2 | 我的家
+SUBLEVEL 1 | warmup | 你家有几口人？
+nǐ jiā yǒu jǐ kǒu rén?
+👉 我家有四口人。
+wǒ jiā yǒu sì kǒu rén
+SUBLEVEL 2 | discussion | 你爸爸做什么？
+nǐ bàba zuò shénme?
+👉 我爸爸是医生。他在医院工作。
+wǒ bàba shì yīshēng. tā zài yīyuàn gōngzuò
+SUBLEVEL 3 | follow_up | 你爸爸/妈妈今年多大？
+nǐ bàba / māma jīnnián duō dà?
+👉 他/她今年……岁。
+tā jīnnián …… suì
+LEVEL 3 | 我的朋友
+SUBLEVEL 1 | warmup | 你有好朋友吗？
+nǐ yǒu hǎo péngyou ma?
+👉 我有一个好朋友。
+wǒ yǒu yí gè hǎo péngyou
+👉 我有很多朋友。
+wǒ yǒu hěn duō péngyou
+SUBLEVEL 2 | discussion | 他/她是哪国人？
+tā shì nǎ guó rén?
+👉 他/她是越南人。
+tā shì yuènán rén
+👉 他/她是中国人。
+tā shì zhōngguó rén
+SUBLEVEL 3 | follow_up | 他/她叫什么名字？
+tā jiào shénme míngzi?
+👉 她叫……
+tā jiào ……
+SUBLEVEL 4 | practice | 他/她今年多大？
+tā jīnnián duō dà?
+👉 她今年……岁。
+tā jīnnián …… suì
+SUBLEVEL 5 | wrapup | 他/她是学生吗？
+tā shì xuéshēng ma?
+👉 是，他/她是学生。
+shì, tā shì xuéshēng
+👉 不是，她不是学生。他/她是……
+bú shì, tā bú shì xuéshēng. tā shì ……
+SUBLEVEL 6 | discussion | 他/她在哪儿学习/工作？
+tā zài nǎr xuéxí / gōngzuò?
+👉 他/她在学校学习。
+tā zài xuéxiào xuéxí
+👉 他/她在公司工作。
+tā zài gōngsī gōngzuò
+SUBLEVEL 7 | practice | 你们做什么？
+nǐmen zuò shénme?
+👉 我们一起学习汉语。
+wǒmen yìqǐ xuéxí hànyǔ
+👉 我们一起吃饭。
+wǒmen yìqǐ chīfàn
+👉 我们一起去看电影。
+wǒmen yìqǐ qù kàn diànyǐn
+LEVEL 4 | 李老师的女儿
+SUBLEVEL 1 | warmup | 李老师的女儿叫什么名字？
+lǐ lǎoshī de nǚ'ér jiào shénme míngzi?
+👉 她叫……
+tā jiào ……

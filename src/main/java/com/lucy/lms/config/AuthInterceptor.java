@@ -22,12 +22,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/send-otp")
                 || uri.startsWith("/forgot-password") || uri.startsWith("/reset-password")
                 || uri.startsWith("/css/") || uri.startsWith("/js/")
-<<<<<<< Updated upstream
-                || uri.startsWith("/images/") || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
-=======
                 || uri.startsWith("/images/") || isPublicApiRead(request, uri)
                 || uri.startsWith("/swagger-ui") || uri.startsWith("/v3/api-docs")
->>>>>>> Stashed changes
                 || uri.equals("/rooms") || uri.matches("/rooms/\\d+")) {
             return true;
         }

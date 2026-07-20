@@ -5,16 +5,77 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset password | LUCY LMS</title>
+    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/images/logo-favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body{font-family:Arial,sans-serif;background:#11101C;min-height:100vh;display:grid;place-items:center;margin:0;padding:18px;color:#172033}
-        .reset-card{background:#fff;width:min(470px,100%);padding:32px;border-radius:8px;box-shadow:0 18px 45px rgba(0,0,0,.3)}
-        h1{font-size:23px;font-weight:700}.form-label{font-size:13px;font-weight:600;color:#475467}
-        .form-control{border-radius:8px;padding:10px 12px}.otp-button,.submit-button{background:#6558E8;color:#fff;border:0;font-weight:700}
-        .otp-button{border-radius:0 8px 8px 0;min-width:115px}.otp-button:disabled{opacity:1;background:#E9E7FF;color:#5145CD}
-        .submit-button{border-radius:8px;padding:11px}.notice{border:1px solid #FECDCA;background:#FEF3F2;color:#B42318;border-radius:8px;padding:10px 12px;font-size:13px}
-        #feedback{font-size:12px;min-height:18px;margin-top:6px}a{color:#6558E8;text-decoration:none;font-weight:600;font-size:13px}
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 18px;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            color: #f8fafc;
+            /* Animated dark blue gradient */
+            background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e3a8a 100%);
+            background-size: 200% 200%;
+            animation: gradientBG 10s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .reset-card {
+            background: rgba(15, 23, 42, 0.5); /* translucent dark */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: min(470px, 100%);
+            padding: 34px;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 { font-size: 26px; font-weight: 700; margin-top: 16px; letter-spacing: -0.5px; }
+        .text-muted { color: #94a3b8 !important; }
+        .form-label { font-size: 13px; font-weight: 600; color: #cbd5e1; }
+        
+        .form-control {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 14px;
+            color: #fff;
+            transition: all 0.2s;
+        }
+        
+        .form-control:focus {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+            color: #fff;
+        }
+        
+        .otp-button, .submit-button { background: #2563eb; color: #fff; border: 0; font-weight: 700; transition: all 0.2s; }
+        
+        .otp-button { border-radius: 0 8px 8px 0; min-width: 115px; }
+        .otp-button:hover:not(:disabled) { background: #1d4ed8; }
+        .otp-button:disabled { opacity: 1; background: rgba(30, 58, 138, 0.4); color: #94a3b8; }
+        
+        .submit-button { border-radius: 8px; padding: 12px; font-size: 15px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .submit-button:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4); }
+        
+        .notice { border: 1px solid rgba(248, 113, 113, 0.3); background: rgba(127, 29, 29, 0.4); color: #fca5a5; border-radius: 8px; padding: 12px; font-size: 13px; }
+        
+        #feedback { font-size: 12px; min-height: 18px; margin-top: 6px; }
+        
+        a { color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 14px; transition: color 0.2s; }
+        a:hover { color: #93c5fd; }
     </style>
 </head>
 <body>

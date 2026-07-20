@@ -9,6 +9,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${pageTitle} — LUCY</title>
+    <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/images/logo-favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -35,7 +36,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
         }
         .room-brand { color: var(--live-text); font-size: 17px; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 9px; letter-spacing: .35px; }
-        .room-brand i { color: var(--live-cyan) !important; filter: drop-shadow(0 0 10px rgba(34, 211, 238, .35)); }
+        .room-brand-icon { width: 28px; height: 28px; object-fit: contain; }
         .room-brand span { color: #9f8cff !important; }
         .btn-leave { background: rgba(251,113,133,.1); color: #fecdd3; border: 1px solid rgba(251,113,133,.28); padding: 8px 15px; border-radius: 12px; font-size: 12px; text-decoration: none; transition: .2s ease; font-weight: 700; }
         .btn-leave:hover { background: #e11d48; border-color: #fb7185; color: #fff; transform: translateY(-1px); }
@@ -55,7 +56,7 @@
 <body>
 
 <nav class="room-nav">
-    <a href="/dashboard" class="room-brand"><i class="bi bi-translate" style="color: #00CEC9;"></i> LUCY<span style="color: #6C5CE7;">.LIVE</span></a>
+    <a href="/dashboard" class="room-brand"><img src="${pageContext.request.contextPath}/images/logo-icon-light-transparent.png" alt="LUCY" class="room-brand-icon"> LUCY<span style="color: #6C5CE7;">.LIVE</span></a>
     <c:choose>
         <c:when test="${roomId != null}">
             <a href="/rooms/${roomId}/leave" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>

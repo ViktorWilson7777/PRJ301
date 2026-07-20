@@ -231,12 +231,12 @@ public class UserWebController {
         return value == null ? "" : value;
     }
 
-<<<<<<< Updated upstream
     private List<AppUser> pendingProApplications() {
         return userRepository.findByRegistrationStatusOrderByCreatedAtDesc("PENDING").stream()
                 .filter(user -> user.getEvidenceUrl() != null && !user.getEvidenceUrl().isBlank())
                 .toList();
-=======
+    }
+
     private void applyRoleDefaults(AppUser user, String role) {
         if ("SUPER_CREATOR".equals(role)) {
             user.setAccountType("CONTENT_CREATOR");
@@ -248,6 +248,5 @@ public class UserWebController {
             user.setAccountType("LEARNER");
             user.setProGrantedByAdmin(false);
         }
->>>>>>> Stashed changes
     }
 }

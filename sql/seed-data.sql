@@ -6,6 +6,19 @@
 USE Lucy;
 GO
 
+-- ============================================================
+-- 0. Xóa sạch dữ liệu cũ để tránh lỗi trùng lặp khóa
+-- ============================================================
+-- Tắt kiểm tra khóa ngoại (Foreign Key)
+EXEC sp_MSforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT all";
+-- Xóa toàn bộ dữ liệu trong tất cả các bảng
+EXEC sp_MSforeachtable "DELETE FROM ?";
+-- Reset lại cột ID tự tăng (Identity) về 0
+EXEC sp_MSforeachtable "IF OBJECTPROPERTY(OBJECT_ID('?'), 'TableHasIdentity') = 1 DBCC CHECKIDENT ('?', RESEED, 0)";
+-- Bật lại kiểm tra khóa ngoại
+EXEC sp_MSforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT all";
+GO
+
 -- ── Programs (Languages) ──
 SET IDENTITY_INSERT program ON;
 INSERT INTO program (id, code, title, description, is_published) VALUES

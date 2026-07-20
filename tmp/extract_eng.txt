@@ -1,0 +1,177 @@
+LEVEL 1 | SAYING WHO I AM
+SUBLEVEL 1 | warmup | My name
+My full name
+My nickname
+How people call me
+SUBLEVEL 2 | ice_breaker | Where I’m from
+Country
+City
+One simple fact
+SUBLEVEL 3 | discussion | Me now
+Student / worker
+Simple sentence: “I am…”
+SUBLEVEL 4 | follow_up | One thing about me
+I like…
+I don’t like…
+SUBLEVEL 5 | practice | Repeat & swap
+Ask and answer with partners
+SUBLEVEL 6 | wrapup | Mini story
+“My name is… I’m from… I am…”
+LEVEL 2 | COUNTRIES & LANGUAGES
+SUBLEVEL 1 | warmup | My country
+SUBLEVEL 2 | ice_breaker | My language
+SUBLEVEL 3 | discussion | Languages I hear
+SUBLEVEL 4 | follow_up | English in my life
+SUBLEVEL 5 | practice | Simple comparison (A or B)
+SUBLEVEL 6 | wrapup | Repeat & summarize
+LEVEL 3 | GREETINGS & POLITENESS
+SUBLEVEL 1 | warmup | Saying hello
+SUBLEVEL 2 | ice_breaker | Saying goodbye
+SUBLEVEL 3 | discussion | Thank you & sorry
+SUBLEVEL 4 | follow_up | Short dialogues
+SUBLEVEL 5 | practice | Role-play (meet & leave)
+SUBLEVEL 6 | wrapup | Natural repetition
+LEVEL 4 | AGE & FAMILY
+SUBLEVEL 1 | warmup | My age
+SUBLEVEL 2 | ice_breaker | Family members
+SUBLEVEL 3 | discussion | Who I live with
+SUBLEVEL 4 | follow_up | Simple description
+SUBLEVEL 5 | practice | Ask about family
+SUBLEVEL 6 | wrapup | Family mini-talk
+LEVEL 5 | MY HOME
+SUBLEVEL 1 | warmup | Where I live
+SUBLEVEL 2 | ice_breaker | House or apartment
+SUBLEVEL 3 | discussion | Rooms
+SUBLEVEL 4 | follow_up | Favorite place at home
+SUBLEVEL 5 | practice | Describe & compare
+SUBLEVEL 6 | wrapup | Home story
+LEVEL 6 | DAILY ROUTINE
+SUBLEVEL 1 | warmup | Morning routine
+SUBLEVEL 2 | ice_breaker | Work / study time
+SUBLEVEL 3 | discussion | Evening routine
+SUBLEVEL 4 | follow_up | Time words
+SUBLEVEL 5 | practice | Weekday vs weekend
+SUBLEVEL 6 | wrapup | Full day story
+LEVEL 7 | FOOD & DRINKS
+SUBLEVEL 1 | warmup | Breakfast
+SUBLEVEL 2 | ice_breaker | Lunch
+SUBLEVEL 3 | discussion | Dinner
+SUBLEVEL 4 | follow_up | Favorite food
+SUBLEVEL 5 | practice | Like / don’t like
+SUBLEVEL 6 | wrapup | Food day recap
+LEVEL 8 | FREE TIME & HOBBIES
+SUBLEVEL 1 | warmup | Free time activities
+SUBLEVEL 2 | ice_breaker | Indoor hobbies
+SUBLEVEL 3 | discussion | Outdoor hobbies
+SUBLEVEL 4 | follow_up | Weekend hobby
+SUBLEVEL 5 | practice | Hobby with friends
+SUBLEVEL 6 | wrapup | Hobby story
+LEVEL 9 | PLACES AROUND ME
+SUBLEVEL 1 | warmup | Shops
+SUBLEVEL 2 | ice_breaker | Cafes / restaurants
+SUBLEVEL 3 | discussion | Supermarket
+SUBLEVEL 4 | follow_up | Near / far
+SUBLEVEL 5 | practice | Simple directions
+SUBLEVEL 6 | wrapup | My area talk
+LEVEL 10 | YESTERDAY
+SUBLEVEL 1 | warmup | Yesterday morning
+SUBLEVEL 2 | ice_breaker | Yesterday afternoon
+SUBLEVEL 3 | discussion | Yesterday evening
+SUBLEVEL 4 | follow_up | One thing I did
+SUBLEVEL 5 | practice | Ask about yesterday
+SUBLEVEL 6 | wrapup | Yesterday story
+LEVEL 11 | SHOPPING
+SUBLEVEL 1 | warmup | Things I buy
+SUBLEVEL 2 | ice_breaker | Prices
+SUBLEVEL 3 | discussion | Asking for things
+SUBLEVEL 4 | follow_up | Buying clothes
+SUBLEVEL 5 | practice | Simple role-play
+SUBLEVEL 6 | wrapup | Shopping recap
+LEVEL 12 | EATING OUT
+SUBLEVEL 1 | warmup | Restaurant types
+SUBLEVEL 2 | ice_breaker | Ordering food
+SUBLEVEL 3 | discussion | Drinks
+SUBLEVEL 4 | follow_up | Paying the bill
+SUBLEVEL 5 | practice | Restaurant role-play
+SUBLEVEL 6 | wrapup | Eating out story
+LEVEL 13 | TRANSPORTATION
+SUBLEVEL 1 | warmup | How I travel
+SUBLEVEL 2 | ice_breaker | Bus / bike / car
+SUBLEVEL 3 | discussion | Time & distance
+SUBLEVEL 4 | follow_up | Daily travel
+SUBLEVEL 5 | practice | Travel problems
+SUBLEVEL 6 | wrapup | Travel routine
+LEVEL 14 | WEATHER & CLOTHES
+SUBLEVEL 1 | warmup | Today’s weather
+SUBLEVEL 2 | ice_breaker | Hot / cold / rainy
+SUBLEVEL 3 | discussion | Clothes I wear
+SUBLEVEL 4 | follow_up | Weather & clothes
+SUBLEVEL 5 | practice | Favorite weather
+SUBLEVEL 6 | wrapup | Weather talk
+LEVEL 15 | WEEKEND
+SUBLEVEL 1 | warmup | Last weekend
+SUBLEVEL 2 | ice_breaker | Weekend activities
+SUBLEVEL 3 | discussion | With friends/family
+SUBLEVEL 4 | follow_up | Good or bad weekend
+SUBLEVEL 5 | practice | Ask about weekend
+SUBLEVEL 6 | wrapup | Weekend story
+LEVEL 16 | JOB / STUDY
+SUBLEVEL 1 | warmup | My job/study
+SUBLEVEL 2 | ice_breaker | Where I work/study
+SUBLEVEL 3 | discussion | Daily tasks
+SUBLEVEL 4 | follow_up | People I work with
+SUBLEVEL 5 | practice | Like / don’t like
+SUBLEVEL 6 | wrapup | Work/study talk
+LEVEL 17 | SKILLS
+SUBLEVEL 1 | warmup | Things I can do
+SUBLEVEL 2 | ice_breaker | Things I can’t do
+SUBLEVEL 3 | discussion | Skills at work/study
+SUBLEVEL 4 | follow_up | Learning now
+SUBLEVEL 5 | practice | Want to learn
+SUBLEVEL 6 | wrapup | Skills summary
+LEVEL 18 | HEALTH
+SUBLEVEL 1 | warmup | How I feel
+SUBLEVEL 2 | ice_breaker | Body parts
+SUBLEVEL 3 | discussion | Simple problems
+SUBLEVEL 4 | follow_up | Healthy habits
+SUBLEVEL 5 | practice | Doctor role-play
+SUBLEVEL 6 | wrapup | Health routine
+LEVEL 19 | FRIENDS
+SUBLEVEL 1 | warmup | My friends
+SUBLEVEL 2 | ice_breaker | How we met
+SUBLEVEL 3 | discussion | What we do
+SUBLEVEL 4 | follow_up | Best friend
+SUBLEVEL 5 | practice | Friends & free time
+SUBLEVEL 6 | wrapup | Friend story
+LEVEL 20 | FAVORITES
+SUBLEVEL 1 | warmup | Favorite food
+SUBLEVEL 2 | ice_breaker | Favorite movie
+SUBLEVEL 3 | discussion | Favorite music
+SUBLEVEL 4 | follow_up | Favorite place
+SUBLEVEL 5 | practice | Simple reasons
+SUBLEVEL 6 | wrapup | Favorites recap
+LEVEL 21 | TRAVEL
+SUBLEVEL 1 | warmup | Places visited
+SUBLEVEL 2 | ice_breaker | Transport
+SUBLEVEL 3 | discussion | Food on trips
+SUBLEVEL 4 | follow_up | Good memories
+SUBLEVEL 5 | practice | Travel problems
+SUBLEVEL 6 | wrapup | Travel story
+LEVEL 22 | HOLIDAYS
+SUBLEVEL 1 | warmup | National holidays
+SUBLEVEL 2 | ice_breaker | What people do
+SUBLEVEL 3 | discussion | Food & family
+SUBLEVEL 4 | follow_up | Last holiday
+SUBLEVEL 5 | practice | Holiday feelings
+SUBLEVEL 6 | wrapup | Holiday talk
+LEVEL 23 | DAILY PROBLEMS
+SUBLEVEL 1 | warmup | Being late
+SUBLEVEL 2 | ice_breaker | Losing things
+SUBLEVEL 3 | discussion | Small problems
+SUBLEVEL 4 | follow_up | Simple solutions
+SUBLEVEL 5 | practice | Ask for help
+SUBLEVEL 6 | wrapup | Problem story
+LEVEL 24 | PLANS
+SUBLEVEL 1 | warmup | Tomorrow
+SUBLEVEL 2 | ice_breaker | Next week
+SUBLEVEL 3 | discussion | Plans with friends
