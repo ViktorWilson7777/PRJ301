@@ -9,6 +9,8 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
     List<Course> findByProgramIdOrderByOrderIndexAsc(Long programId);
 
+    List<Course> findAllByOrderByProgramTitleAscOrderIndexAscTitleAsc();
+
     @org.springframework.data.jpa.repository.Query("SELECT c FROM Course c WHERE " +
             "(:keyword IS NULL OR c.code LIKE %:keyword% OR c.title LIKE %:keyword% OR c.description LIKE %:keyword%) AND " +
             "(:level IS NULL OR c.level = :level)")

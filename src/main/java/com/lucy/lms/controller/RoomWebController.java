@@ -83,11 +83,11 @@ public class RoomWebController {
                 model.addAttribute("rooms", roomRepository.findByStatusInOrderByLevelNumberAsc(activeStatuses));
             }
 
-            // Calculate user level for display
-            int userLevel = progressService.levelsForUser(currentUser).stream()
-                    .map(UserProgramLevel::getLevelNumber).filter(java.util.Objects::nonNull)
-                    .max(Integer::compareTo).orElse(1);
-            model.addAttribute("userLevel", userLevel);
+            model.addAttribute("programLevels", progressService.levelsForUser(currentUser));
+            boolean canHostAnyCourse = currentUser != null
+                    && courseRepository.findAll().stream()
+                    .anyMatch(course -> progressService.canHostCourse(currentUser, course));
+            model.addAttribute("canHostAnyCourse", canHostAnyCourse);
             java.util.Map<Long, Boolean> roomAccess = new java.util.HashMap<>();
             for (Room room : (java.util.List<Room>) model.getAttribute("rooms")) {
                 int levelForProgram = room.getCourse() != null
@@ -115,9 +115,15 @@ public class RoomWebController {
         if (currentUser == null) return "redirect:/login";
         model.addAttribute("room", new Room());
         model.addAttribute("users", userRepository.findAll());
-        model.addAttribute("courses", courseRepository.findAll().stream()
-                .filter(course -> progressService.canHostCourse(currentUser, course)).toList());
-        model.addAttribute("programs", programRepository.findAll());
+        List<Course> hostableCourses = courseRepository.findAll().stream()
+                .filter(course -> progressService.canHostCourse(currentUser, course)).toList();
+        java.util.Set<Long> hostableProgramIds = hostableCourses.stream()
+                .filter(course -> course.getProgram() != null)
+                .map(course -> course.getProgram().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        model.addAttribute("courses", hostableCourses);
+        model.addAttribute("programs", programRepository.findAll().stream()
+                .filter(program -> hostableProgramIds.contains(program.getId())).toList());
         model.addAttribute("chapters", chapterRepository.findAll().stream()
                 .filter(chapter -> progressService.canHostCourse(currentUser, chapter.getCourse())).toList());
         return "room-form";

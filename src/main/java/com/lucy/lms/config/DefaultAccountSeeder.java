@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
+@Order(10)
 @ConditionalOnProperty(
         name = "lucy.bootstrap.default-accounts.enabled",
         havingValue = "true",
@@ -37,7 +39,7 @@ public class DefaultAccountSeeder implements ApplicationRunner {
             ),
             new DefaultAccount(
                     "Sensei Miko", "miko@lucy.demo", "SenseiMiko", null,
-                    "PRO_MENTOR", "PRO_MENTOR", false, 500.0, 75, true
+                    "PRO_MENTOR", "PRO_MENTOR", false, 500.0, 75, false
             ),
             new DefaultAccount(
                     "Studio Max", "max@lucy.demo", "StudioMax", null,

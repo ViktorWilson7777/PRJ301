@@ -29,14 +29,22 @@
                         <a href="<c:out value='${application.evidenceUrl}' />" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-arrow-up-right me-1"></i>Open evidence</a>
                     </div>
                     <div class="mt-2" style="font-size:13px;white-space:pre-wrap"><c:out value="${application.achievements}"/></div>
-                    <div class="d-flex gap-2 mt-3">
-                        <form method="post" action="${pageContext.request.contextPath}/users/${application.id}/application">
-                            <input type="hidden" name="decision" value="APPROVE"><button class="btn btn-sm btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>Approve</button>
-                        </form>
-                        <form method="post" action="${pageContext.request.contextPath}/users/${application.id}/application">
-                            <input type="hidden" name="decision" value="REJECT"><button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-lg me-1"></i>Reject</button>
-                        </form>
-                    </div>
+                    <form method="post" action="${pageContext.request.contextPath}/users/${application.id}/application" class="pro-review-form mt-3">
+                        <div class="form-label mb-1">Approve hosting access for</div>
+                        <div class="border rounded p-2" style="max-height:170px;overflow-y:auto">
+                            <c:forEach var="permission" items="${pendingCoursePermissions[application.id]}">
+                                <label class="d-flex gap-2 py-2 border-bottom" style="font-size:12px">
+                                    <input class="form-check-input review-course" type="checkbox" name="courseIds" value="${permission.course.id}" checked>
+                                    <span><strong><c:out value="${permission.course.program.title}"/></strong> / <c:out value="${permission.course.title}"/></span>
+                                </label>
+                            </c:forEach>
+                        </div>
+                        <div class="text-danger review-course-error mt-1" style="font-size:12px"></div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-sm btn-success" type="submit" name="decision" value="APPROVE"><i class="bi bi-check-lg me-1"></i>Approve selected</button>
+                            <button class="btn btn-sm btn-outline-danger" type="submit" name="decision" value="REJECT"><i class="bi bi-x-lg me-1"></i>Reject</button>
+                        </div>
+                    </form>
                 </div>
             </c:forEach>
         </div>
@@ -102,5 +110,16 @@
         </c:otherwise>
     </c:choose>
 </div>
+
+<script>
+document.querySelectorAll('.pro-review-form').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+        if (event.submitter && event.submitter.value === 'APPROVE' && !form.querySelector('.review-course:checked')) {
+            event.preventDefault();
+            form.querySelector('.review-course-error').textContent = 'Select at least one course to approve.';
+        }
+    });
+});
+</script>
 
 </layout:main>

@@ -97,6 +97,25 @@
                     <button type="submit" class="btn btn-outline-lucy mt-3"><i class="bi bi-save me-1"></i>Save program level</button>
                 </form>
             </div>
+            <c:if test="${user.role == 'PRO_MENTOR'}">
+                <div class="stat-card mt-4">
+                    <h5 style="font-weight:700">Course hosting permissions</h5>
+                    <p class="text-muted" style="font-size:13px">The mentor can create rooms only inside selected courses. Unchecking every course revokes administrator-granted hosting access.</p>
+                    <c:if test="${param.success == 'hosting_courses_saved'}"><div class="alert alert-success py-2">Hosting courses saved.</div></c:if>
+                    <c:if test="${param.error == 'hosting_courses_invalid'}"><div class="alert alert-danger py-2">Could not save hosting courses.</div></c:if>
+                    <form method="post" action="${pageContext.request.contextPath}/users/${user.id}/hosting-courses">
+                        <div class="border rounded p-2" style="max-height:280px;overflow-y:auto">
+                            <c:forEach var="course" items="${courses}">
+                                <label class="d-flex gap-2 py-2 border-bottom" style="font-size:13px">
+                                    <input class="form-check-input" type="checkbox" name="courseIds" value="${course.id}" <c:if test="${approvedCourseIds.contains(course.id)}">checked</c:if>>
+                                    <span><strong><c:out value="${course.program.title}"/></strong> / <c:out value="${course.title}"/></span>
+                                </label>
+                            </c:forEach>
+                        </div>
+                        <button type="submit" class="btn btn-outline-lucy mt-3"><i class="bi bi-key me-1"></i>Save hosting permissions</button>
+                    </form>
+                </div>
+            </c:if>
         </c:if>
     </div>
 </div>

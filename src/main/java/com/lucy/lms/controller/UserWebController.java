@@ -1,10 +1,14 @@
 package com.lucy.lms.controller;
 
 import com.lucy.lms.entity.AppUser;
+import com.lucy.lms.entity.CourseHostingPermission;
 import com.lucy.lms.repository.AppUserRepository;
+import com.lucy.lms.repository.CourseRepository;
 import com.lucy.lms.repository.ProgramRepository;
+import com.lucy.lms.service.CourseHostingPermissionService;
 import com.lucy.lms.service.EmailService;
 import com.lucy.lms.service.ProgramProgressService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -19,7 +23,10 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Controller
 @SuppressWarnings("null")
@@ -27,46 +34,60 @@ public class UserWebController {
 
     private final AppUserRepository userRepository;
     private final ProgramRepository programRepository;
+    private final CourseRepository courseRepository;
     private final ProgramProgressService progressService;
+    private final CourseHostingPermissionService hostingPermissionService;
     private final EmailService emailService;
     private static final DateTimeFormatter EXPORT_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public UserWebController(AppUserRepository userRepository,
                              ProgramRepository programRepository,
+                             CourseRepository courseRepository,
                              ProgramProgressService progressService,
+                             CourseHostingPermissionService hostingPermissionService,
                              EmailService emailService) {
         this.userRepository = userRepository;
         this.programRepository = programRepository;
+        this.courseRepository = courseRepository;
         this.progressService = progressService;
+        this.hostingPermissionService = hostingPermissionService;
         this.emailService = emailService;
     }
 
     @GetMapping("/users")
     public String users(Model model) {
+        List<AppUser> pendingApplications = pendingProApplications();
         model.addAttribute("users", userRepository.findAll());
-        model.addAttribute("pendingApplications", pendingProApplications());
+        model.addAttribute("pendingApplications", pendingApplications);
+        model.addAttribute("pendingCoursePermissions", permissionsByUser(pendingApplications, "PENDING"));
         return "users";
     }
 
     @GetMapping("/pro-applications")
     public String proApplications(Model model) {
-        model.addAttribute("pendingApplications", pendingProApplications());
-        model.addAttribute("reviewedApplications", userRepository.findAll().stream()
+        List<AppUser> pendingApplications = pendingProApplications();
+        List<AppUser> reviewedApplications = userRepository.findAll().stream()
                 .filter(user -> user.getEvidenceUrl() != null && !user.getEvidenceUrl().isBlank())
                 .filter(user -> !"PENDING".equals(user.getRegistrationStatus()))
                 .sorted((left, right) -> {
                     if (left.getCreatedAt() == null) return 1;
                     if (right.getCreatedAt() == null) return -1;
                     return right.getCreatedAt().compareTo(left.getCreatedAt());
-                }).toList());
+                }).toList();
+        model.addAttribute("pendingApplications", pendingApplications);
+        model.addAttribute("pendingCoursePermissions", permissionsByUser(pendingApplications, "PENDING"));
+        model.addAttribute("reviewedApplications", reviewedApplications);
+        model.addAttribute("approvedCoursePermissions", permissionsByUser(reviewedApplications, "APPROVED"));
         return "pro-applications";
     }
 
     @PostMapping("/pro-applications/{id}/decision")
     public String reviewProApplicationPage(@PathVariable Long id,
-                                           @RequestParam String decision) {
-        if (!reviewApplication(id, decision)) {
+                                           @RequestParam String decision,
+                                           @RequestParam(required = false) List<Long> courseIds,
+                                           HttpSession session) {
+        if (!reviewApplication(id, decision, courseIds, currentAdmin(session))) {
             return "redirect:/pro-applications?error=invalid_application";
         }
         return "redirect:/pro-applications?success=application_"
@@ -127,6 +148,8 @@ public class UserWebController {
     public String createUserPage(Model model) {
         model.addAttribute("user", new AppUser());
         model.addAttribute("programs", programRepository.findAll());
+        model.addAttribute("courses", courseRepository.findAllByOrderByProgramTitleAscOrderIndexAscTitleAsc());
+        model.addAttribute("approvedCourseIds", Set.of());
         return "user-form";
     }
 
@@ -166,6 +189,7 @@ public class UserWebController {
         user.setActive(active != null);
 
         userRepository.save(user);
+        progressService.initializeAllProgramLevels(user);
         return "redirect:/users";
     }
 
@@ -176,31 +200,56 @@ public class UserWebController {
         model.addAttribute("user", user);
         model.addAttribute("programs", programRepository.findAll());
         model.addAttribute("programLevels", progressService.levelsForUser(user));
+        model.addAttribute("courses", courseRepository.findAllByOrderByProgramTitleAscOrderIndexAscTitleAsc());
+        model.addAttribute("approvedCourseIds", hostingPermissionService.approvedCourseIds(user));
         return "user-form";
+    }
+
+    @PostMapping("/users/{id}/hosting-courses")
+    public String saveHostingCourses(@PathVariable Long id,
+                                     @RequestParam(required = false) List<Long> courseIds,
+                                     HttpSession session) {
+        AppUser admin = currentAdmin(session);
+        AppUser user = userRepository.findById(id).orElse(null);
+        if (admin == null || user == null || !"PRO_MENTOR".equals(user.getRole())) {
+            return "redirect:/users/edit/" + id + "?error=hosting_courses_invalid";
+        }
+        if (!hostingPermissionService.replaceApprovedPermissions(user, courseIds, admin)) {
+            return "redirect:/users/edit/" + id + "?error=hosting_courses_invalid";
+        }
+        return "redirect:/users/edit/" + id + "?success=hosting_courses_saved";
     }
 
     @PostMapping("/users/{id}/application")
     public String reviewProApplication(@PathVariable Long id,
-                                       @RequestParam String decision) {
-        if (!reviewApplication(id, decision)) {
+                                       @RequestParam String decision,
+                                       @RequestParam(required = false) List<Long> courseIds,
+                                       HttpSession session) {
+        if (!reviewApplication(id, decision, courseIds, currentAdmin(session))) {
             return "redirect:/users?error=invalid_application";
         }
         return "redirect:/users?success=application_"
                 + ("APPROVE".equalsIgnoreCase(decision) ? "approved" : "rejected");
     }
 
-    private boolean reviewApplication(Long id, String decision) {
+    private boolean reviewApplication(Long id, String decision,
+                                      List<Long> courseIds, AppUser admin) {
         if (!("APPROVE".equalsIgnoreCase(decision) || "REJECT".equalsIgnoreCase(decision))) return false;
+        if (admin == null) return false;
         AppUser user = userRepository.findById(id).orElse(null);
         if (user == null || !"PENDING".equals(user.getRegistrationStatus())
                 || user.getEvidenceUrl() == null || user.getEvidenceUrl().isBlank()) return false;
         boolean approved = "APPROVE".equalsIgnoreCase(decision);
+        if (approved && !hostingPermissionService.approveApplication(user, courseIds, admin)) {
+            return false;
+        }
+        if (!approved) hostingPermissionService.rejectApplication(user, admin);
         user.setRegistrationStatus(approved ? "APPROVED" : "REJECTED");
         user.setActive(approved || Boolean.TRUE.equals(user.getActive()));
         if (approved) {
             user.setRole("PRO_MENTOR");
             user.setAccountType("PRO_MENTOR");
-            user.setProGrantedByAdmin(true);
+            user.setProGrantedByAdmin(false);
         }
         userRepository.save(user);
         emailService.sendApplicationDecision(user.getEmail(), approved);
@@ -237,13 +286,33 @@ public class UserWebController {
                 .toList();
     }
 
+    private Map<Long, List<CourseHostingPermission>> permissionsByUser(
+            List<AppUser> users, String status
+    ) {
+        Map<Long, List<CourseHostingPermission>> result = new LinkedHashMap<>();
+        for (AppUser user : users) {
+            List<CourseHostingPermission> permissions = hostingPermissionService.permissionsForUser(user).stream()
+                    .filter(permission -> status.equals(permission.getStatus()))
+                    .toList();
+            result.put(user.getId(), permissions);
+        }
+        return result;
+    }
+
+    private AppUser currentAdmin(HttpSession session) {
+        AppUser currentUser = session == null ? null : (AppUser) session.getAttribute("currentUser");
+        if (currentUser == null || currentUser.getId() == null) return null;
+        AppUser freshUser = userRepository.findById(currentUser.getId()).orElse(null);
+        return freshUser != null && "ADMIN".equals(freshUser.getRole()) ? freshUser : null;
+    }
+
     private void applyRoleDefaults(AppUser user, String role) {
         if ("SUPER_CREATOR".equals(role)) {
             user.setAccountType("CONTENT_CREATOR");
             user.setProGrantedByAdmin(false);
         } else if ("PRO_MENTOR".equals(role)) {
             user.setAccountType("PRO_MENTOR");
-            user.setProGrantedByAdmin(true);
+            user.setProGrantedByAdmin(false);
         } else {
             user.setAccountType("LEARNER");
             user.setProGrantedByAdmin(false);

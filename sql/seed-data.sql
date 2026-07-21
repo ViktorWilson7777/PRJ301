@@ -43,7 +43,7 @@ MERGE INTO app_user AS target
 USING (VALUES
     (N'admin@lucy.demo', N'Admin User', N'LucyAdmin', CAST(NULL AS NVARCHAR(100)), N'ADMIN', N'LEARNER', CAST(0 AS bit), 1000.0, 100, CAST(0 AS bit)),
     (N'learner@lucy.demo', N'Anonymous Learner', N'AnonymousPanda', N'CuriousPanda', N'LEARNER', N'LEARNER', CAST(1 AS bit), 50.0, 5, CAST(0 AS bit)),
-    (N'miko@lucy.demo', N'Sensei Miko', N'SenseiMiko', CAST(NULL AS NVARCHAR(100)), N'PRO_MENTOR', N'PRO_MENTOR', CAST(0 AS bit), 500.0, 75, CAST(1 AS bit)),
+    (N'miko@lucy.demo', N'Sensei Miko', N'SenseiMiko', CAST(NULL AS NVARCHAR(100)), N'PRO_MENTOR', N'PRO_MENTOR', CAST(0 AS bit), 500.0, 75, CAST(0 AS bit)),
     (N'max@lucy.demo', N'Studio Max', N'StudioMax', CAST(NULL AS NVARCHAR(100)), N'SUPER_CREATOR', N'CONTENT_CREATOR', CAST(0 AS bit), 800.0, 90, CAST(0 AS bit))
 ) AS source (
     email, full_name, display_name, avatar_persona, role, account_type,
@@ -71,6 +71,33 @@ WHEN NOT MATCHED THEN
         source.initial_credits, source.initial_reputation, source.pro_granted_by_admin,
         GETDATE(), 1, N'123456'
     );
+
+-- Every account has an independent Level 1 track in every language program.
+MERGE INTO user_program_level AS target
+USING (
+    SELECT user_row.id AS user_id, program_row.id AS program_id
+    FROM app_user AS user_row
+    CROSS JOIN program AS program_row
+) AS source
+ON target.user_id = source.user_id AND target.program_id = source.program_id
+WHEN NOT MATCHED THEN
+    INSERT (user_id, program_id, level_number, experience_points, max_hosting_level)
+    VALUES (source.user_id, source.program_id, 1, 0, 0);
+
+-- The bundled mentor receives explicit course permissions instead of a global Pro flag.
+MERGE INTO course_hosting_permission AS target
+USING (
+    SELECT user_row.id AS user_id, course_row.id AS course_id
+    FROM app_user AS user_row
+    CROSS JOIN course AS course_row
+    WHERE LOWER(user_row.email) = N'miko@lucy.demo'
+) AS source
+ON target.user_id = source.user_id AND target.course_id = source.course_id
+WHEN MATCHED THEN
+    UPDATE SET status = N'APPROVED', grant_source = N'DEFAULT_ACCOUNT', reviewed_at = GETDATE()
+WHEN NOT MATCHED THEN
+    INSERT (user_id, course_id, status, grant_source, requested_at, reviewed_at)
+    VALUES (source.user_id, source.course_id, N'APPROVED', N'DEFAULT_ACCOUNT', GETDATE(), GETDATE());
 
 -- ── Billing Plans ──
 SET IDENTITY_INSERT billing_plan ON;

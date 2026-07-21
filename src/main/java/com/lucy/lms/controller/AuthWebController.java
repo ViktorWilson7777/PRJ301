@@ -2,6 +2,8 @@ package com.lucy.lms.controller;
 
 import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.repository.AppUserRepository;
+import com.lucy.lms.repository.CourseRepository;
+import com.lucy.lms.service.CourseHostingPermissionService;
 import com.lucy.lms.service.EmailService;
 import com.lucy.lms.service.ProgramProgressService;
 import jakarta.servlet.http.HttpSession;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,12 +33,19 @@ public class AuthWebController {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AppUserRepository userRepository;
+    private final CourseRepository courseRepository;
+    private final CourseHostingPermissionService hostingPermissionService;
     private final EmailService emailService;
     private final ProgramProgressService progressService;
 
-    public AuthWebController(AppUserRepository userRepository, EmailService emailService,
+    public AuthWebController(AppUserRepository userRepository,
+                             CourseRepository courseRepository,
+                             CourseHostingPermissionService hostingPermissionService,
+                             EmailService emailService,
                              ProgramProgressService progressService) {
         this.userRepository = userRepository;
+        this.courseRepository = courseRepository;
+        this.hostingPermissionService = hostingPermissionService;
         this.emailService = emailService;
         this.progressService = progressService;
     }
@@ -75,6 +85,7 @@ public class AuthWebController {
                     redirectAttributes.addFlashAttribute("error", "Your account is waiting for approval or is inactive.");
                     return "redirect:/login";
                 }
+                progressService.initializeAllProgramLevels(user);
                 session.setAttribute("currentUser", user);
                 return "redirect:/dashboard";
             }
@@ -85,10 +96,11 @@ public class AuthWebController {
     }
 
     @GetMapping("/register")
-    public String registerPage(HttpSession session) {
+    public String registerPage(HttpSession session, Model model) {
         if (session.getAttribute("currentUser") != null) {
             return "redirect:/dashboard";
         }
+        model.addAttribute("courses", courseRepository.findAllByOrderByProgramTitleAscOrderIndexAscTitleAsc());
         return "register";
     }
 
@@ -141,6 +153,7 @@ public class AuthWebController {
             @RequestParam(defaultValue = "LEARNER") String accountType,
             @RequestParam(required = false) String evidenceUrl,
             @RequestParam(required = false) String achievements,
+            @RequestParam(required = false) List<Long> courseIds,
             @RequestParam(required = false) String anonymousMode,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -169,10 +182,15 @@ public class AuthWebController {
             redirectAttributes.addFlashAttribute("error", "Password must contain at least 8 characters.");
             return "redirect:/register";
         }
-        if ("PRO_MENTOR".equals(accountType)
-                && (!isAllowedEvidenceUrl(evidenceUrl) || achievements == null || achievements.isBlank())) {
-            redirectAttributes.addFlashAttribute("error", "Pro Mentor applications require a valid Google Drive certificate link and description.");
-            return "redirect:/register";
+        if ("PRO_MENTOR".equals(accountType)) {
+            if (!isAllowedEvidenceUrl(evidenceUrl) || achievements == null || achievements.isBlank()) {
+                redirectAttributes.addFlashAttribute("error", "Pro Mentor applications require a valid Google Drive certificate link and description.");
+                return "redirect:/register";
+            }
+            if (!hostingPermissionService.isValidCourseSelection(courseIds)) {
+                redirectAttributes.addFlashAttribute("error", "Select at least one valid course you are qualified to host.");
+                return "redirect:/register";
+            }
         }
         
         // Remove OTP from session after successful validation
@@ -200,7 +218,9 @@ public class AuthWebController {
         user.setActive(!isProApplication);
 
         userRepository.save(user);
+        progressService.initializeAllProgramLevels(user);
         if (isProApplication) {
+            hostingPermissionService.submitApplication(user, courseIds);
             emailService.notifyAdminAboutProApplication(user.getId(), user.getFullName());
             redirectAttributes.addFlashAttribute("success", "Application submitted. You can sign in after an administrator approves it.");
             return "redirect:/login";
@@ -308,6 +328,9 @@ public class AuthWebController {
         AppUser freshUser = userRepository.findById(currentUser.getId()).orElse(currentUser);
         model.addAttribute("user", freshUser);
         model.addAttribute("programLevels", progressService.levelsForUser(freshUser));
+        model.addAttribute("courses", courseRepository.findAllByOrderByProgramTitleAscOrderIndexAscTitleAsc());
+        model.addAttribute("pendingHostingPermissions", hostingPermissionService.pendingForUser(freshUser));
+        model.addAttribute("approvedHostingPermissions", hostingPermissionService.approvedForUser(freshUser));
         return "profile";
     }
 
@@ -382,6 +405,7 @@ public class AuthWebController {
     @PostMapping("/profile/apply-pro")
     public String applyForPro(@RequestParam String evidenceUrl,
                               @RequestParam String achievements,
+                              @RequestParam(required = false) List<Long> courseIds,
                               HttpSession session,
                               RedirectAttributes redirectAttributes) {
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
@@ -398,10 +422,15 @@ public class AuthWebController {
             redirectAttributes.addFlashAttribute("error", "Please provide a public Google Drive link and a description of your language certificates.");
             return "redirect:/profile?tab=account";
         }
+        if (!hostingPermissionService.isValidCourseSelection(courseIds)) {
+            redirectAttributes.addFlashAttribute("error", "Select at least one valid course you are qualified to host.");
+            return "redirect:/profile?tab=account";
+        }
         user.setEvidenceUrl(evidenceUrl.trim());
         user.setAchievements(achievements.trim());
         user.setRegistrationStatus("PENDING");
         userRepository.save(user);
+        hostingPermissionService.submitApplication(user, courseIds);
         session.setAttribute("currentUser", user);
         emailService.notifyAdminAboutProApplication(user.getId(), user.getFullName());
         redirectAttributes.addFlashAttribute("success", "Your Pro Mentor application was sent to the administrator.");

@@ -244,14 +244,16 @@
                 <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                         <h3 style="font-weight: 800; margin-bottom: 6px;">🎯 Live Rooms by Level</h3>
-                        <p style="color: rgba(255,255,255,0.7); margin-bottom: 0; font-size: 14px;">
-                            Select a level to browse rooms. Your current level: 
-                            <span class="badge" style="background: rgba(16,185,129,0.3); color: #A7F3D0; font-size: 13px;">
-                                Lvl ${userLevel}
-                            </span>
-                        </p>
+                        <p style="color: rgba(255,255,255,0.7); margin-bottom: 8px; font-size: 14px;">Your level is tracked separately for each language program.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <c:forEach var="programLevel" items="${programLevels}">
+                                <span class="badge" style="background: rgba(16,185,129,0.3); color: #A7F3D0; font-size: 12px;">
+                                    <c:out value="${programLevel.program.title}"/>: Lvl ${programLevel.levelNumber}
+                                </span>
+                            </c:forEach>
+                        </div>
                     </div>
-                    <c:if test="${sessionScope.currentUser.role != 'LEARNER'}">
+                    <c:if test="${canHostAnyCourse}">
                         <a href="/rooms/create" class="btn btn-light px-4" style="border-radius: 12px; font-weight: 600;">
                             <i class="bi bi-plus-lg me-1"></i> Host a Room
                         </a>
@@ -285,18 +287,10 @@
             <div class="level-grid" id="levelGrid">
                 <c:forEach var="lvl" begin="1" end="100">
                     <a href="/rooms?level=${lvl}" 
-                       class="level-btn ${selectedLevel == lvl ? 'active' : ''} ${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? 'locked' : ''}"
+                       class="level-btn ${selectedLevel == lvl ? 'active' : ''}"
                        id="levelBtn_${lvl}"
-                       title="Level ${lvl}${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? ' (Locked)' : ''}"
-                       ${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN' ? 'onclick="event.preventDefault();"' : ''}>
-                        <c:choose>
-                            <c:when test="${lvl > userLevel && sessionScope.currentUser.role != 'ADMIN'}">
-                                <i class="bi bi-lock-fill" style="font-size: 11px;"></i>
-                            </c:when>
-                            <c:otherwise>
-                                ${lvl}
-                            </c:otherwise>
-                        </c:choose>
+                       title="Browse Level ${lvl}">
+                        ${lvl}
                     </a>
                 </c:forEach>
             </div>
@@ -383,7 +377,7 @@
                                         </div>
                                         <c:set var="reqLevel" value="${r.levelNumber != null ? r.levelNumber : 1}" />
                                         <c:choose>
-                                            <c:when test="${roomAccess[room.id]}">
+                                            <c:when test="${roomAccess[r.id]}">
                                                 <a href="/rooms/${r.id}" class="btn btn-lucy px-4" style="border-radius: 20px; font-size: 13px;">
                                                     <c:choose>
                                                         <c:when test="${r.status == 'LIVE'}"><i class="bi bi-broadcast me-1"></i>Join Now</c:when>

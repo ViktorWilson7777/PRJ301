@@ -98,6 +98,17 @@
         
         .role-fields { display: none; }
         .role-fields.active { display: block; }
+        .course-picker {
+            max-height: 190px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 8px 12px;
+        }
+        .course-picker label { display: flex; gap: 9px; padding: 8px 2px; color: #e2e8f0; font-size: 13px; }
+        .course-picker label + label { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+        .course-picker input { margin-top: 3px; flex: 0 0 auto; }
         
         .notice { border: 1px solid; border-radius: 8px; padding: 12px 14px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
         .notice.error { color: #fca5a5; background: rgba(127, 29, 29, 0.4); border-color: rgba(248, 113, 113, 0.3); }
@@ -194,6 +205,18 @@
                         <label class="form-label" for="achievements">Qualifications and achievements</label>
                         <textarea id="achievements" name="achievements" class="form-control" rows="4" placeholder="IELTS, JLPT, HSK, degree, teaching experience..." disabled></textarea>
                     </div>
+                    <div class="mt-3">
+                        <label class="form-label">Courses you are qualified to host</label>
+                        <div class="course-picker">
+                            <c:forEach var="course" items="${courses}">
+                                <label>
+                                    <input type="checkbox" class="form-check-input pro-course-checkbox" name="courseIds" value="${course.id}" disabled>
+                                    <span><strong><c:out value="${course.program.title}"/></strong> / <c:out value="${course.title}"/></span>
+                                </label>
+                            </c:forEach>
+                        </div>
+                        <div id="courseSelectionFeedback" class="form-text" style="color:#fca5a5"></div>
+                    </div>
                 </div>
 
                 <div class="role-fields mt-3" data-fields="CONTENT_CREATOR">
@@ -220,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const email = document.getElementById('email');
     const sendButton = document.getElementById('btnSendOtp');
     const feedback = document.getElementById('otpFeedback');
+    const registerForm = document.getElementById('registerForm');
+    const courseFeedback = document.getElementById('courseSelectionFeedback');
     let countdownTimer;
 
     options.forEach(function (option) {
@@ -286,6 +311,19 @@ document.addEventListener('DOMContentLoaded', function () {
             sendButton.disabled = false;
             sendButton.textContent = 'Send OTP';
         });
+    });
+
+    registerForm.addEventListener('submit', function (event) {
+        if (accountType.value !== 'PRO_MENTOR') return;
+        const selectedCourse = registerForm.querySelector('.pro-course-checkbox:checked');
+        if (!selectedCourse) {
+            event.preventDefault();
+            courseFeedback.textContent = 'Select at least one course for administrator review.';
+            registerForm.querySelector('.course-picker').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+    document.querySelectorAll('.pro-course-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () { courseFeedback.textContent = ''; });
     });
 
     document.getElementById('password').addEventListener('input', function (event) {

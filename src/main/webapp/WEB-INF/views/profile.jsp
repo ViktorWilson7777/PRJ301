@@ -335,18 +335,44 @@ document.addEventListener("DOMContentLoaded", function() {
                                     <c:choose>
                                         <c:when test="${user.role == 'PRO_MENTOR'}">
                                             <button class="btn btn-secondary btn-sm w-100" disabled style="border-radius: 8px;">Active / Unlocked</button>
+                                            <div class="mt-3">
+                                                <div class="form-label mb-1">Admin-approved hosting courses</div>
+                                                <c:choose>
+                                                    <c:when test="${empty approvedHostingPermissions}"><div class="text-muted" style="font-size:12px">Your hosting access was earned through completed courses.</div></c:when>
+                                                    <c:otherwise><div style="max-height:150px;overflow-y:auto">
+                                                        <c:forEach var="permission" items="${approvedHostingPermissions}">
+                                                            <div class="border-bottom py-2" style="font-size:12px"><strong><c:out value="${permission.course.program.title}"/></strong> / <c:out value="${permission.course.title}"/></div>
+                                                        </c:forEach>
+                                                    </div></c:otherwise>
+                                                </c:choose>
+                                            </div>
                                         </c:when>
                                         <c:otherwise>
                                             <c:choose>
                                                 <c:when test="${user.registrationStatus == 'PENDING'}">
-                                                    <div class="alert alert-warning py-2 mb-0">Application pending administrator review.</div>
+                                                    <div class="alert alert-warning py-2 mb-2">Application pending administrator review.</div>
+                                                    <div style="max-height:150px;overflow-y:auto">
+                                                        <c:forEach var="permission" items="${pendingHostingPermissions}">
+                                                            <div class="border-bottom py-2" style="font-size:12px"><strong><c:out value="${permission.course.program.title}"/></strong> / <c:out value="${permission.course.title}"/></div>
+                                                        </c:forEach>
+                                                    </div>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <form method="post" action="${pageContext.request.contextPath}/profile/apply-pro">
+                                                    <form method="post" action="${pageContext.request.contextPath}/profile/apply-pro" id="proApplicationForm">
                                                         <label class="form-label">Google Drive certificate link</label>
                                                         <input type="url" name="evidenceUrl" class="form-control mb-2" placeholder="https://drive.google.com/..." required />
                                                         <label class="form-label">Certificate / language experience description</label>
                                                         <textarea name="achievements" class="form-control mb-2" rows="3" required></textarea>
+                                                        <label class="form-label">Courses you are qualified to host</label>
+                                                        <div class="border rounded p-2 mb-1" style="max-height:180px;overflow-y:auto">
+                                                            <c:forEach var="course" items="${courses}">
+                                                                <label class="d-flex gap-2 py-2 border-bottom" style="font-size:12px">
+                                                                    <input type="checkbox" class="form-check-input pro-course-checkbox" name="courseIds" value="${course.id}">
+                                                                    <span><strong><c:out value="${course.program.title}"/></strong> / <c:out value="${course.title}"/></span>
+                                                                </label>
+                                                            </c:forEach>
+                                                        </div>
+                                                        <div id="proCourseError" class="text-danger mb-2" style="font-size:12px"></div>
                                                         <button class="btn btn-outline-primary btn-sm w-100" type="submit"><i class="bi bi-send me-1"></i>Send Pro application</button>
                                                     </form>
                                                 </c:otherwise>
@@ -382,5 +408,21 @@ document.addEventListener("DOMContentLoaded", function() {
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('proApplicationForm');
+    if (!form) return;
+    var error = document.getElementById('proCourseError');
+    form.addEventListener('submit', function (event) {
+        if (form.querySelector('.pro-course-checkbox:checked')) return;
+        event.preventDefault();
+        error.textContent = 'Select at least one course for administrator review.';
+    });
+    form.querySelectorAll('.pro-course-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () { error.textContent = ''; });
+    });
+});
+</script>
 
 </layout:main>

@@ -19,19 +19,25 @@ public class ProgramProgressService {
     private final LessonRepository lessonRepository;
     private final ChapterRepository chapterRepository;
     private final AppUserRepository userRepository;
+    private final ProgramRepository programRepository;
+    private final CourseHostingPermissionRepository hostingPermissionRepository;
 
     public ProgramProgressService(UserProgramLevelRepository levelRepository,
                                   LessonCompletionRepository lessonCompletionRepository,
                                   CourseCompletionRepository courseCompletionRepository,
                                   LessonRepository lessonRepository,
                                   ChapterRepository chapterRepository,
-                                  AppUserRepository userRepository) {
+                                  AppUserRepository userRepository,
+                                  ProgramRepository programRepository,
+                                  CourseHostingPermissionRepository hostingPermissionRepository) {
         this.levelRepository = levelRepository;
         this.lessonCompletionRepository = lessonCompletionRepository;
         this.courseCompletionRepository = courseCompletionRepository;
         this.lessonRepository = lessonRepository;
         this.chapterRepository = chapterRepository;
         this.userRepository = userRepository;
+        this.programRepository = programRepository;
+        this.hostingPermissionRepository = hostingPermissionRepository;
     }
 
     @Transactional
@@ -123,12 +129,7 @@ public class ProgramProgressService {
             user.setActive(true);
             userRepository.save(user);
         }
-        UserProgramLevel progress = getOrCreate(user, course.getProgram());
-        int courseMaxLevel = chapterRepository.findByCourseIdOrderByOrderIndexAsc(course.getId()).stream()
-                .map(Chapter::getOrderIndex).filter(java.util.Objects::nonNull).max(Integer::compareTo).orElse(1);
-        progress.setMaxHostingLevel(Math.max(
-                progress.getMaxHostingLevel() == null ? 0 : progress.getMaxHostingLevel(), courseMaxLevel));
-        levelRepository.save(progress);
+        grantHostingThroughCourse(user, course);
     }
 
     @Transactional(readOnly = true)
@@ -149,10 +150,8 @@ public class ProgramProgressService {
         if ("ADMIN".equals(user.getRole())) return true;
         if (!"PRO_MENTOR".equals(user.getRole())) return false;
         if (courseCompletionRepository.existsByUserIdAndCourseId(user.getId(), course.getId())) return true;
-        if (Boolean.TRUE.equals(user.getProGrantedByAdmin())) return true;
-        return levelRepository.findByUserIdAndProgramId(user.getId(), course.getProgram().getId())
-                .map(level -> level.getMaxHostingLevel() != null && level.getMaxHostingLevel() > 0)
-                .orElse(false);
+        return hostingPermissionRepository.existsByUserIdAndCourseIdAndStatus(
+                user.getId(), course.getId(), "APPROVED");
     }
 
     @Transactional(readOnly = true)
@@ -160,16 +159,44 @@ public class ProgramProgressService {
         if (user == null || course == null) return false;
         if ("ADMIN".equals(user.getRole())) return true;
         if (!canHostCourse(user, course)) return false;
-        if (Boolean.TRUE.equals(user.getProGrantedByAdmin())) return true;
         int requestedLevel = roomLevel == null ? 1 : Math.max(1, roomLevel);
         return levelRepository.findByUserIdAndProgramId(user.getId(), course.getProgram().getId())
                 .map(level -> level.getMaxHostingLevel() != null && level.getMaxHostingLevel() >= requestedLevel)
                 .orElse(false);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<UserProgramLevel> levelsForUser(AppUser user) {
-        return user == null ? List.of() : levelRepository.findByUserIdOrderByProgramTitleAsc(user.getId());
+        if (user == null) return List.of();
+        initializeAllProgramLevels(user);
+        return levelRepository.findByUserIdOrderByProgramTitleAsc(user.getId());
+    }
+
+    @Transactional
+    public void initializeAllProgramLevels(AppUser user) {
+        if (user == null || user.getId() == null) return;
+        for (Program program : programRepository.findAll()) {
+            getOrCreate(user, program);
+        }
+    }
+
+    @Transactional
+    public UserProgramLevel grantHostingThroughCourse(AppUser user, Course course) {
+        if (user == null || course == null || course.getProgram() == null) return null;
+        UserProgramLevel progress = getOrCreate(user, course.getProgram());
+        int currentLimit = progress.getMaxHostingLevel() == null ? 0 : progress.getMaxHostingLevel();
+        progress.setMaxHostingLevel(Math.max(currentLimit, maxLevelForCourse(course)));
+        return levelRepository.save(progress);
+    }
+
+    @Transactional(readOnly = true)
+    public int maxLevelForCourse(Course course) {
+        if (course == null || course.getId() == null) return 1;
+        return chapterRepository.findByCourseIdOrderByOrderIndexAsc(course.getId()).stream()
+                .map(Chapter::getOrderIndex)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(1);
     }
 
     @Transactional

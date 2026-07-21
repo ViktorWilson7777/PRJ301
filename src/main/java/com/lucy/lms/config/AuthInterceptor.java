@@ -1,6 +1,7 @@
 package com.lucy.lms.config;
 
 import com.lucy.lms.entity.AppUser;
+import com.lucy.lms.repository.AppUserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -10,6 +11,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
+    private final AppUserRepository userRepository;
+
+    public AuthInterceptor(AppUserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
     @Override
     public boolean preHandle(
             @org.springframework.lang.NonNull HttpServletRequest request,
@@ -17,6 +24,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             @org.springframework.lang.NonNull Object handler
     ) throws Exception {
         String uri = request.getRequestURI();
+        HttpSession session = request.getSession(false);
+        AppUser user = refreshSessionUser(session);
 
         // Allow static resources, swagger, login, register, send-otp, public read APIs, and room browsing/viewing
         if (uri.startsWith("/login") || uri.startsWith("/register") || uri.startsWith("/send-otp")
@@ -28,8 +37,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("currentUser") == null) {
+        if (user == null) {
             if (uri.startsWith("/api/")) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return false;
@@ -38,7 +46,6 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        AppUser user = (AppUser) session.getAttribute("currentUser");
         String role = user.getRole() != null ? user.getRole() : "LEARNER";
 
         // Admin-only route checks
@@ -122,6 +129,19 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
         return true;
+    }
+
+    private AppUser refreshSessionUser(HttpSession session) {
+        if (session == null) return null;
+        AppUser sessionUser = (AppUser) session.getAttribute("currentUser");
+        if (sessionUser == null || sessionUser.getId() == null) return null;
+        AppUser freshUser = userRepository.findById(sessionUser.getId()).orElse(null);
+        if (freshUser == null || !Boolean.TRUE.equals(freshUser.getActive())) {
+            session.removeAttribute("currentUser");
+            return null;
+        }
+        session.setAttribute("currentUser", freshUser);
+        return freshUser;
     }
 
     private boolean isPublicApiRead(HttpServletRequest request, String uri) {
