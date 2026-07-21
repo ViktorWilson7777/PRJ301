@@ -415,6 +415,12 @@ public class RoomWebController {
                 p.setMicOn(false);
             }
             participantRepository.save(p);
+
+            java.util.Map<String, Object> event = new java.util.HashMap<>();
+            event.put("type", "MIC_PERMISSION");
+            event.put("receiverName", p.getDisplayName());
+            event.put("content", allowed ? "ALLOWED" : "REVOKED");
+            messagingTemplate.convertAndSend("/topic/room/" + roomId, event);
         }
         return "redirect:/rooms/" + roomId;
     }

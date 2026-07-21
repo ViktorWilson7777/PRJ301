@@ -130,7 +130,7 @@
 
                     .speaker-node-wrapper {
                         position: absolute;
-                        z-index: 5;
+                        z-index: 15;
                         transition: all 0.5s ease-in-out;
                         /* Initial position at center, will move out via JS */
                         top: 50%;
@@ -930,27 +930,27 @@
                             </div>
                         </div>
 
-                        <!-- Current Participants -->
                         <div class="tool-module">
                             <h6>Current Participants</h6>
-                            <div class="d-flex flex-column gap-2" style="max-height: 250px; overflow-y: auto;">
+                            <div class="d-flex flex-column gap-2" id="sidebarParticipantsContainer" style="max-height: 250px; overflow-y: auto;">
+                                <!-- Rendered dynamically by refreshParticipantsUI() -->
                                 <c:forEach var="p" items="${participants}">
                                     <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background: rgba(0,0,0,0.2); font-size: 12px;">
-                                        <div>
-                                            <div class="fw-bold">${p.displayName}</div>
+                                        <div class="text-truncate me-2">
+                                            <div class="fw-bold text-truncate">${p.displayName}</div>
                                             <div class="text-muted" style="font-size: 10px;">
                                                 Role: <span class="badge ${p.roleInRoom == 'SPEAKER' ? 'bg-primary' : (p.roleInRoom == 'MODERATOR' ? 'bg-warning' : 'bg-secondary')}">${p.roleInRoom}</span>
                                             </div>
                                         </div>
-                                        <div class="d-flex gap-1">
+                                        <div class="d-flex gap-1 flex-shrink-0">
                                             <c:choose>
                                                 <c:when test="${room.hostUser != null && p.user.id == room.hostUser.id}">
                                                     <span class="text-warning" style="font-size: 10px; font-weight: bold;">👑 Host</span>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <a href="/rooms/${room.id}/toggle-role/${p.id}" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 9px; border-radius: 4px;" title="Promote or Demote">Role</a>
-                                                    <a href="/rooms/${room.id}/toggle-mic/${p.id}" class="btn btn-xs ${p.micAllowed ? 'btn-warning' : 'btn-outline-success'} py-0 px-2" style="font-size:9px;border-radius:4px" title="${p.micAllowed ? 'Revoke microphone' : 'Allow microphone'}"><i class="bi ${p.micAllowed ? 'bi-mic-mute' : 'bi-mic'}"></i></a>
-                                                    <button type="button" class="btn btn-xs btn-danger py-0 px-2" style="font-size:9px;border-radius:4px" onclick="kickSpeaker(${p.id}, '${p.displayName}')" title="Kick user">Kick</button>
+                                                    <a href="/rooms/${room.id}/toggle-role/${p.id}" class="btn btn-xs btn-outline-info py-0 px-2 flex-shrink-0" style="font-size: 9px; border-radius: 4px;" title="Promote or Demote">Role</a>
+                                                    <button type="button" id="staticMicBtn_${p.id}" onclick="setMicPermission('${p.id}')" class="btn btn-xs ${p.micAllowed ? 'btn-warning' : 'btn-outline-success'} py-0 px-2 flex-shrink-0" style="font-size:9px;border-radius:4px" title="${p.micAllowed ? 'Revoke microphone' : 'Allow microphone'}"><i id="staticMicIcon_${p.id}" class="bi ${p.micAllowed ? 'bi-mic-mute' : 'bi-mic'}"></i></button>
+                                                    <button type="button" class="btn btn-xs btn-danger py-0 px-2 flex-shrink-0" style="font-size:9px;border-radius:4px" onclick="kickSpeaker('${p.id}', '${p.displayName}')" title="Kick user">Kick</button>
                                                 </c:otherwise>
                                             </c:choose>
                                         </div>
@@ -1069,6 +1069,9 @@
                                         micStage.classList.add('bg-danger');
                                     }
                                 }
+                            }
+                            else if (msg.type === 'MIC_PERMISSION') {
+                                refreshParticipantsUI();
                             }
                             // Bị Host ép tắt Mic
                             else if (msg.type === 'FORCE_MUTE' && currentUser === msg.receiverName) {
@@ -1606,6 +1609,40 @@
 
                                 // Re-layout the network graph
                                 layoutNetworkStage();
+                                
+                                // ── Update Sidebar Participants List ──
+                                const sidebarParticipantsContainer = document.getElementById('sidebarParticipantsContainer');
+                                if (sidebarParticipantsContainer) {
+                                    const hostUserId = Number('${room.hostUser != null ? room.hostUser.id : -1}');
+                                    let sidebarHtml = '';
+                                    participants.forEach(p => {
+                                        const badgeClass = p.roleInRoom === 'SPEAKER' ? 'bg-primary' : (p.roleInRoom === 'MODERATOR' ? 'bg-warning' : 'bg-secondary');
+                                        sidebarHtml += '<div class="d-flex justify-content-between align-items-center p-2 rounded" style="background: rgba(0,0,0,0.2); font-size: 12px;">' +
+                                            '<div class="text-truncate me-2">' +
+                                                '<div class="fw-bold text-truncate">' + p.displayName + '</div>' +
+                                                '<div class="text-muted" style="font-size: 10px;">Role: <span class="badge ' + badgeClass + '">' + p.roleInRoom + '</span></div>' +
+                                            '</div>' +
+                                            '<div class="d-flex gap-1 flex-shrink-0">';
+                                            
+                                        if (hostUserId !== -1 && p.userId === hostUserId) {
+                                            sidebarHtml += `<span class="text-warning" style="font-size: 10px; font-weight: bold;">👑 Host</span>`;
+                                        } else {
+                                            const roleLink = `/rooms/${roomId}/toggle-role/${p.id}`;
+                                            const micBtnClass = p.micAllowed ? 'btn-warning' : 'btn-outline-success';
+                                            const micBtnTitle = p.micAllowed ? 'Revoke microphone' : 'Allow microphone';
+                                            const micIconClass = p.micAllowed ? 'bi-mic-mute' : 'bi-mic';
+                                            const cleanName = p.displayName.replace(/'/g, "\\'");
+                                            
+                                            sidebarHtml += `
+                                                <a href="${roleLink}" class="btn btn-xs btn-outline-info py-0 px-2 flex-shrink-0" style="font-size: 9px; border-radius: 4px;" title="Promote or Demote">Role</a>
+                                                <button type="button" id="staticMicBtn_${p.id}" onclick="setMicPermission('${p.id}')" class="btn btn-xs ${micBtnClass} py-0 px-2 flex-shrink-0" style="font-size:9px;border-radius:4px" title="${micBtnTitle}"><i id="staticMicIcon_${p.id}" class="bi ${micIconClass}"></i></button>
+                                                <button type="button" class="btn btn-xs btn-danger py-0 px-2 flex-shrink-0" style="font-size:9px;border-radius:4px" onclick="kickSpeaker('${p.id}', '${cleanName}')" title="Kick user">Kick</button>
+                                            `;
+                                        }
+                                        sidebarHtml += `</div></div>`;
+                                    });
+                                    sidebarParticipantsContainer.innerHTML = sidebarHtml;
+                                }
                             })
                             .catch(err => console.error("Error refreshing participants:", err));
                     }
@@ -1668,6 +1705,19 @@
                         })
                         .then(function(data) {
                             refreshParticipantsUI();
+                            var staticBtn = document.getElementById('staticMicBtn_' + participantId);
+                            var staticIcon = document.getElementById('staticMicIcon_' + participantId);
+                            if (staticBtn && staticIcon) {
+                                if (data.micAllowed) {
+                                    staticBtn.className = 'btn btn-xs btn-warning py-0 px-2';
+                                    staticBtn.title = 'Revoke microphone';
+                                    staticIcon.className = 'bi bi-mic-mute';
+                                } else {
+                                    staticBtn.className = 'btn btn-xs btn-outline-success py-0 px-2';
+                                    staticBtn.title = 'Allow microphone';
+                                    staticIcon.className = 'bi bi-mic';
+                                }
+                            }
                             Swal.fire({
                                 icon:'success',
                                 title:data.micAllowed ? 'Microphone enabled' : 'Microphone revoked',
@@ -1699,7 +1749,7 @@
                         // Keep nodes inside a safe ellipse so labels never collide with the controls.
                         const speakerCount = speakers.length;
                         const radiusX = Math.min(230, Math.max(120, (rect.width - 320) / 2));
-                        const radiusY = Math.min(150, Math.max(72, (rect.height - 300) / 2));
+                        const radiusY = Math.min(150, Math.max(125, (rect.height - 300) / 2));
                         
                         speakers.forEach((speaker, index) => {
                             const angle = speakerCount === 2

@@ -516,47 +516,44 @@ public class RoomApiController {
         Room room = roomRepository.findById(id).orElse(null);
         if (room == null) return ResponseEntity.notFound().build();
         if (!canManageRoom(room, currentUser)) return forbidden("access_denied");
-        if (room != null) {
-            if (Boolean.TRUE.equals(room.getIsRecording())) {
-                room.setIsRecording(false);
-                
-                com.lucy.lms.entity.PodcastEpisode episode = new com.lucy.lms.entity.PodcastEpisode();
-                episode.setRoom(null);
-                episode.setCreator(room.getHostUser());
-                episode.setTitle("Podcast: " + room.getTitle());
-                episode.setDescription("Recorded session of room: " + room.getTitle());
-                episode.setAudioUrl("/audio/recordings/room_" + room.getId() + ".mp3");
-                
-                long durationSec = 0;
-                if (room.getRecordingStartedAt() != null) {
-                    durationSec = java.time.Duration.between(room.getRecordingStartedAt(), java.time.LocalDateTime.now()).getSeconds();
-                }
-                episode.setDurationSeconds((int) (durationSec > 0 ? durationSec : 600));
-                episode.setStatus("PUBLISHED");
-                podcastEpisodeRepository.save(episode);
+        if (Boolean.TRUE.equals(room.getIsRecording())) {
+            room.setIsRecording(false);
+            
+            com.lucy.lms.entity.PodcastEpisode episode = new com.lucy.lms.entity.PodcastEpisode();
+            episode.setRoom(null);
+            episode.setCreator(room.getHostUser());
+            episode.setTitle("Podcast: " + room.getTitle());
+            episode.setDescription("Recorded session of room: " + room.getTitle());
+            episode.setAudioUrl("/audio/recordings/room_" + room.getId() + ".mp3");
+            
+            long durationSec = 0;
+            if (room.getRecordingStartedAt() != null) {
+                durationSec = java.time.Duration.between(room.getRecordingStartedAt(), java.time.LocalDateTime.now()).getSeconds();
             }
-            
-            // Clean up related entities
-            participantRepository.findByRoomId(id).forEach(p -> {
-                if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
-                participantRepository.deleteById(p.getId());
-            });
-            pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
-            joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
-            giftTransactionRepository.findByRoomId(id).forEach(gt -> {
-                gt.setRoom(null);
-                giftTransactionRepository.save(gt);
-            });
-            podcastEpisodeRepository.findByRoomId(id).forEach(pe -> {
-                pe.setRoom(null);
-                podcastEpisodeRepository.save(pe);
-            });
-            
-            // Delete the room
-            roomRepository.deleteById(id);
-            return ResponseEntity.ok(Map.of("status", "ENDED_AND_DELETED"));
+            episode.setDurationSeconds((int) (durationSec > 0 ? durationSec : 600));
+            episode.setStatus("PUBLISHED");
+            podcastEpisodeRepository.save(episode);
         }
-        return ResponseEntity.notFound().build();
+        
+        // Clean up related entities
+        participantRepository.findByRoomId(id).forEach(p -> {
+            if (Boolean.TRUE.equals(p.getMicOn())) progressService.stopSpeakingAndAward(p);
+            participantRepository.deleteById(p.getId());
+        });
+        pinnedMaterialRepository.findByRoomId(id).forEach(pm -> pinnedMaterialRepository.deleteById(pm.getId()));
+        joinRequestRepository.findByRoomId(id).forEach(jr -> joinRequestRepository.deleteById(jr.getId()));
+        giftTransactionRepository.findByRoomId(id).forEach(gt -> {
+            gt.setRoom(null);
+            giftTransactionRepository.save(gt);
+        });
+        podcastEpisodeRepository.findByRoomId(id).forEach(pe -> {
+            pe.setRoom(null);
+            podcastEpisodeRepository.save(pe);
+        });
+        
+        // Delete the room
+        roomRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("status", "ENDED_AND_DELETED"));
     }
 
     @PostMapping("/api/rooms/{id}/toggle-recording")

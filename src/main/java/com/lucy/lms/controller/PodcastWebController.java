@@ -4,7 +4,6 @@ import com.lucy.lms.entity.AppUser;
 import com.lucy.lms.entity.PodcastEpisode;
 import com.lucy.lms.repository.AppUserRepository;
 import com.lucy.lms.repository.PodcastEpisodeRepository;
-import com.lucy.lms.repository.RoomRepository;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -23,17 +22,14 @@ import java.nio.file.StandardCopyOption;
 public class PodcastWebController {
 
     private final PodcastEpisodeRepository podcastRepository;
-    private final RoomRepository roomRepository;
     private final AppUserRepository userRepository;
 
     @Value("${podcast.upload.dir:uploads/podcasts}")
     private String podcastUploadDir;
 
     public PodcastWebController(PodcastEpisodeRepository podcastRepository,
-                                RoomRepository roomRepository,
                                 AppUserRepository userRepository) {
         this.podcastRepository = podcastRepository;
-        this.roomRepository = roomRepository;
         this.userRepository = userRepository;
     }
 

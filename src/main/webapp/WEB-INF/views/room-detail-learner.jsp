@@ -130,7 +130,7 @@
 
                     .speaker-node-wrapper {
                         position: absolute;
-                        z-index: 5;
+                        z-index: 15;
                         transition: all 0.5s ease-in-out;
                         /* Initial position at center, will move out via JS */
                         top: 50%;
@@ -161,6 +161,12 @@
                         font-size: 12px;
                         margin-bottom: 8px;
                         font-weight: 600;
+                        text-transform: uppercase;
+                        letter-spacing: .08em;
+                    }
+
+                    @media (max-width: 767.98px) {
+                        .listeners-box { display: none; }
                     }
 
                     .listeners-grid {
@@ -541,26 +547,6 @@
                                         <div class="stage-progress" id="stageProgress"></div>
                                     </div>
 
-                                    <!-- Pinned Detail Modal -->
-                                    <div class="modal fade" id="pinnedMaterialModal_${pm.id}" tabindex="-1">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content" style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 16px;">
-                                                <div class="modal-header border-0 pb-0">
-                                                    <h5 class="modal-title fw-bold">📌 Current Topic — Level ${room.levelNumber != null ? room.levelNumber : '—'}</h5>
-                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <h6 class="text-info">${pm.title}</h6>
-                                                    <hr style="border-color: rgba(255,255,255,0.1);">
-                                                    <p style="font-size: 13px; line-height: 1.6; color: #CBD5E1; white-space: pre-line;">${pm.content}</p>
-                                                    <div class="mt-3 p-2" style="background: rgba(99,102,241,0.1); border-radius: 8px; font-size: 11px; color: #A5B4FC;">
-                                                        <i class="bi bi-robot me-1"></i>
-                                                        AI will automatically transition to the next topic after 10 minutes.
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </c:if>
                             </c:forEach>
                         </c:if>
@@ -735,6 +721,32 @@
                         </div>
                     </div>
                 </div>
+                </div>
+
+                <!-- Pinned Detail Modals -->
+                <c:if test="${not empty pinnedMaterials}">
+                    <c:forEach var="pm" items="${pinnedMaterials}">
+                        <div class="modal fade" id="pinnedMaterialModal_${pm.id}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content" style="background: #1A1929; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 16px;">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h5 class="modal-title fw-bold">📌 Current Topic — Level ${room.levelNumber != null ? room.levelNumber : '—'}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <h6 class="text-info">${pm.title}</h6>
+                                        <hr style="border-color: rgba(255,255,255,0.1);">
+                                        <p style="font-size: 13px; line-height: 1.6; color: #CBD5E1; white-space: pre-line;">${pm.content}</p>
+                                        <div class="mt-3 p-2" style="background: rgba(99,102,241,0.1); border-radius: 8px; font-size: 11px; color: #A5B4FC;">
+                                            <i class="bi bi-robot me-1"></i>
+                                            AI will automatically transition to the next topic after 10 minutes.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </c:forEach>
+                </c:if>
 
                 <!-- Top Up Iframe Modal -->
                 <div class="modal fade" id="topupModal" tabindex="-1">
@@ -831,24 +843,27 @@
                                     }
                                 }
                             }
-                            // Bị Host ép tắt Mic
-                            else if (msg.type === 'MIC_PERMISSION' && currentUser === msg.receiverName) {
-                                micAllowed = msg.content === 'ALLOWED';
-                                if (btnToggleMic) {
-                                    btnToggleMic.disabled = !micAllowed;
-                                    btnToggleMic.style.opacity = micAllowed ? '1' : '0.45';
-                                    btnToggleMic.title = micAllowed ? 'Turn microphone on or off' : 'Wait for the host to enable your microphone';
+                            // Cập nhật quyền Mic
+                            else if (msg.type === 'MIC_PERMISSION') {
+                                refreshParticipantsUI();
+                                if (currentUser === msg.receiverName) {
+                                    micAllowed = msg.content === 'ALLOWED';
+                                    if (btnToggleMic) {
+                                        btnToggleMic.disabled = !micAllowed;
+                                        btnToggleMic.style.opacity = micAllowed ? '1' : '0.45';
+                                        btnToggleMic.title = micAllowed ? 'Turn microphone on or off' : 'Wait for the host to enable your microphone';
+                                    }
+                                    if (!micAllowed) {
+                                        isMuted = true;
+                                        if (rtc.localAudioTrack) rtc.localAudioTrack.setEnabled(false);
+                                        if (micIcon) micIcon.className = 'bi bi-mic-mute-fill';
+                                    }
+                                    Swal.fire({
+                                        icon:micAllowed ? 'success' : 'info',
+                                        title:micAllowed ? 'The host enabled your microphone' : 'Microphone access was revoked',
+                                        toast:true,position:'top-end',showConfirmButton:false,timer:3000
+                                    });
                                 }
-                                if (!micAllowed) {
-                                    isMuted = true;
-                                    if (rtc.localAudioTrack) rtc.localAudioTrack.setEnabled(false);
-                                    if (micIcon) micIcon.className = 'bi bi-mic-mute-fill';
-                                }
-                                Swal.fire({
-                                    icon:micAllowed ? 'success' : 'info',
-                                    title:micAllowed ? 'The host enabled your microphone' : 'Microphone access was revoked',
-                                    toast:true,position:'top-end',showConfirmButton:false,timer:3000
-                                });
                             }
                             else if (msg.type === 'FORCE_MUTE' && currentUser === msg.receiverName) {
                                 if (!isMuted) {
@@ -1283,7 +1298,7 @@
                         
                         const speakerCount = speakers.length;
                         const radiusX = Math.min(230, Math.max(120, (rect.width - 320) / 2));
-                        const radiusY = Math.min(145, Math.max(70, (rect.height - 320) / 2));
+                        const radiusY = Math.min(145, Math.max(125, (rect.height - 320) / 2));
                         
                         speakers.forEach((speaker, index) => {
                             const angle = speakerCount === 2
