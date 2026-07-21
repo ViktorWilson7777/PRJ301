@@ -1212,6 +1212,48 @@
                                         topupModal.show();
                                     }
                                 });
+                            } else {
+                                e.preventDefault();
+                                var formData = new FormData(formSendGift);
+                                fetch('/api/rooms/' + roomId + '/send-gift', {
+                                    method: 'POST',
+                                    body: new URLSearchParams(formData)
+                                })
+                                .then(response => {
+                                    if(response.ok) return response.json();
+                                    throw new Error("Failed to send gift");
+                                })
+                                .then(data => {
+                                    var giftModalEl = document.getElementById('giftModal');
+                                    var giftModal = bootstrap.Modal.getInstance(giftModalEl);
+                                    if (giftModal) giftModal.hide();
+                                    
+                                    var currentBalanceEl = document.getElementById('currentBalanceDisplay');
+                                    if(currentBalanceEl) currentBalanceEl.innerText = data.senderCreditBalance;
+                                    var currentBalanceInput = document.getElementById('currentBalance');
+                                    if(currentBalanceInput) currentBalanceInput.value = data.senderCreditBalance;
+
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Gift Sent!',
+                                        text: 'Your remaining balance is: ' + data.senderCreditBalance + ' cr',
+                                        background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7',
+                                        toast: true, position: 'top-end', showConfirmButton: false, timer: 4000
+                                    });
+
+                                    // Send WS message
+                                    var icon = selectedGift.closest('.card-body').querySelector('h5').innerText || '🎁';
+                                    stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'GIFT', senderName: currentUser, content: icon }));
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Oops...',
+                                        text: 'Something went wrong while sending the gift!',
+                                        background: '#1E1B4B', color: '#fff', confirmButtonColor: '#6C5CE7'
+                                    });
+                                });
                             }
                         });
                     }
