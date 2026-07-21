@@ -23,7 +23,7 @@ public class CreditTransaction {
     private Double amount;
 
     @Column(columnDefinition = "NVARCHAR(30)")
-    private String type; // TOP_UP, GIFT_SENT, GIFT_RECEIVED, AI_USAGE, IMPORT_USAGE, PREMIUM_PURCHASE
+    private String type; // TOP_UP, GIFT_SENT, GIFT_RECEIVED, AI_USAGE, IMPORT_USAGE, PREMIUM_PURCHASE, PODCAST_STORAGE
 
     @Column(columnDefinition = "NVARCHAR(500)")
     private String description;

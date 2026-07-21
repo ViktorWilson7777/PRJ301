@@ -91,8 +91,8 @@
                 <form method="post" action="${pageContext.request.contextPath}/users/${user.id}/program-level">
                     <div class="row g-3">
                         <div class="col-md-5"><label class="form-label">Program</label><select name="programId" class="form-select" data-live-search required><option value="">Select a program</option><c:forEach var="program" items="${programs}"><option value="${program.id}"><c:out value="${program.title}"/></option></c:forEach></select></div>
-                        <div class="col-md-3"><label class="form-label">Learner level</label><input type="number" name="levelNumber" class="form-control" value="1" min="1" required></div>
-                        <div class="col-md-4"><label class="form-label">Max hosting level</label><input type="number" name="maxHostingLevel" class="form-control" value="0" min="0" required></div>
+                        <div class="col-md-3"><label class="form-label">Program level</label><input type="number" name="levelNumber" class="form-control" value="1" min="1" required></div>
+                        <div class="col-md-4"><label class="form-label">Max hosting level</label><input type="number" name="maxHostingLevel" class="form-control" value="0" min="0" required><div class="form-text">Program level is raised automatically when this value is higher.</div></div>
                     </div>
                     <button type="submit" class="btn btn-outline-lucy mt-3"><i class="bi bi-save me-1"></i>Save program level</button>
                 </form>

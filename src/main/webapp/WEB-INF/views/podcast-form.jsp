@@ -63,7 +63,7 @@
             </div>
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-lucy"><i class="bi bi-check-lg me-1"></i>Save podcast</button>
-                <a href="${pageContext.request.contextPath}/podcasts" class="btn btn-light">Cancel</a>
+                <a href="${pageContext.request.contextPath}${manageUrl}" class="btn btn-light">Cancel</a>
             </div>
         </form>
     </div>

@@ -35,6 +35,8 @@ public class PodcastEpisode {
     @Column(columnDefinition = "NVARCHAR(500)")
     private String audioUrl; // placeholder URL, no real audio
 
+    private Long fileSizeBytes = 0L;
+
     private Integer durationSeconds = 0;
 
     @Column(columnDefinition = "NVARCHAR(20)")
@@ -60,5 +62,11 @@ public class PodcastEpisode {
         if (status == null) status = "DRAFT";
         if (isPremium == null) isPremium = false;
         if (price == null) price = 0;
+        if (fileSizeBytes == null) fileSizeBytes = 0L;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        if (fileSizeBytes == null) fileSizeBytes = 0L;
     }
 }

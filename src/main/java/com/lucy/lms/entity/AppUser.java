@@ -49,7 +49,7 @@ public class AppUser {
     @JsonIgnore
     private String achievements;
 
-    private Long storageLimitBytes = 104857600L;
+    private Long storageLimitBytes = 20971520L;
 
     private Long storageUsedBytes = 0L;
 
@@ -75,7 +75,7 @@ public class AppUser {
         if (password == null) password = "123456";
         if (accountType == null) accountType = "LEARNER";
         if (registrationStatus == null) registrationStatus = "APPROVED";
-        if (storageLimitBytes == null) storageLimitBytes = 104857600L;
+        if (storageLimitBytes == null) storageLimitBytes = 20971520L;
         if (storageUsedBytes == null) storageUsedBytes = 0L;
         if (proGrantedByAdmin == null) proGrantedByAdmin = false;
     }

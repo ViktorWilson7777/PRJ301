@@ -118,7 +118,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         // Podcast creator routes: Content Creator or ADMIN
         boolean isPodcastCreatorRoute = uri.equals("/podcasts/create")
+                || uri.equals("/podcasts/mine")
                 || uri.equals("/podcasts/save")
+                || uri.equals("/podcasts/storage/buy")
                 || uri.matches("/podcasts/edit/\\d+")
                 || uri.matches("/podcasts/delete/\\d+")
                 || uri.matches("/podcasts/publish/\\d+");

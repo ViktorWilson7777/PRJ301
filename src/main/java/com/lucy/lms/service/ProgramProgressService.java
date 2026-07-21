@@ -43,7 +43,7 @@ public class ProgramProgressService {
     @Transactional
     public UserProgramLevel getOrCreate(AppUser user, Program program) {
         if (user == null || user.getId() == null || program == null || program.getId() == null) return null;
-        return levelRepository.findByUserIdAndProgramId(user.getId(), program.getId()).orElseGet(() -> {
+        UserProgramLevel progress = levelRepository.findByUserIdAndProgramId(user.getId(), program.getId()).orElseGet(() -> {
             UserProgramLevel level = new UserProgramLevel();
             level.setUser(user);
             level.setProgram(program);
@@ -52,13 +52,19 @@ public class ProgramProgressService {
             level.setMaxHostingLevel(0);
             return levelRepository.save(level);
         });
+        return synchronizeLevelWithHosting(progress);
     }
 
     @Transactional(readOnly = true)
     public int getLevel(AppUser user, Program program) {
         if (user == null || program == null) return 1;
         return levelRepository.findByUserIdAndProgramId(user.getId(), program.getId())
-                .map(UserProgramLevel::getLevelNumber).orElse(1);
+                .map(level -> Math.max(
+                        Math.max(
+                                level.getLevelNumber() == null ? 1 : level.getLevelNumber(),
+                                level.getMaxHostingLevel() == null ? 0 : level.getMaxHostingLevel()),
+                        1 + (level.getExperiencePoints() == null ? 0 : level.getExperiencePoints()) / 100))
+                .orElse(1);
     }
 
     @Transactional
@@ -87,7 +93,9 @@ public class ProgramProgressService {
                     participant.getUser(), participant.getRoom().getCourse().getProgram());
             int xp = (progress.getExperiencePoints() == null ? 0 : progress.getExperiencePoints()) + delta;
             progress.setExperiencePoints(xp);
-            progress.setLevelNumber(1 + xp / 100);
+            progress.setLevelNumber(Math.max(
+                    progress.getLevelNumber() == null ? 1 : progress.getLevelNumber(),
+                    1 + xp / 100));
             levelRepository.save(progress);
             participant.setAwardedExperience(earnedTotal);
 
@@ -184,9 +192,10 @@ public class ProgramProgressService {
     public UserProgramLevel grantHostingThroughCourse(AppUser user, Course course) {
         if (user == null || course == null || course.getProgram() == null) return null;
         UserProgramLevel progress = getOrCreate(user, course.getProgram());
+        int grantedLevel = maxLevelForCourse(course);
         int currentLimit = progress.getMaxHostingLevel() == null ? 0 : progress.getMaxHostingLevel();
-        progress.setMaxHostingLevel(Math.max(currentLimit, maxLevelForCourse(course)));
-        return levelRepository.save(progress);
+        progress.setMaxHostingLevel(Math.max(currentLimit, grantedLevel));
+        return synchronizeLevelWithHosting(progress);
     }
 
     @Transactional(readOnly = true)
@@ -202,10 +211,30 @@ public class ProgramProgressService {
     @Transactional
     public UserProgramLevel setLevel(AppUser user, Program program, int levelNumber, int maxHostingLevel) {
         UserProgramLevel progress = getOrCreate(user, program);
-        progress.setLevelNumber(Math.max(1, levelNumber));
-        progress.setExperiencePoints(Math.max(progress.getExperiencePoints() == null ? 0 : progress.getExperiencePoints(),
-                (Math.max(1, levelNumber) - 1) * 100));
-        progress.setMaxHostingLevel(Math.max(0, maxHostingLevel));
-        return levelRepository.save(progress);
+        int normalizedHostingLevel = Math.max(0, maxHostingLevel);
+        progress.setMaxHostingLevel(normalizedHostingLevel);
+        progress.setLevelNumber(Math.max(Math.max(1, levelNumber), normalizedHostingLevel));
+        return synchronizeLevelWithHosting(progress);
+    }
+
+    private UserProgramLevel synchronizeLevelWithHosting(UserProgramLevel progress) {
+        int hostingLevel = progress.getMaxHostingLevel() == null
+                ? 0 : Math.max(0, progress.getMaxHostingLevel());
+        int currentLevel = progress.getLevelNumber() == null
+                ? 1 : Math.max(1, progress.getLevelNumber());
+        int effectiveLevel = Math.max(currentLevel, hostingLevel);
+        int currentXp = progress.getExperiencePoints() == null
+                ? 0 : Math.max(0, progress.getExperiencePoints());
+        effectiveLevel = Math.max(effectiveLevel, 1 + currentXp / 100);
+        int minimumXp = (effectiveLevel - 1) * 100;
+
+        boolean changed = !Integer.valueOf(hostingLevel).equals(progress.getMaxHostingLevel())
+                || !Integer.valueOf(effectiveLevel).equals(progress.getLevelNumber())
+                || !Integer.valueOf(Math.max(currentXp, minimumXp)).equals(progress.getExperiencePoints());
+
+        progress.setMaxHostingLevel(hostingLevel);
+        progress.setLevelNumber(effectiveLevel);
+        progress.setExperiencePoints(Math.max(currentXp, minimumXp));
+        return changed ? levelRepository.save(progress) : progress;
     }
 }

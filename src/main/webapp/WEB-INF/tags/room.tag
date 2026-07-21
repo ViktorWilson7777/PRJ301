@@ -62,7 +62,7 @@
             <a href="/rooms/${roomId}/leave" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
         </c:when>
         <c:otherwise>
-            <a href="/rooms" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
+            <a href="/dashboard" class="btn-leave" id="globalLeaveBtn"><i class="bi bi-door-open-fill"></i> Leave Quietly</a>
         </c:otherwise>
     </c:choose>
 </nav>

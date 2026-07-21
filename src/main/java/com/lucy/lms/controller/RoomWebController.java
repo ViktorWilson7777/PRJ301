@@ -66,38 +66,16 @@ public class RoomWebController {
     }
 
     @GetMapping("/rooms")
-    public String rooms(@RequestParam(required = false) Integer level,
-                        Model model, jakarta.servlet.http.HttpSession session) {
+    public String rooms(Model model, jakarta.servlet.http.HttpSession session) {
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
-        boolean isAdmin = currentUser != null && "ADMIN".equals(currentUser.getRole());
-
-        if (isAdmin) {
-            model.addAttribute("rooms", roomRepository.findAll());
-        } else {
-            // For learners: show all live/scheduled rooms, optionally filtered by level
-            java.util.List<String> activeStatuses = java.util.Arrays.asList("LIVE", "SCHEDULED");
-            if (level != null && level > 0) {
-                model.addAttribute("rooms", roomRepository.findByLevelNumberAndStatusInOrderByIdDesc(level, activeStatuses));
-                model.addAttribute("selectedLevel", level);
-            } else {
-                model.addAttribute("rooms", roomRepository.findByStatusInOrderByLevelNumberAsc(activeStatuses));
-            }
-
-            model.addAttribute("programLevels", progressService.levelsForUser(currentUser));
-            boolean canHostAnyCourse = currentUser != null
-                    && courseRepository.findAll().stream()
-                    .anyMatch(course -> progressService.canHostCourse(currentUser, course));
-            model.addAttribute("canHostAnyCourse", canHostAnyCourse);
-            java.util.Map<Long, Boolean> roomAccess = new java.util.HashMap<>();
-            for (Room room : (java.util.List<Room>) model.getAttribute("rooms")) {
-                int levelForProgram = room.getCourse() != null
-                        ? progressService.getLevel(currentUser, room.getCourse().getProgram()) : 1;
-                roomAccess.put(room.getId(), currentUser != null
-                        && ("ADMIN".equals(currentUser.getRole())
-                        || levelForProgram >= (room.getLevelNumber() == null ? 1 : room.getLevelNumber())));
-            }
-            model.addAttribute("roomAccess", roomAccess);
+        if (currentUser == null) return "redirect:/login";
+        if (!"ADMIN".equals(currentUser.getRole())) {
+            return "LEARNER".equals(currentUser.getRole())
+                    ? "redirect:/courses"
+                    : "redirect:/my-rooms";
         }
+
+        model.addAttribute("rooms", roomRepository.findAll());
         return "rooms";
     }
 
@@ -181,7 +159,7 @@ public class RoomWebController {
 
         if (currentUser == null || !progressService.canHostRoom(
                 currentUser, room.getCourse(), room.getLevelNumber())) {
-            return "redirect:/rooms?error=host_level_not_allowed";
+            return "redirect:/rooms/create?error=host_level_not_allowed";
         }
 
         if ("LIVE".equals(status) && room.getStartedAt() == null) {
@@ -208,13 +186,13 @@ public class RoomWebController {
             return "redirect:/courses/" + room.getCourse().getId();
         }
         
-        return "redirect:/rooms";
+        return "redirect:/my-rooms";
     }
 
     @GetMapping("/rooms/{id}")
     public String roomDetail(@PathVariable Long id, Model model, jakarta.servlet.http.HttpSession session) {
         Room room = roomRepository.findById(id).orElse(null);
-        if (room == null) return "redirect:/rooms";
+        if (room == null) return "redirect:/courses";
 
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
         if (currentUser == null) {
@@ -261,10 +239,8 @@ public class RoomWebController {
             int userLevel = progressService.getLevel(currentUser, room.getCourse().getProgram());
             boolean isParticipantAlready = participantRepository.existsByRoomIdAndUserId(id, currentUser.getId());
             if (userLevel < room.getLevelNumber() && !isParticipantAlready) {
-                model.addAttribute("room", room);
-                model.addAttribute("userLevel", userLevel);
-                model.addAttribute("requiredLevel", room.getLevelNumber());
-                return "redirect:/rooms?error=level_too_low&required=" + room.getLevelNumber() + "&current=" + userLevel;
+                return "redirect:/courses/" + room.getCourse().getId()
+                        + "?error=level_too_low&required=" + room.getLevelNumber() + "&current=" + userLevel;
             }
         }
 
@@ -357,6 +333,7 @@ public class RoomWebController {
     @GetMapping("/rooms/{id}/leave")
     public String leaveRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        Room room = roomRepository.findById(id).orElse(null);
         if (currentUser != null) {
             RoomParticipant participant = participantRepository.findFirstByRoomIdAndUserId(id, currentUser.getId()).orElse(null);
             if (participant != null) {
@@ -372,7 +349,17 @@ public class RoomWebController {
                 messagingTemplate.convertAndSend("/topic/room/" + id, msg);
             }
         }
-        return "redirect:/rooms";
+        return roomExitDestination(currentUser, room);
+    }
+
+    private String roomExitDestination(AppUser currentUser, Room room) {
+        if (currentUser == null) return "redirect:/login";
+        if ("ADMIN".equals(currentUser.getRole())) return "redirect:/rooms";
+        if (!"LEARNER".equals(currentUser.getRole())) return "redirect:/my-rooms";
+        if (room != null && room.getCourse() != null) {
+            return "redirect:/courses/" + room.getCourse().getId();
+        }
+        return "redirect:/courses";
     }
 
     @PostMapping("/rooms/{id}/add-participant")
@@ -381,7 +368,7 @@ public class RoomWebController {
                                  @RequestParam String roleInRoom) {
         Room room = roomRepository.findById(id).orElse(null);
         AppUser user = userRepository.findById(userId).orElse(null);
-        if (room == null || user == null) return "redirect:/rooms";
+        if (room == null || user == null) return "redirect:/my-rooms";
 
         boolean exists = participantRepository.existsByRoomIdAndUserId(id, userId);
         if (!exists) {
@@ -525,7 +512,7 @@ public class RoomWebController {
     @GetMapping("/rooms/{id}/go-live")
     public String goLiveRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
         Room room = roomRepository.findById(id).orElse(null);
-        if (room == null) return "redirect:/rooms";
+        if (room == null) return "redirect:/my-rooms";
 
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
         if (currentUser == null) return "redirect:/login";
@@ -591,9 +578,12 @@ public class RoomWebController {
 
     @GetMapping("/rooms/{id}/end")
     @Transactional
-    public String endRoom(@PathVariable Long id) {
+    public String endRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        Room room = roomRepository.findById(id).orElse(null);
+        String destination = roomExitDestination(currentUser, room);
         performRoomCleanup(id);
-        return "redirect:/rooms";
+        return destination;
     }
 
     @GetMapping("/rooms/{roomId}/toggle-role/{participantId}")
@@ -708,9 +698,12 @@ public class RoomWebController {
 
     @GetMapping("/rooms/delete/{id}")
     @Transactional
-    public String deleteRoom(@PathVariable Long id) {
+    public String deleteRoom(@PathVariable Long id, jakarta.servlet.http.HttpSession session) {
+        AppUser currentUser = (AppUser) session.getAttribute("currentUser");
+        Room room = roomRepository.findById(id).orElse(null);
+        String destination = roomExitDestination(currentUser, room);
         performRoomCleanup(id);
-        return "redirect:/rooms";
+        return destination;
     }
 
     @GetMapping("/rooms/{id}/export-participants")

@@ -88,15 +88,16 @@ public class DefaultAccountSeeder implements ApplicationRunner {
             user.setReputationScore(account.initialReputation());
             user.setCreatedAt(LocalDateTime.now());
             user.setPassword(defaultPassword);
+            user.setRole(account.role());
+            user.setAccountType(account.accountType());
+            user.setRegistrationStatus("APPROVED");
+            user.setProGrantedByAdmin(account.proGrantedByAdmin());
+            user.setActive(true);
         } else {
             fillMissingProfileFields(user, account);
+            fillMissingAccountState(user, account);
         }
 
-        user.setRole(account.role());
-        user.setAccountType(account.accountType());
-        user.setRegistrationStatus("APPROVED");
-        user.setProGrantedByAdmin(account.proGrantedByAdmin());
-        user.setActive(true);
         hashPasswordIfNeeded(user);
         userRepository.save(user);
         return isNew;
@@ -127,6 +128,24 @@ public class DefaultAccountSeeder implements ApplicationRunner {
         }
         if (user.getPassword() == null || user.getPassword().isBlank()) {
             user.setPassword(defaultPassword);
+        }
+    }
+
+    private void fillMissingAccountState(AppUser user, DefaultAccount account) {
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole(account.role());
+        }
+        if (user.getAccountType() == null || user.getAccountType().isBlank()) {
+            user.setAccountType(account.accountType());
+        }
+        if (user.getRegistrationStatus() == null || user.getRegistrationStatus().isBlank()) {
+            user.setRegistrationStatus("APPROVED");
+        }
+        if (user.getProGrantedByAdmin() == null) {
+            user.setProGrantedByAdmin(account.proGrantedByAdmin());
+        }
+        if (user.getActive() == null) {
+            user.setActive(true);
         }
     }
 
