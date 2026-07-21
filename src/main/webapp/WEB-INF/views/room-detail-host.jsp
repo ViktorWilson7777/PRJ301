@@ -1322,10 +1322,10 @@
                         };
                     }
 
-                    // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
+                    // Do not announce a leave during reloads or in-room navigation.
+                    // The room lifecycle actions handle the host's real departure.
                     window.addEventListener('beforeunload', function() {
                         if (stompClient !== null) {
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'LEAVE', senderName: currentUser }));
                             stompClient.disconnect();
                         }
                     });

@@ -667,10 +667,10 @@
                         this.disabled = true; // Bấm 1 lần thôi
                     };
 
-                    // Khi đóng Tab hoặc tải lại trang thì trừ mắt xem đi
+                    // Do not announce a leave during reloads or in-room navigation.
+                    // Explicit room actions are responsible for removing participants.
                     window.addEventListener('beforeunload', function() {
                         if (stompClient !== null) {
-                            stompClient.send('/app/room/' + roomId, {}, JSON.stringify({ type: 'LEAVE', senderName: currentUser }));
                             stompClient.disconnect();
                         }
                     });

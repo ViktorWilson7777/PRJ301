@@ -44,32 +44,43 @@
 
 1. **Java 17+** installed
 2. **SQL Server** running locally (or Docker)
-3. **Maven 3.8+**
+3. Maven is optional because the repository includes Maven Wrapper
 
 ### Setup
 
-```bash
-# 1. Create the database
-sqlcmd -S localhost -i sql/create-database.sql
+```powershell
+# 1. Run sql/create-database.sql in SQL Server Management Studio,
+#    or run it with sqlcmd using your SQL Server credentials.
 
 # 2. Configure application.properties
 #    Update the connection string, username, password if needed
 #    File: src/main/resources/application.properties
 
-# 3. Build and run
-mvn clean package -DskipTests
-java -jar target/lucy-lms-0.0.1-SNAPSHOT.jar
-
-# OR use Maven directly
-mvn spring-boot:run
+# 3. Run the application
+.\mvnw.cmd spring-boot:run
 ```
 
 ### First Boot
 
 1. JPA will **auto-create all tables** on first run.
-2. Run the seed data script: `sqlcmd -S localhost -d Lucy -i sql/seed-data.sql`
-3. Open **http://localhost:8080/dashboard**
-4. Open **http://localhost:8080/swagger-ui/index.html** for API docs
+2. The application automatically creates and synchronizes the default login accounts.
+3. To reset all data and load the sample dataset, run `sql/seed-data.sql` after startup.
+   Warning: this script deletes every existing row before inserting sample data.
+4. Open **http://localhost:8081/login**
+5. Open **http://localhost:8081/swagger-ui/index.html** for API docs
+
+### Default Login Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@lucy.demo` | `123456` |
+| Learner | `learner@lucy.demo` | `123456` |
+| Pro Mentor | `miko@lucy.demo` | `123456` |
+| Content Creator | `max@lucy.demo` | `123456` |
+
+Default accounts are enabled by `LUCY_DEFAULT_ACCOUNTS_ENABLED` and use
+`LUCY_DEFAULT_ACCOUNT_PASSWORD` when a new database is initialized. Existing
+passwords are preserved, while old plaintext passwords are migrated to BCrypt.
 
 ---
 

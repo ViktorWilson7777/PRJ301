@@ -30,9 +30,9 @@ BEGIN
 END
 ELSE
 BEGIN
-    -- Đảm bảo role và password đúng
+    -- Keep the role active without resetting a password that was already changed.
     UPDATE app_user 
-    SET role = N'ADMIN', password = N'123456', active = 1
+    SET role = N'ADMIN', password = COALESCE(password, N'123456'), active = 1
     WHERE email = N'admin@lucy.demo';
     PRINT 'Đã cập nhật tài khoản admin.';
 END

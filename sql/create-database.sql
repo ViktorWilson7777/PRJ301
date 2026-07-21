@@ -3,23 +3,21 @@
 -- SQL Server
 -- ============================================================
 
--- Create database (run in master context)
--- USE master;
--- GO
--- IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'Lucy')
--- BEGIN
---     CREATE DATABASE Lucy
---     COLLATE Latin1_General_100_CI_AS_SC_UTF8;
--- END
--- GO
+USE master;
+GO
 
--- NOTE: If your SQL Server does not support UTF8 collation,
--- use the default collation. NVARCHAR columns handle Unicode regardless.
-
-CREATE DATABASE Lucy;
+IF DB_ID(N'Lucy') IS NULL
+BEGIN
+    CREATE DATABASE Lucy;
+    PRINT 'Database Lucy created successfully.';
+END
+ELSE
+BEGIN
+    PRINT 'Database Lucy already exists.';
+END
 GO
 
 USE Lucy;
 GO
 
-PRINT 'Database Lucy created successfully.';
+PRINT 'Database Lucy is ready.';

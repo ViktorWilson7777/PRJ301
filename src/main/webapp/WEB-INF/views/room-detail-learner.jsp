@@ -1091,9 +1091,9 @@
                         };
                     }
 
-                    // Khi đóng Tab hoặc tải lại trang thì báo cho server xóa khỏi DB
+                    // Membership is removed only by the explicit Leave Quietly action.
+                    // Reloads and in-room navigation must keep the learner in the room.
                     window.addEventListener('beforeunload', function() {
-                        navigator.sendBeacon('/api/rooms/' + roomId + '/leave');
                         if (stompClient !== null) {
                             stompClient.disconnect();
                         }

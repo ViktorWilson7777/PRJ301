@@ -36,14 +36,41 @@ INSERT INTO course (id, code, title, description, level, order_index, program_id
 (4, N'JA-S1', N'Japanese Stage 1', N'初級日本語会話', N'Beginner', 1, 3);
 SET IDENTITY_INSERT course OFF;
 
--- ── Users ──
-SET IDENTITY_INSERT app_user ON;
-INSERT INTO app_user (id, full_name, email, display_name, avatar_persona, role, anonymous_mode, credit_balance, reputation_score, created_at, active, password) VALUES
-(1, N'Admin User', N'admin@lucy.demo', N'LucyAdmin', NULL, N'ADMIN', 0, 1000.0, 100, GETDATE(), 1, N'123456'),
-(2, N'Anonymous Learner', N'learner@lucy.demo', N'AnonymousPanda', N'CuriousPanda🐼', N'LEARNER', 1, 50.0, 5, GETDATE(), 1, N'123456'),
-(3, N'Sensei Miko', N'miko@lucy.demo', N'SenseiMiko', NULL, N'PRO_MENTOR', 0, 500.0, 75, GETDATE(), 1, N'123456'),
-(4, N'Studio Max', N'max@lucy.demo', N'StudioMax', NULL, N'SUPER_CREATOR', 0, 800.0, 90, GETDATE(), 1, N'123456');
-SET IDENTITY_INSERT app_user OFF;
+-- ── Default Login Accounts ──
+-- Spring Boot creates these automatically. This MERGE keeps manual SQL seeding
+-- compatible and does not overwrite an existing password or account balance.
+MERGE INTO app_user AS target
+USING (VALUES
+    (N'admin@lucy.demo', N'Admin User', N'LucyAdmin', CAST(NULL AS NVARCHAR(100)), N'ADMIN', N'LEARNER', CAST(0 AS bit), 1000.0, 100, CAST(0 AS bit)),
+    (N'learner@lucy.demo', N'Anonymous Learner', N'AnonymousPanda', N'CuriousPanda', N'LEARNER', N'LEARNER', CAST(1 AS bit), 50.0, 5, CAST(0 AS bit)),
+    (N'miko@lucy.demo', N'Sensei Miko', N'SenseiMiko', CAST(NULL AS NVARCHAR(100)), N'PRO_MENTOR', N'PRO_MENTOR', CAST(0 AS bit), 500.0, 75, CAST(1 AS bit)),
+    (N'max@lucy.demo', N'Studio Max', N'StudioMax', CAST(NULL AS NVARCHAR(100)), N'SUPER_CREATOR', N'CONTENT_CREATOR', CAST(0 AS bit), 800.0, 90, CAST(0 AS bit))
+) AS source (
+    email, full_name, display_name, avatar_persona, role, account_type,
+    anonymous_mode, initial_credits, initial_reputation, pro_granted_by_admin
+)
+ON LOWER(target.email) = LOWER(source.email)
+WHEN MATCHED THEN
+    UPDATE SET
+        target.role = source.role,
+        target.account_type = source.account_type,
+        target.registration_status = N'APPROVED',
+        target.pro_granted_by_admin = source.pro_granted_by_admin,
+        target.active = 1,
+        target.full_name = COALESCE(NULLIF(target.full_name, N''), source.full_name),
+        target.display_name = COALESCE(NULLIF(target.display_name, N''), source.display_name)
+WHEN NOT MATCHED THEN
+    INSERT (
+        full_name, email, display_name, avatar_persona, role, account_type,
+        registration_status, anonymous_mode, credit_balance, reputation_score,
+        pro_granted_by_admin, created_at, active, password
+    )
+    VALUES (
+        source.full_name, source.email, source.display_name, source.avatar_persona,
+        source.role, source.account_type, N'APPROVED', source.anonymous_mode,
+        source.initial_credits, source.initial_reputation, source.pro_granted_by_admin,
+        GETDATE(), 1, N'123456'
+    );
 
 -- ── Billing Plans ──
 SET IDENTITY_INSERT billing_plan ON;
@@ -65,8 +92,11 @@ SET IDENTITY_INSERT gift OFF;
 
 -- ── Sample Room ──
 SET IDENTITY_INSERT room ON;
-INSERT INTO room (id, title, language_code, level_number, room_type, status, host_user_id, course_id, max_participants, started_at, description) VALUES
-(1, N'English Beginner — Daily Conversation', N'EN', 1, N'PUBLIC', N'LIVE', 3, 1, 20, GETDATE(), N'Practice everyday English conversation with SenseiMiko');
+INSERT INTO room (id, title, language_code, level_number, room_type, status, host_user_id, course_id, max_participants, started_at, description)
+SELECT 1, N'English Beginner — Daily Conversation', N'EN', 1, N'PUBLIC', N'LIVE',
+       id, 1, 20, GETDATE(), N'Practice everyday English conversation with SenseiMiko'
+FROM app_user
+WHERE email = N'miko@lucy.demo';
 SET IDENTITY_INSERT room OFF;
 
 PRINT 'Seed data inserted successfully.';
