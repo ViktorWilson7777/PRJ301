@@ -1,4 +1,5 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+    <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
     <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
         <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
@@ -515,7 +516,7 @@
                                         <label class="form-label" style="font-size: 11px; color: #94A1B2;">Select
                                             Gift</label>
                                         <div class="gift-sticker-grid">
-                                            <c:forEach var="g" items="${gifts}" varStatus="giftStatus"><label class="gift-sticker-option"><input type="radio" name="giftId" value="${g.id}" data-cost="${g.creditCost}" <c:if test="${giftStatus.first}">checked</c:if> required /><span class="gift-sticker-card"><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" /></c:when><c:otherwise><i class="bi bi-gift-fill" style="font-size:32px"></i></c:otherwise></c:choose><span class="gift-sticker-name">${g.name}</span><span class="gift-sticker-cost">${g.creditCost} cr</span></span></label></c:forEach>
+                                            <c:forEach var="g" items="${gifts}" varStatus="giftStatus"><label class="gift-sticker-option"><input type="radio" name="giftId" value="${g.id}" data-cost="${g.creditCost}" <c:if test="${giftStatus.first}">checked</c:if> required /><span class="gift-sticker-card"><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" /></c:when><c:otherwise><i class="bi bi-gift-fill" style="font-size:32px"></i></c:otherwise></c:choose><span class="gift-sticker-name">${g.name}</span><span class="gift-sticker-cost"><fmt:formatNumber value="${g.creditCost}" pattern="#,##0"/> cr</span></span></label></c:forEach>
                                         </div>
                                     </div>
                                     <button type="submit" class="btn w-100"

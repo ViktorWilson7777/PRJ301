@@ -1,5 +1,6 @@
 <%@ tag description="LUCY Main Layout" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ attribute name="pageTitle" required="true" type="java.lang.String" %>
 
 <c:set var="isAdminMode" value="${sessionScope.currentUser.role == 'ADMIN'}" />
@@ -171,7 +172,7 @@
             </div>
             <div class="learner-user">
                 <a href="/billing/topup" class="btn btn-sm" style="background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; border-radius: 20px; padding: 4px 12px; font-weight: 600;">
-                    <i class="bi bi-coin"></i> ${sessionScope.currentUser.creditBalance} cr
+                    <i class="bi bi-coin"></i> <fmt:formatNumber value="${sessionScope.currentUser.creditBalance}" pattern="#,##0"/> cr
                 </a>
                 <div class="dropdown ms-3">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" style="color: #1E293B; font-weight: 500;">

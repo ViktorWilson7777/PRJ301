@@ -93,6 +93,9 @@ public class GiftWebController {
         if (gift.getImageUrl() == null || gift.getImageUrl().isBlank()) {
             return "redirect:/gifts?error=image_required";
         }
+        if (creditCost == null || creditCost < 1000) {
+            return "redirect:/gifts?error=invalid_price";
+        }
         gift.setCreditCost(creditCost);
         gift.setActive(active != null);
         giftRepository.save(gift);

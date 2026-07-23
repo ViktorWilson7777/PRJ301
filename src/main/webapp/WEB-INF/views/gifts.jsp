@@ -1,4 +1,5 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
@@ -7,6 +8,7 @@
 <c:if test="${param.error == 'invalid_image'}"><div class="alert alert-danger">The sticker must be a valid PNG, JPG or GIF under 3 MB and 4096 x 4096 px.</div></c:if>
 <c:if test="${param.error == 'image_required'}"><div class="alert alert-danger">Please upload a sticker image for this gift.</div></c:if>
 <c:if test="${param.error == 'upload_failed'}"><div class="alert alert-danger">The sticker could not be saved. Please try again.</div></c:if>
+<c:if test="${param.error == 'invalid_price'}"><div class="alert alert-danger">Gift price must be at least 1,000 credits.</div></c:if>
 
 <div class="mock-banner">
     <i class="bi bi-info-circle"></i>
@@ -37,7 +39,7 @@
                             <td><strong>#${g.id}</strong></td>
                             <td><c:choose><c:when test="${not empty g.imageUrl}"><img src="${g.imageUrl}" alt="${g.name}" style="width:64px;height:64px;object-fit:contain;border-radius:14px;background:#f8fafc;padding:5px" /></c:when><c:otherwise><i class="bi bi-gift-fill text-muted" style="font-size:32px"></i></c:otherwise></c:choose></td>
                             <td><strong>${g.name}</strong></td>
-                            <td>${g.creditCost} credits</td>
+                            <td><fmt:formatNumber value="${g.creditCost}" pattern="#,##0"/> credits</td>
                             <td>
                                 <c:choose>
                                     <c:when test="${g.active}"><span class="badge-status badge-success">Active</span></c:when>
@@ -68,7 +70,7 @@
                         <td><c:if test="${txn.sender != null}">${txn.sender.displayName}</c:if></td>
                         <td><c:if test="${txn.receiver != null}">${txn.receiver.displayName}</c:if></td>
                         <td><c:if test="${txn.room != null}">${txn.room.title}</c:if></td>
-                        <td><strong>${txn.creditAmount}</strong></td>
+                        <td><strong><fmt:formatNumber value="${txn.creditAmount}" pattern="#,##0"/></strong></td>
                         <td style="font-size: 12px;">${txn.createdAt}</td>
                     </tr>
                 </c:forEach>

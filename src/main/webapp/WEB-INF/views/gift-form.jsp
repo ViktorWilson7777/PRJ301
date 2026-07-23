@@ -28,7 +28,8 @@
 
                 <div class="mb-3">
                     <label class="form-label">Credit Cost <span class="text-danger">*</span></label>
-                    <input type="number" name="creditCost" class="form-control" value="${gift.creditCost}" min="1" required />
+                    <input type="number" name="creditCost" class="form-control" value="${gift.creditCost}" min="1000" step="500" required />
+                    <div class="form-text">Minimum gift price: 1,000 credits.</div>
                 </div>
 
                 <div class="mb-4">

@@ -7,12 +7,18 @@ import com.lucy.lms.repository.AppUserRepository;
 import com.lucy.lms.repository.BillingPlanRepository;
 import com.lucy.lms.repository.CreditTransactionRepository;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @Controller
 @SuppressWarnings("null")
 public class BillingWebController {
+
+    private static final Set<Integer> DEMO_TOP_UP_AMOUNTS = Set.of(
+            20000, 50000, 100000, 200000);
 
     private final BillingPlanRepository planRepository;
     private final AppUserRepository userRepository;
@@ -91,32 +97,33 @@ public class BillingWebController {
     }
 
     @PostMapping("/billing/topup")
+    @Transactional
     public String processTopup(
-            @RequestParam Double amount,
-            @RequestParam(required = false, defaultValue = "TOP_UP") String txType,
+            @RequestParam Integer amount,
             jakarta.servlet.http.HttpSession session) {
 
         AppUser currentUser = (AppUser) session.getAttribute("currentUser");
         if (currentUser == null) return "redirect:/login";
         AppUser user = userRepository.findById(currentUser.getId()).orElse(null);
         if (user == null) return "redirect:/billing/topup?error=user_not_found";
-        if (amount == null || amount <= 0) return "redirect:/billing/topup?error=invalid_amount";
+        if (amount == null || !DEMO_TOP_UP_AMOUNTS.contains(amount)) {
+            return "redirect:/billing/topup?error=invalid_amount";
+        }
 
-        user.setCreditBalance((user.getCreditBalance() != null ? user.getCreditBalance() : 0.0) + amount);
+        double currentBalance = user.getCreditBalance() == null ? 0.0 : user.getCreditBalance();
+        user.setCreditBalance(currentBalance + amount);
         userRepository.save(user);
 
         CreditTransaction tx = new CreditTransaction();
         tx.setUser(user);
-        tx.setAmount(amount);
-        tx.setType(txType);
-        tx.setDescription("Self-service top-up of " + amount + " credits");
+        tx.setAmount(amount.doubleValue());
+        tx.setType("TOP_UP");
+        tx.setDescription("Demo top-up of " + amount + " credits");
         transactionRepository.save(tx);
 
-        if (user != null) {
-            session.setAttribute("currentUser", user);
-        }
+        session.setAttribute("currentUser", user);
 
-        return "redirect:/billing/topup?success=credits_added&amount=" + amount.intValue();
+        return "redirect:/billing/topup?success=credits_added&amount=" + amount;
     }
 
     // ── User Wallets ──

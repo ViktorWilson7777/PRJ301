@@ -1,4 +1,5 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="layout" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 
@@ -39,8 +40,8 @@
                             </td>
                             <td>
                                 <c:choose>
-                                    <c:when test="${tx.amount >= 0}"><strong style="color: #059669;">+${tx.amount}</strong></c:when>
-                                    <c:otherwise><strong style="color: #DC2626;">${tx.amount}</strong></c:otherwise>
+                                    <c:when test="${tx.amount >= 0}"><strong style="color: #059669;">+<fmt:formatNumber value="${tx.amount}" pattern="#,##0"/></strong></c:when>
+                                    <c:otherwise><strong style="color: #DC2626;"><fmt:formatNumber value="${tx.amount}" pattern="#,##0"/></strong></c:otherwise>
                                 </c:choose>
                             </td>
                             <td style="font-size: 12px;">${tx.description}</td>

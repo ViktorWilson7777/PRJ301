@@ -23,7 +23,7 @@ public class Gift {
     @Column(length = 500)
     private String imageUrl;
 
-    private Integer creditCost = 10;
+    private Integer creditCost = 2000;
 
     private Boolean active = true;
 }
